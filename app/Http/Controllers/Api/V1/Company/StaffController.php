@@ -1,0 +1,99 @@
+<?php
+
+namespace App\Http\Controllers\Api\V1\Company;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Company\AddCompanyStaffRequest;
+use App\Http\Requests\Company\TransferOwnershipRequest;
+use App\Http\Requests\Company\UpdateStaffRoleRequest;
+use App\Http\Resources\MembershipResource;
+use App\Models\Company;
+use App\Models\UserCompany;
+use App\Services\StaffService;
+use App\Support\Permissions;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+class StaffController extends Controller
+{
+    public function __construct(private StaffService $staffService) {}
+
+    public function index(Company $company): JsonResponse
+    {
+        $staff = $company->memberships()
+            ->with(['user', 'role.permissions', 'company'])
+            ->where('status', '!=', 'removed')
+            ->get();
+
+        return $this->success(MembershipResource::collection($staff)->resolve(), 'Staff retrieved');
+    }
+
+    public function store(AddCompanyStaffRequest $request, Company $company): JsonResponse
+    {
+        $membership = $this->staffService->add($request->user(), $company, $request->validated());
+
+        return $this->success((new MembershipResource($membership))->resolve(), 'Staff member added', 201);
+    }
+
+    public function show(Company $company, UserCompany $membership): JsonResponse
+    {
+        $this->assertMembership($company, $membership);
+
+        $membership->load(['user', 'role.permissions', 'company']);
+
+        return $this->success((new MembershipResource($membership))->resolve(), 'Staff member retrieved');
+    }
+
+    public function updateRole(UpdateStaffRoleRequest $request, Company $company, UserCompany $membership): JsonResponse
+    {
+        $this->assertMembership($company, $membership);
+
+        $membership = $this->staffService->updateRole($request->user(), $membership, $request->string('role')->toString());
+
+        return $this->success((new MembershipResource($membership))->resolve(), 'Staff role updated');
+    }
+
+    public function suspend(Request $request, Company $company, UserCompany $membership): JsonResponse
+    {
+        $this->assertMembership($company, $membership);
+
+        $membership = $this->staffService->suspend($request->user(), $membership);
+
+        return $this->success((new MembershipResource($membership))->resolve(), 'Staff membership suspended');
+    }
+
+    public function activate(Request $request, Company $company, UserCompany $membership): JsonResponse
+    {
+        $this->assertMembership($company, $membership);
+
+        $membership = $this->staffService->activate($request->user(), $membership);
+
+        return $this->success((new MembershipResource($membership))->resolve(), 'Staff membership activated');
+    }
+
+    public function destroy(Request $request, Company $company, UserCompany $membership): JsonResponse
+    {
+        $this->assertMembership($company, $membership);
+
+        $this->staffService->remove($request->user(), $membership);
+
+        return $this->success([], 'Staff member removed');
+    }
+
+    public function transferOwnership(TransferOwnershipRequest $request, Company $company): JsonResponse
+    {
+        $membership = UserCompany::query()->findOrFail($request->integer('membership_id'));
+        $this->assertMembership($company, $membership);
+
+        $this->staffService->transferOwnership($request->user(), $company, $membership);
+
+        return $this->success([], 'Ownership transferred successfully');
+    }
+
+    private function assertMembership(Company $company, UserCompany $membership): void
+    {
+        if ($membership->company_id !== $company->id) {
+            abort(404);
+        }
+    }
+}

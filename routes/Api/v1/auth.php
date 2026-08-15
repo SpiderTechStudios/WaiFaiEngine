@@ -1,0 +1,27 @@
+<?php
+
+use App\Http\Controllers\Api\V1\Auth\EmailVerificationController;
+use App\Http\Controllers\Api\V1\Auth\PasswordController;
+use App\Http\Controllers\Api\V1\Auth\SessionController;
+use App\Http\Controllers\RegisterController;
+use Illuminate\Support\Facades\Route;
+
+Route::post('/register', [RegisterController::class, 'index'])->name('signup');
+Route::post('/auth/register', [SessionController::class, 'register'])->middleware('throttle:10,1');
+Route::post('/auth/login', [SessionController::class, 'login'])->middleware('throttle:5,1');
+Route::post('/auth/forgot-password', [PasswordController::class, 'forgot'])->middleware('throttle:5,1');
+Route::post('/auth/reset-password', [PasswordController::class, 'reset'])->middleware('throttle:5,1');
+
+Route::get('/auth/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
+    ->middleware(['signed'])
+    ->name('api.v1.auth.email.verify');
+
+Route::middleware(['auth:sanctum', 'active.user', 'company.context'])->group(function () {
+    Route::get('/auth/me', [SessionController::class, 'me']);
+    Route::post('/auth/logout', [SessionController::class, 'logout']);
+    Route::post('/auth/logout-all', [SessionController::class, 'logoutAll']);
+    Route::post('/auth/company/switch', [SessionController::class, 'switchCompany']);
+    Route::put('/auth/password', [PasswordController::class, 'update']);
+    Route::post('/auth/password', [PasswordController::class, 'update']);
+    Route::post('/auth/email/resend', [EmailVerificationController::class, 'resend'])->middleware('throttle:6,1');
+});
