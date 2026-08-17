@@ -17,8 +17,8 @@
                 "tags": [
                     "Auth"
                 ],
-                "summary": "Register (legacy route)",
-                "description": "Same as POST /auth/register. Kept for existing clients.",
+                "summary": "Register business + owner (legacy route)",
+                "description": "Same as POST /auth/register. Creates the user and their first company in one request.",
                 "operationId": "legacyRegister",
                 "requestBody": {
                     "required": true,
@@ -59,7 +59,8 @@
                 "tags": [
                     "Auth"
                 ],
-                "summary": "Register a user",
+                "summary": "Register business and owner account",
+                "description": "Creates a user and their company in one transaction. The registrant becomes the company owner and the company is set as current_company.",
                 "operationId": "register",
                 "requestBody": {
                     "required": true,
@@ -73,7 +74,7 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Registered",
+                        "description": "Registered with company",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -608,7 +609,8 @@
                 "tags": [
                     "Companies"
                 ],
-                "summary": "Create a company and become owner",
+                "summary": "Create an additional company and become owner",
+                "description": "Use this after registration when the authenticated user needs another company. Initial signup already creates the first company via POST /auth/register.",
                 "operationId": "createCompany",
                 "requestBody": {
                     "required": true,
@@ -1631,25 +1633,59 @@
         "schemas": {
             "RegisterRequest": {
                 "required": [
-                    "name",
+                    "business_name",
+                    "first_name",
+                    "last_name",
                     "email",
+                    "phone",
                     "password",
                     "password_confirmation"
                 ],
                 "properties": {
-                    "name": {
-                        "type": "string"
+                    "business_name": {
+                        "type": "string",
+                        "example": "ABC Internet Services"
+                    },
+                    "first_name": {
+                        "type": "string",
+                        "example": "Jane"
+                    },
+                    "last_name": {
+                        "type": "string",
+                        "example": "Doe"
                     },
                     "email": {
                         "type": "string",
-                        "format": "email"
+                        "format": "email",
+                        "example": "jane@example.com"
+                    },
+                    "phone": {
+                        "type": "string",
+                        "example": "0700123456"
                     },
                     "password": {
                         "type": "string",
+                        "format": "password",
                         "minLength": 8
                     },
                     "password_confirmation": {
-                        "type": "string"
+                        "type": "string",
+                        "format": "password"
+                    },
+                    "business_email": {
+                        "description": "Defaults to the owner email when omitted",
+                        "type": "string",
+                        "format": "email",
+                        "nullable": true
+                    },
+                    "address": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "timezone": {
+                        "type": "string",
+                        "example": "Africa/Nairobi",
+                        "nullable": true
                     }
                 },
                 "type": "object"
@@ -1750,9 +1786,21 @@
                     "name": {
                         "type": "string"
                     },
+                    "first_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "last_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
                     "email": {
                         "type": "string",
                         "format": "email"
+                    },
+                    "phone": {
+                        "type": "string",
+                        "nullable": true
                     },
                     "status": {
                         "type": "string",

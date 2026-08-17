@@ -22,7 +22,8 @@ class CompanyDocumentation
         path: '/companies',
         operationId: 'createCompany',
         tags: ['Companies'],
-        summary: 'Create a company and become owner',
+        summary: 'Create an additional company and become owner',
+        description: 'Use this after registration when the authenticated user needs another company. Initial signup already creates the first company via POST /auth/register.',
         security: [['sanctum' => []]],
         requestBody: new OA\RequestBody(
             required: true,

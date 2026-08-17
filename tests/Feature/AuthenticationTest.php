@@ -18,8 +18,11 @@ class AuthenticationTest extends TestCase
         Notification::fake();
 
         $response = $this->postJson('/api/v1/auth/register', [
-            'name' => 'Jane Doe',
+            'business_name' => 'ABC Internet',
+            'first_name' => 'Jane',
+            'last_name' => 'Doe',
             'email' => 'jane@example.com',
+            'phone' => '0700123456',
             'password' => 'password123',
             'password_confirmation' => 'password123',
         ]);
@@ -27,9 +30,20 @@ class AuthenticationTest extends TestCase
         $response->assertCreated()
             ->assertJsonPath('status', true)
             ->assertJsonPath('data.user.email', 'jane@example.com')
-            ->assertJsonStructure(['data' => ['token', 'user', 'companies']]);
+            ->assertJsonPath('data.user.first_name', 'Jane')
+            ->assertJsonPath('data.user.last_name', 'Doe')
+            ->assertJsonPath('data.user.phone', '0700123456')
+            ->assertJsonPath('data.current_company.name', 'ABC Internet')
+            ->assertJsonPath('data.membership.role.slug', 'owner')
+            ->assertJsonStructure(['data' => ['token', 'user', 'companies', 'current_company']]);
 
-        $this->assertDatabaseHas('users', ['email' => 'jane@example.com']);
+        $this->assertDatabaseHas('users', [
+            'email' => 'jane@example.com',
+            'first_name' => 'Jane',
+            'last_name' => 'Doe',
+            'phone' => '0700123456',
+        ]);
+        $this->assertDatabaseHas('companies', ['name' => 'ABC Internet']);
         Notification::assertSentTo(User::query()->where('email', 'jane@example.com')->first(), VerifyEmailNotification::class);
     }
 
@@ -38,8 +52,11 @@ class AuthenticationTest extends TestCase
         $this->createUser(['email' => 'jane@example.com']);
 
         $this->postJson('/api/v1/auth/register', [
-            'name' => 'Jane',
+            'business_name' => 'ABC Internet',
+            'first_name' => 'Jane',
+            'last_name' => 'Doe',
             'email' => 'jane@example.com',
+            'phone' => '0700123456',
             'password' => 'password123',
             'password_confirmation' => 'password123',
         ])->assertStatus(422);
@@ -48,8 +65,11 @@ class AuthenticationTest extends TestCase
     public function test_invalid_password_is_rejected(): void
     {
         $this->postJson('/api/v1/auth/register', [
-            'name' => 'Jane',
+            'business_name' => 'ABC Internet',
+            'first_name' => 'Jane',
+            'last_name' => 'Doe',
             'email' => 'jane@example.com',
+            'phone' => '0700123456',
             'password' => 'short',
             'password_confirmation' => 'short',
         ])->assertStatus(422);
@@ -234,10 +254,14 @@ class AuthenticationTest extends TestCase
     public function test_legacy_register_route_still_works(): void
     {
         $this->postJson('/api/v1/register', [
-            'name' => 'Legacy',
+            'business_name' => 'Legacy ISP',
+            'first_name' => 'Legacy',
+            'last_name' => 'User',
             'email' => 'legacy@example.com',
+            'phone' => '0700999888',
             'password' => 'password123',
             'password_confirmation' => 'password123',
-        ])->assertCreated();
+        ])->assertCreated()
+            ->assertJsonPath('data.current_company.name', 'Legacy ISP');
     }
 }

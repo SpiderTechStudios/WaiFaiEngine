@@ -27,7 +27,10 @@ use OpenApi\Attributes as OA;
     properties: [
         new OA\Property(property: 'id', type: 'integer', example: 1),
         new OA\Property(property: 'name', type: 'string'),
+        new OA\Property(property: 'first_name', type: 'string', nullable: true),
+        new OA\Property(property: 'last_name', type: 'string', nullable: true),
         new OA\Property(property: 'email', type: 'string', format: 'email'),
+        new OA\Property(property: 'phone', type: 'string', nullable: true),
         new OA\Property(property: 'status', type: 'string', enum: ['pending', 'active', 'suspended', 'inactive']),
         new OA\Property(property: 'is_superadmin', type: 'boolean'),
         new OA\Property(property: 'email_verified_at', type: 'string', format: 'date-time', nullable: true),

@@ -7,29 +7,55 @@ use App\Models\Company;
 use App\Models\User;
 use App\Models\UserCompany;
 use Illuminate\Auth\Events\Registered;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 class AuthService
 {
-    public function __construct(private AuditLogger $auditLogger) {}
+    public function __construct(
+        private AuditLogger $auditLogger,
+        private CompanyService $companyService,
+    ) {}
 
     public function register(array $data): array
     {
-        $user = User::query()->create([
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'password' => $data['password'],
-            'status' => 'pending',
-        ]);
+        return DB::transaction(function () use ($data) {
+            $fullName = trim($data['first_name'].' '.$data['last_name']);
 
-        event(new Registered($user));
+            $user = User::query()->create([
+                'name' => $fullName,
+                'first_name' => $data['first_name'],
+                'last_name' => $data['last_name'],
+                'email' => $data['email'],
+                'phone' => $data['phone'],
+                'password' => $data['password'],
+                'status' => 'pending',
+            ]);
 
-        $token = $user->createToken('auth')->plainTextToken;
+            $company = $this->companyService->create($user, [
+                'name' => $data['business_name'],
+                'email' => $data['business_email'] ?? $data['email'],
+                'phone' => $data['phone'],
+                'address' => $data['address'] ?? null,
+                'timezone' => $data['timezone'] ?? 'UTC',
+            ]);
 
-        $this->auditLogger->log('registered', $user, entityType: User::class, entityId: $user->id);
+            event(new Registered($user));
 
-        return $this->sessionPayload($user, $token);
+            $token = $user->createToken('auth')->plainTextToken;
+
+            $this->auditLogger->log(
+                'registered',
+                $user,
+                $company->id,
+                User::class,
+                $user->id,
+                newValues: ['company_id' => $company->id],
+            );
+
+            return $this->sessionPayload($user->fresh(), $token);
+        });
     }
 
     public function login(string $email, string $password, ?string $deviceName = 'auth'): array

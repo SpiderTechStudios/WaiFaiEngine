@@ -10,8 +10,8 @@ class AuthDocumentation
         path: '/register',
         operationId: 'legacyRegister',
         tags: ['Auth'],
-        summary: 'Register (legacy route)',
-        description: 'Same as POST /auth/register. Kept for existing clients.',
+        summary: 'Register business + owner (legacy route)',
+        description: 'Same as POST /auth/register. Creates the user and their first company in one request.',
         requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(ref: '#/components/schemas/RegisterRequest')),
         responses: [
             new OA\Response(response: 201, description: 'Registered', content: new OA\JsonContent(ref: '#/components/schemas/AuthSessionResponse')),
@@ -24,10 +24,11 @@ class AuthDocumentation
         path: '/auth/register',
         operationId: 'register',
         tags: ['Auth'],
-        summary: 'Register a user',
+        summary: 'Register business and owner account',
+        description: 'Creates a user and their company in one transaction. The registrant becomes the company owner and the company is set as current_company.',
         requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(ref: '#/components/schemas/RegisterRequest')),
         responses: [
-            new OA\Response(response: 201, description: 'Registered', content: new OA\JsonContent(ref: '#/components/schemas/AuthSessionResponse')),
+            new OA\Response(response: 201, description: 'Registered with company', content: new OA\JsonContent(ref: '#/components/schemas/AuthSessionResponse')),
             new OA\Response(response: 422, description: 'Validation error', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
         ]
     )]
@@ -209,12 +210,18 @@ class AuthDocumentation
 
 #[OA\Schema(
     schema: 'RegisterRequest',
-    required: ['name', 'email', 'password', 'password_confirmation'],
+    required: ['business_name', 'first_name', 'last_name', 'email', 'phone', 'password', 'password_confirmation'],
     properties: [
-        new OA\Property(property: 'name', type: 'string'),
-        new OA\Property(property: 'email', type: 'string', format: 'email'),
-        new OA\Property(property: 'password', type: 'string', minLength: 8),
-        new OA\Property(property: 'password_confirmation', type: 'string'),
+        new OA\Property(property: 'business_name', type: 'string', example: 'ABC Internet Services'),
+        new OA\Property(property: 'first_name', type: 'string', example: 'Jane'),
+        new OA\Property(property: 'last_name', type: 'string', example: 'Doe'),
+        new OA\Property(property: 'email', type: 'string', format: 'email', example: 'jane@example.com'),
+        new OA\Property(property: 'phone', type: 'string', example: '0700123456'),
+        new OA\Property(property: 'password', type: 'string', minLength: 8, format: 'password'),
+        new OA\Property(property: 'password_confirmation', type: 'string', format: 'password'),
+        new OA\Property(property: 'business_email', type: 'string', format: 'email', nullable: true, description: 'Defaults to the owner email when omitted'),
+        new OA\Property(property: 'address', type: 'string', nullable: true),
+        new OA\Property(property: 'timezone', type: 'string', nullable: true, example: 'Africa/Nairobi'),
     ]
 )]
 #[OA\Schema(
