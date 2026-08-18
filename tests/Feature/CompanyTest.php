@@ -2,56 +2,43 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
 use Tests\TestCase;
 
 class CompanyTest extends TestCase
 {
-    public function test_user_can_create_company_and_becomes_owner(): void
+    public function test_registration_creates_company_and_owner(): void
     {
-        $user = $this->createUser();
+        $response = $this->postJson('/api/v1/auth/register', [
+            'business_name' => 'ABC Internet',
+            'first_name' => 'Jane',
+            'last_name' => 'Doe',
+            'email' => 'jane@example.com',
+            'phone' => '0700123456',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'portal_subdomain' => 'abc',
+        ]);
 
-        $response = $this->withHeaders($this->authHeaders($user))
-            ->postJson('/api/v1/companies', [
-                'name' => 'ABC Internet',
-                'email' => 'abc@example.com',
-                'phone' => '0700000000',
-            ]);
-
-        $response->assertCreated()->assertJsonPath('data.name', 'ABC Internet');
+        $response->assertCreated()
+            ->assertJsonPath('data.current_company.name', 'ABC Internet')
+            ->assertJsonPath('data.current_company.subdomain', 'abc')
+            ->assertJsonPath('data.membership.role.slug', 'owner');
 
         $this->assertDatabaseHas('user_companies', [
-            'user_id' => $user->id,
+            'user_id' => $response->json('data.user.id'),
             'role_id' => $this->roleId('owner'),
             'status' => 'active',
         ]);
     }
 
-    public function test_list_returns_only_membership_companies(): void
-    {
-        $user = $this->createUser();
-        $mine = $this->createCompanyFor($user);
-        $otherOwner = $this->createUser();
-        $this->createCompanyFor($otherOwner);
-
-        $response = $this->withHeaders($this->authHeaders($user))
-            ->getJson('/api/v1/companies')
-            ->assertOk();
-
-        $ids = collect($response->json('data'))->pluck('id');
-        $this->assertTrue($ids->contains($mine->id));
-        $this->assertCount(1, $ids);
-    }
-
-    public function test_user_cannot_view_another_company(): void
+    public function test_company_crud_routes_are_removed(): void
     {
         $user = $this->createUser();
         $this->createCompanyFor($user);
-        $other = $this->createCompanyFor($this->createUser());
 
         $this->withHeaders($this->authHeaders($user))
-            ->getJson('/api/v1/companies/'.$other->id)
-            ->assertForbidden();
+            ->postJson('/api/v1/companies', ['name' => 'Nope'])
+            ->assertNotFound();
     }
 
     public function test_user_can_switch_between_companies_and_roles_do_not_leak(): void

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureCompanyAccess;
+use App\Http\Middleware\EnsureCurrentCompany;
 use App\Http\Middleware\EnsurePermission;
 use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\EnsureUserIsActive;
@@ -27,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'active.user' => EnsureUserIsActive::class,
             'company.context' => SetCompanyContext::class,
             'company.access' => EnsureCompanyAccess::class,
+            'company.required' => EnsureCurrentCompany::class,
             'superadmin' => EnsureSuperAdmin::class,
             'permission' => EnsurePermission::class,
         ]);

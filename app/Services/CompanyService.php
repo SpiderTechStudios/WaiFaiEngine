@@ -20,11 +20,13 @@ class CompanyService
                 'created_by' => $user->id,
                 'name' => $data['name'],
                 'slug' => $this->uniqueSlug($data['name']),
+                'subdomain' => $this->uniqueSubdomain($data['subdomain'] ?? $data['name']),
                 'email' => $data['email'] ?? null,
                 'phone' => $data['phone'] ?? null,
                 'address' => $data['address'] ?? null,
                 'timezone' => $data['timezone'] ?? 'UTC',
                 'status' => 'active',
+                'settings' => $this->defaultSettings(),
             ]);
 
             $ownerRole = Role::query()->whereNull('company_id')->where('slug', 'owner')->firstOrFail();
@@ -35,6 +37,12 @@ class CompanyService
                 'role_id' => $ownerRole->id,
                 'status' => 'active',
                 'joined_at' => now(),
+            ]);
+
+            $company->wallets()->create([
+                'currency' => 'TZS',
+                'balance' => 0,
+                'status' => 'active',
             ]);
 
             if (! $user->current_company_id) {
@@ -79,6 +87,22 @@ class CompanyService
         return $company;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    public function defaultSettings(): array
+    {
+        return [
+            'primary_color' => '#0F4C81',
+            'logo_url' => null,
+            'voucher_code_digits' => 6,
+            'payout_methods' => [],
+            'captive_portal_welcome_message' => 'Welcome to WiFi. Choose a package or enter a voucher code.',
+            'ruijie_account_id' => null,
+            'ruijie_password' => null,
+        ];
+    }
+
     private function uniqueSlug(string $name): string
     {
         $base = Str::slug($name) ?: 'company';
@@ -90,5 +114,18 @@ class CompanyService
         }
 
         return $slug;
+    }
+
+    private function uniqueSubdomain(string $value): string
+    {
+        $base = Str::slug($value) ?: 'wifi';
+        $subdomain = $base;
+        $i = 1;
+
+        while (Company::query()->where('subdomain', $subdomain)->exists()) {
+            $subdomain = $base.'-'.$i++;
+        }
+
+        return $subdomain;
     }
 }

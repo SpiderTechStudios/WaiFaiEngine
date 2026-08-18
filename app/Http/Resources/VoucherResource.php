@@ -5,7 +5,7 @@ namespace App\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class CompanyResource extends JsonResource
+class VoucherResource extends JsonResource
 {
     /**
      * @return array<string, mixed>
@@ -14,14 +14,11 @@ class CompanyResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'name' => $this->name,
-            'slug' => $this->slug,
-            'subdomain' => $this->subdomain,
-            'email' => $this->email,
-            'phone' => $this->phone,
-            'address' => $this->address,
-            'timezone' => $this->timezone,
+            'code' => $this->code,
             'status' => $this->status,
+            'expires_at' => $this->expires_at,
+            'redeemed_at' => $this->redeemed_at,
+            'internet_plan_id' => $this->internet_plan_id,
             'created_at' => $this->created_at,
         ];
     }

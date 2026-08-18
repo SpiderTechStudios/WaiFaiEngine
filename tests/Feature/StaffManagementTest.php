@@ -16,7 +16,7 @@ class StaffManagementTest extends TestCase
         $staff = $this->createUser(['email' => 'staff@example.com']);
 
         $this->withHeaders($this->authHeaders($owner))
-            ->postJson("/api/v1/companies/{$company->id}/staff", [
+            ->postJson('/api/v1/staff', [
                 'email' => 'staff@example.com',
                 'role' => 'operator',
             ])->assertCreated()
@@ -31,7 +31,7 @@ class StaffManagementTest extends TestCase
         $company = $this->createCompanyFor($owner);
 
         $this->withHeaders($this->authHeaders($owner))
-            ->postJson("/api/v1/companies/{$company->id}/staff", [
+            ->postJson('/api/v1/staff', [
                 'name' => 'New Staff',
                 'email' => 'new@example.com',
                 'role' => 'cashier',
@@ -50,7 +50,7 @@ class StaffManagementTest extends TestCase
         $this->attach($staff, $company, 'operator');
 
         $this->withHeaders($this->authHeaders($owner))
-            ->postJson("/api/v1/companies/{$company->id}/staff", [
+            ->postJson('/api/v1/staff', [
                 'email' => $staff->email,
                 'role' => 'operator',
             ])->assertStatus(422);
@@ -64,7 +64,7 @@ class StaffManagementTest extends TestCase
         $membership = $this->attach($staff, $company, 'operator');
 
         $this->withHeaders($this->authHeaders($owner))
-            ->patchJson("/api/v1/companies/{$company->id}/staff/{$membership->id}/role", [
+            ->patchJson("/api/v1/staff/{$membership->id}/role", [
                 'role' => 'manager',
             ])->assertOk()
             ->assertJsonPath('data.role.slug', 'manager');
@@ -78,16 +78,16 @@ class StaffManagementTest extends TestCase
         $membership = $this->attach($staff, $company, 'operator');
 
         $this->withHeaders($this->authHeaders($owner))
-            ->patchJson("/api/v1/companies/{$company->id}/staff/{$membership->id}/suspend")
+            ->patchJson("/api/v1/staff/{$membership->id}/suspend")
             ->assertOk()
             ->assertJsonPath('data.status', 'suspended');
 
         $this->withHeaders($this->authHeaders($staff->fresh()))
-            ->getJson("/api/v1/companies/{$company->id}")
+            ->getJson('/api/v1/dashboard')
             ->assertForbidden();
 
         $this->withHeaders($this->authHeaders($owner))
-            ->patchJson("/api/v1/companies/{$company->id}/staff/{$membership->id}/activate")
+            ->patchJson("/api/v1/staff/{$membership->id}/activate")
             ->assertOk()
             ->assertJsonPath('data.status', 'active');
     }
@@ -100,7 +100,7 @@ class StaffManagementTest extends TestCase
         $membership = $this->attach($staff, $company, 'operator');
 
         $this->withHeaders($this->authHeaders($owner))
-            ->deleteJson("/api/v1/companies/{$company->id}/staff/{$membership->id}")
+            ->deleteJson("/api/v1/staff/{$membership->id}")
             ->assertOk();
 
         $this->assertDatabaseHas('users', ['id' => $staff->id]);
@@ -117,11 +117,11 @@ class StaffManagementTest extends TestCase
         $ownerMembership = $owner->membershipFor($company);
 
         $this->withHeaders($this->authHeaders($owner))
-            ->deleteJson("/api/v1/companies/{$company->id}/staff/{$ownerMembership->id}")
+            ->deleteJson("/api/v1/staff/{$ownerMembership->id}")
             ->assertForbidden();
 
         $this->withHeaders($this->authHeaders($owner))
-            ->patchJson("/api/v1/companies/{$company->id}/staff/{$ownerMembership->id}/role", [
+            ->patchJson("/api/v1/staff/{$ownerMembership->id}/role", [
                 'role' => 'manager',
             ])->assertForbidden();
     }
@@ -136,7 +136,7 @@ class StaffManagementTest extends TestCase
         $membership = $this->attach($staff, $company, 'operator');
 
         $this->withHeaders($this->authHeaders($manager))
-            ->patchJson("/api/v1/companies/{$company->id}/staff/{$membership->id}", [
+            ->patchJson("/api/v1/staff/{$membership->id}", [
                 'role' => 'owner',
             ])->assertStatus(422);
     }
@@ -149,7 +149,7 @@ class StaffManagementTest extends TestCase
         $membership = $this->attach($manager, $company, 'manager');
 
         $this->withHeaders($this->authHeaders($owner))
-            ->postJson("/api/v1/companies/{$company->id}/ownership/transfer", [
+            ->postJson('/api/v1/ownership/transfer', [
                 'membership_id' => $membership->id,
             ])->assertOk();
 
@@ -165,7 +165,7 @@ class StaffManagementTest extends TestCase
         $this->attach($operator, $company, 'operator');
 
         $this->withHeaders($this->authHeaders($operator))
-            ->postJson("/api/v1/companies/{$company->id}/staff", [
+            ->postJson('/api/v1/staff', [
                 'email' => 'someone@example.com',
                 'role' => 'cashier',
             ])->assertForbidden();

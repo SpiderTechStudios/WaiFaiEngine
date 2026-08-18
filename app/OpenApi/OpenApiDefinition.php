@@ -7,7 +7,7 @@ use OpenApi\Attributes as OA;
 #[OA\Info(
     title: 'WaiFai Engine API',
     version: '1.0.0',
-    description: 'Multi-tenant authentication, company membership, staff, and platform administration APIs.'
+    description: 'Hotspot management API: authentication, current-company operations, staff, and platform administration.'
 )]
 #[OA\Server(url: '/api/v1', description: 'API v1')]
 #[OA\SecurityScheme(
@@ -18,7 +18,18 @@ use OpenApi\Attributes as OA;
     description: 'Laravel Sanctum personal access token. Prefix with Bearer.'
 )]
 #[OA\Tag(name: 'Auth', description: 'Registration, login, session, and password')]
-#[OA\Tag(name: 'Companies', description: 'Company creation and membership-scoped company APIs')]
-#[OA\Tag(name: 'Staff', description: 'Company staff and ownership')]
+#[OA\Tag(name: 'Dashboard', description: 'Home KPIs')]
+#[OA\Tag(name: 'Income', description: 'Revenue by source')]
+#[OA\Tag(name: 'Device Setup', description: 'MikroTik and Ruijie Cloud instructions')]
+#[OA\Tag(name: 'Routers', description: 'Hotspot routers')]
+#[OA\Tag(name: 'Packages', description: 'Internet packages')]
+#[OA\Tag(name: 'Vouchers', description: 'Prepaid voucher codes')]
+#[OA\Tag(name: 'Payments', description: 'Customer payments')]
+#[OA\Tag(name: 'Sessions', description: 'Active and recent hotspot sessions')]
+#[OA\Tag(name: 'Customers', description: 'Hotspot customers')]
+#[OA\Tag(name: 'Staff', description: 'Company staff')]
+#[OA\Tag(name: 'Branches', description: 'Business locations')]
+#[OA\Tag(name: 'Withdrawals', description: 'Payouts from company wallet')]
+#[OA\Tag(name: 'Settings', description: 'Company branding and integrations')]
 #[OA\Tag(name: 'Superadmin', description: 'Platform administration')]
 class OpenApiDefinition {}

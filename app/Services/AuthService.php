@@ -39,6 +39,7 @@ class AuthService
                 'phone' => $data['phone'],
                 'address' => $data['address'] ?? null,
                 'timezone' => $data['timezone'] ?? 'UTC',
+                'subdomain' => $data['portal_subdomain'] ?? null,
             ]);
 
             event(new Registered($user));

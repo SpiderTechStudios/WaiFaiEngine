@@ -66,12 +66,18 @@ abstract class TestCase extends \Illuminate\Foundation\Testing\TestCase
 
     protected function attach(User $user, Company $company, string $role = 'operator', string $status = 'active'): UserCompany
     {
-        return UserCompany::query()->create([
+        $membership = UserCompany::query()->create([
             'user_id' => $user->id,
             'company_id' => $company->id,
             'role_id' => $this->roleId($role),
             'status' => $status,
             'joined_at' => now(),
         ]);
+
+        if (! $user->current_company_id) {
+            $user->forceFill(['current_company_id' => $company->id])->save();
+        }
+
+        return $membership;
     }
 }

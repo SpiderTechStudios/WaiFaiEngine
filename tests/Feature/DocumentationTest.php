@@ -23,8 +23,10 @@ class DocumentationTest extends TestCase
 
         $this->assertContains('/auth/login', $paths);
         $this->assertContains('/auth/register', $paths);
-        $this->assertContains('/companies', $paths);
-        $this->assertContains('/companies/{company}/staff', $paths);
-        $this->assertContains('/superadmin/users', $paths);
+        $this->assertContains('/dashboard', $paths);
+        $this->assertContains('/routers', $paths);
+        $this->assertContains('/packages', $paths);
+        $this->assertContains('/settings', $paths);
+        $this->assertNotContains('/companies', $paths);
     }
 }

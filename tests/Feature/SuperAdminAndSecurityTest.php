@@ -69,23 +69,28 @@ class SuperAdminAndSecurityTest extends TestCase
         $membership->forceFill(['status' => 'removed'])->save();
 
         $this->withHeaders($this->authHeaders($staff))
-            ->getJson("/api/v1/companies/{$company->id}")
+            ->getJson('/api/v1/dashboard')
             ->assertForbidden();
     }
 
-    public function test_company_isolation_on_company_show(): void
+    public function test_company_isolation_on_packages(): void
     {
         $userA = $this->createUser();
-        $companyA = $this->createCompanyFor($userA);
+        $this->createCompanyFor($userA);
         $userB = $this->createUser();
-        $companyB = $this->createCompanyFor($userB);
+        $this->createCompanyFor($userB);
+
+        $package = $this->withHeaders($this->authHeaders($userB))
+            ->postJson('/api/v1/packages', [
+                'name' => '1 Hour',
+                'duration' => 1,
+                'duration_unit' => 'hour',
+                'price' => 1000,
+            ])->assertCreated()
+            ->json('data.id');
 
         $this->withHeaders($this->authHeaders($userA))
-            ->getJson("/api/v1/companies/{$companyB->id}")
-            ->assertForbidden();
-
-        $this->withHeaders($this->authHeaders($userA))
-            ->getJson("/api/v1/companies/{$companyA->id}")
-            ->assertOk();
+            ->getJson('/api/v1/packages/'.$package)
+            ->assertNotFound();
     }
 }

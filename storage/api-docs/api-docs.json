@@ -2,7 +2,7 @@
     "openapi": "3.0.0",
     "info": {
         "title": "WaiFai Engine API",
-        "description": "Multi-tenant authentication, company membership, staff, and platform administration APIs.",
+        "description": "Hotspot management API: authentication, current-company operations, staff, and platform administration.",
         "version": "1.0.0"
     },
     "servers": [
@@ -60,7 +60,7 @@
                     "Auth"
                 ],
                 "summary": "Register business and owner account",
-                "description": "Creates a user and their company in one transaction. The registrant becomes the company owner and the company is set as current_company.",
+                "description": "Creates a user and their company in one transaction. The registrant becomes the company owner. Optional portal_subdomain is used for the captive portal URL.",
                 "operationId": "register",
                 "requestBody": {
                     "required": true,
@@ -580,23 +580,72 @@
                 ]
             }
         },
-        "/companies": {
+        "/dashboard": {
             "get": {
                 "tags": [
-                    "Companies"
+                    "Dashboard"
                 ],
-                "summary": "List companies the user belongs to",
-                "operationId": "listCompanies",
+                "summary": "Manager dashboard KPIs",
+                "operationId": "dashboard",
                 "responses": {
                     "200": {
-                        "description": "Companies",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/CompanyListResponse"
-                                }
-                            }
-                        }
+                        "description": "Dashboard"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/income": {
+            "get": {
+                "tags": [
+                    "Income"
+                ],
+                "summary": "Income by source and last 14 days",
+                "operationId": "income",
+                "responses": {
+                    "200": {
+                        "description": "Income"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/device-setup": {
+            "get": {
+                "tags": [
+                    "Device Setup"
+                ],
+                "summary": "MikroTik and Ruijie Cloud setup instructions",
+                "operationId": "deviceSetup",
+                "responses": {
+                    "200": {
+                        "description": "Instructions"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/routers": {
+            "get": {
+                "tags": [
+                    "Routers"
+                ],
+                "operationId": "listRouters",
+                "responses": {
+                    "200": {
+                        "description": "Routers"
                     }
                 },
                 "security": [
@@ -607,11 +656,9 @@
             },
             "post": {
                 "tags": [
-                    "Companies"
+                    "Routers"
                 ],
-                "summary": "Create an additional company and become owner",
-                "description": "Use this after registration when the authenticated user needs another company. Initial signup already creates the first company via POST /auth/register.",
-                "operationId": "createCompany",
+                "operationId": "createRouter",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -623,24 +670,30 @@
                                 "properties": {
                                     "name": {
                                         "type": "string",
-                                        "example": "ABC Internet Services"
+                                        "example": "Main AP"
                                     },
-                                    "email": {
+                                    "vendor": {
                                         "type": "string",
-                                        "format": "email",
-                                        "nullable": true
+                                        "example": "mikrotik"
                                     },
-                                    "phone": {
-                                        "type": "string",
-                                        "nullable": true
-                                    },
-                                    "address": {
+                                    "model": {
                                         "type": "string",
                                         "nullable": true
                                     },
-                                    "timezone": {
+                                    "serial_number": {
                                         "type": "string",
-                                        "example": "UTC",
+                                        "nullable": true
+                                    },
+                                    "mac_address": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "ip_address": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "branch_id": {
+                                        "type": "integer",
                                         "nullable": true
                                     }
                                 },
@@ -651,24 +704,7 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Created",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/CompanyResponse"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
+                        "description": "Created"
                     }
                 },
                 "security": [
@@ -678,16 +714,15 @@
                 ]
             }
         },
-        "/companies/{company}": {
+        "/routers/{router}": {
             "get": {
                 "tags": [
-                    "Companies"
+                    "Routers"
                 ],
-                "summary": "View a company the user belongs to",
-                "operationId": "showCompany",
+                "operationId": "showRouter",
                 "parameters": [
                     {
-                        "name": "company",
+                        "name": "router",
                         "in": "path",
                         "required": true,
                         "schema": {
@@ -697,24 +732,33 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Company",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/CompanyResponse"
-                                }
-                            }
+                        "description": "Router"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Routers"
+                ],
+                "operationId": "deleteRouter",
+                "parameters": [
+                    {
+                        "name": "router",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
                         }
-                    },
-                    "403": {
-                        "description": "Not a member",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Deleted"
                     }
                 },
                 "security": [
@@ -725,13 +769,12 @@
             },
             "patch": {
                 "tags": [
-                    "Companies"
+                    "Routers"
                 ],
-                "summary": "Update a company",
-                "operationId": "updateCompany",
+                "operationId": "updateRouter",
                 "parameters": [
                     {
-                        "name": "company",
+                        "name": "router",
                         "in": "path",
                         "required": true,
                         "schema": {
@@ -739,28 +782,217 @@
                         }
                     }
                 ],
+                "responses": {
+                    "200": {
+                        "description": "Updated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/packages": {
+            "get": {
+                "tags": [
+                    "Packages"
+                ],
+                "operationId": "listPackages",
+                "responses": {
+                    "200": {
+                        "description": "Packages"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Packages"
+                ],
+                "operationId": "createPackage",
                 "requestBody": {
+                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
+                                "required": [
+                                    "name",
+                                    "price"
+                                ],
                                 "properties": {
                                     "name": {
-                                        "type": "string"
-                                    },
-                                    "email": {
                                         "type": "string",
-                                        "format": "email",
-                                        "nullable": true
+                                        "example": "1 Hour"
                                     },
-                                    "phone": {
+                                    "duration": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "duration_unit": {
                                         "type": "string",
-                                        "nullable": true
+                                        "example": "hour"
                                     },
-                                    "address": {
+                                    "download_speed": {
+                                        "type": "integer",
+                                        "example": 5
+                                    },
+                                    "upload_speed": {
+                                        "type": "integer",
+                                        "example": 5
+                                    },
+                                    "price": {
+                                        "type": "number",
+                                        "example": 1000
+                                    },
+                                    "currency": {
                                         "type": "string",
-                                        "nullable": true
+                                        "example": "TZS"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/packages/{package}": {
+            "get": {
+                "tags": [
+                    "Packages"
+                ],
+                "operationId": "showPackage",
+                "parameters": [
+                    {
+                        "name": "package",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Package"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Packages"
+                ],
+                "operationId": "deletePackage",
+                "parameters": [
+                    {
+                        "name": "package",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Deleted"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Packages"
+                ],
+                "operationId": "updatePackage",
+                "parameters": [
+                    {
+                        "name": "package",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Updated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/vouchers": {
+            "get": {
+                "tags": [
+                    "Vouchers"
+                ],
+                "operationId": "listVouchers",
+                "responses": {
+                    "200": {
+                        "description": "Vouchers"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Vouchers"
+                ],
+                "summary": "Generate voucher codes for a package",
+                "operationId": "createVouchers",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "internet_plan_id",
+                                    "quantity"
+                                ],
+                                "properties": {
+                                    "internet_plan_id": {
+                                        "type": "integer"
                                     },
-                                    "timezone": {
+                                    "quantity": {
+                                        "type": "integer",
+                                        "example": 10
+                                    },
+                                    "name": {
                                         "type": "string",
                                         "nullable": true
                                     }
@@ -771,25 +1003,8 @@
                     }
                 },
                 "responses": {
-                    "200": {
-                        "description": "Updated",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/CompanyResponse"
-                                }
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
+                    "201": {
+                        "description": "Created"
                     }
                 },
                 "security": [
@@ -799,60 +1014,323 @@
                 ]
             }
         },
-        "/companies/{company}/staff": {
+        "/payments": {
+            "get": {
+                "tags": [
+                    "Payments"
+                ],
+                "operationId": "listPayments",
+                "responses": {
+                    "200": {
+                        "description": "Payments"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Payments"
+                ],
+                "operationId": "createPayment",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "internet_plan_id"
+                                ],
+                                "properties": {
+                                    "internet_plan_id": {
+                                        "type": "integer"
+                                    },
+                                    "customer_name": {
+                                        "type": "string"
+                                    },
+                                    "customer_phone": {
+                                        "type": "string"
+                                    },
+                                    "payment_method": {
+                                        "type": "string",
+                                        "example": "mpesa"
+                                    },
+                                    "amount": {
+                                        "type": "number",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Recorded"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/sessions": {
+            "get": {
+                "tags": [
+                    "Sessions"
+                ],
+                "operationId": "listSessions",
+                "responses": {
+                    "200": {
+                        "description": "Sessions"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/customers": {
+            "get": {
+                "tags": [
+                    "Customers"
+                ],
+                "operationId": "listCustomers",
+                "responses": {
+                    "200": {
+                        "description": "Customers"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/branches": {
+            "get": {
+                "tags": [
+                    "Branches"
+                ],
+                "operationId": "listBranches",
+                "responses": {
+                    "200": {
+                        "description": "Branches"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Branches"
+                ],
+                "operationId": "createBranch",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "address": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/withdrawals": {
+            "get": {
+                "tags": [
+                    "Withdrawals"
+                ],
+                "operationId": "listWithdrawals",
+                "responses": {
+                    "200": {
+                        "description": "Withdrawals and wallet balance"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Withdrawals"
+                ],
+                "operationId": "createWithdrawal",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "amount",
+                                    "provider",
+                                    "destination_phone"
+                                ],
+                                "properties": {
+                                    "amount": {
+                                        "type": "number",
+                                        "example": 10000
+                                    },
+                                    "provider": {
+                                        "type": "string",
+                                        "example": "mpesa"
+                                    },
+                                    "destination_phone": {
+                                        "type": "string"
+                                    },
+                                    "destination_name": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Requested"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/settings": {
+            "get": {
+                "tags": [
+                    "Settings"
+                ],
+                "summary": "Current company settings",
+                "operationId": "showSettings",
+                "responses": {
+                    "200": {
+                        "description": "Settings"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Settings"
+                ],
+                "summary": "Update branding, voucher digits, payout methods, portal message, and Ruijie credentials",
+                "operationId": "updateSettings",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "primary_color": {
+                                        "type": "string",
+                                        "example": "#0F4C81"
+                                    },
+                                    "logo_url": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "voucher_code_digits": {
+                                        "type": "integer",
+                                        "example": 6
+                                    },
+                                    "captive_portal_welcome_message": {
+                                        "type": "string"
+                                    },
+                                    "ruijie_account_id": {
+                                        "type": "string"
+                                    },
+                                    "ruijie_password": {
+                                        "type": "string"
+                                    },
+                                    "portal_subdomain": {
+                                        "type": "string"
+                                    },
+                                    "payout_methods": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/staff": {
             "get": {
                 "tags": [
                     "Staff"
                 ],
-                "summary": "List company staff",
+                "summary": "List staff for the current company",
                 "operationId": "listStaff",
-                "parameters": [
-                    {
-                        "name": "company",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
                 "responses": {
                     "200": {
-                        "description": "Staff list",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "boolean"
-                                        },
-                                        "code": {
-                                            "type": "integer"
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        },
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/components/schemas/Membership"
-                                            }
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "description": "Staff list"
                     },
                     "403": {
-                        "description": "Forbidden",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
+                        "description": "Forbidden"
                     }
                 },
                 "security": [
@@ -866,18 +1344,7 @@
                     "Staff"
                 ],
                 "summary": "Add or invite staff",
-                "description": "If the email already exists, a membership is created. Otherwise a pending user is invited.",
                 "operationId": "addStaff",
-                "parameters": [
-                    {
-                        "name": "company",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -912,24 +1379,7 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Staff added",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/MembershipResponse"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Duplicate membership or validation error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
+                        "description": "Staff added"
                     }
                 },
                 "security": [
@@ -939,22 +1389,13 @@
                 ]
             }
         },
-        "/companies/{company}/staff/{membership}": {
+        "/staff/{membership}": {
             "get": {
                 "tags": [
                     "Staff"
                 ],
-                "summary": "View a staff membership",
                 "operationId": "showStaff",
                 "parameters": [
-                    {
-                        "name": "company",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
                     {
                         "name": "membership",
                         "in": "path",
@@ -966,14 +1407,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Membership",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/MembershipResponse"
-                                }
-                            }
-                        }
+                        "description": "Membership"
                     }
                 },
                 "security": [
@@ -986,18 +1420,8 @@
                 "tags": [
                     "Staff"
                 ],
-                "summary": "Remove staff from the company",
-                "description": "Marks the membership as removed. Does not delete the global user.",
                 "operationId": "removeStaff",
                 "parameters": [
-                    {
-                        "name": "company",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
                     {
                         "name": "membership",
                         "in": "path",
@@ -1009,14 +1433,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Removed",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/MessageResponse"
-                                }
-                            }
-                        }
+                        "description": "Removed"
                     }
                 },
                 "security": [
@@ -1029,18 +1446,9 @@
                 "tags": [
                     "Staff"
                 ],
-                "summary": "Update staff role (alias)",
                 "operationId": "updateStaffRoleAlias",
                 "parameters": [
                     {
-                        "name": "company",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
                         "name": "membership",
                         "in": "path",
                         "required": true,
@@ -1074,24 +1482,7 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Role updated",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/MembershipResponse"
-                                }
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Owner protection or missing permission",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
+                        "description": "Updated"
                     }
                 },
                 "security": [
@@ -1101,23 +1492,14 @@
                 ]
             }
         },
-        "/companies/{company}/staff/{membership}/role": {
+        "/staff/{membership}/role": {
             "patch": {
                 "tags": [
                     "Staff"
                 ],
-                "summary": "Update staff role",
                 "operationId": "updateStaffRole",
                 "parameters": [
                     {
-                        "name": "company",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
                         "name": "membership",
                         "in": "path",
                         "required": true,
@@ -1151,14 +1533,7 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Role updated",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/MembershipResponse"
-                                }
-                            }
-                        }
+                        "description": "Updated"
                     }
                 },
                 "security": [
@@ -1168,23 +1543,14 @@
                 ]
             }
         },
-        "/companies/{company}/staff/{membership}/suspend": {
+        "/staff/{membership}/suspend": {
             "patch": {
                 "tags": [
                     "Staff"
                 ],
-                "summary": "Suspend a company membership",
                 "operationId": "suspendStaff",
                 "parameters": [
                     {
-                        "name": "company",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
                         "name": "membership",
                         "in": "path",
                         "required": true,
@@ -1195,14 +1561,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Suspended",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/MembershipResponse"
-                                }
-                            }
-                        }
+                        "description": "Suspended"
                     }
                 },
                 "security": [
@@ -1212,22 +1571,13 @@
                 ]
             }
         },
-        "/companies/{company}/staff/{membership}/activate": {
+        "/staff/{membership}/activate": {
             "patch": {
                 "tags": [
                     "Staff"
                 ],
-                "summary": "Activate a company membership",
                 "operationId": "activateStaff",
                 "parameters": [
-                    {
-                        "name": "company",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
                     {
                         "name": "membership",
                         "in": "path",
@@ -1239,14 +1589,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Activated",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/MembershipResponse"
-                                }
-                            }
-                        }
+                        "description": "Activated"
                     }
                 },
                 "security": [
@@ -1256,23 +1599,13 @@
                 ]
             }
         },
-        "/companies/{company}/ownership/transfer": {
+        "/ownership/transfer": {
             "post": {
                 "tags": [
                     "Staff"
                 ],
                 "summary": "Transfer company ownership",
                 "operationId": "transferOwnership",
-                "parameters": [
-                    {
-                        "name": "company",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -1293,24 +1626,7 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Ownership transferred",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/MessageResponse"
-                                }
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
+                        "description": "Transferred"
                     }
                 },
                 "security": [
@@ -1682,9 +1998,10 @@
                         "type": "string",
                         "nullable": true
                     },
-                    "timezone": {
+                    "portal_subdomain": {
+                        "description": "Auto-assigned from business name if omitted",
                         "type": "string",
-                        "example": "Africa/Nairobi",
+                        "example": "morice",
                         "nullable": true
                     }
                 },
@@ -1847,6 +2164,10 @@
                     },
                     "slug": {
                         "type": "string"
+                    },
+                    "subdomain": {
+                        "type": "string",
+                        "nullable": true
                     },
                     "email": {
                         "type": "string",
@@ -2159,12 +2480,56 @@
             "description": "Registration, login, session, and password"
         },
         {
-            "name": "Companies",
-            "description": "Company creation and membership-scoped company APIs"
+            "name": "Dashboard",
+            "description": "Home KPIs"
+        },
+        {
+            "name": "Income",
+            "description": "Revenue by source"
+        },
+        {
+            "name": "Device Setup",
+            "description": "MikroTik and Ruijie Cloud instructions"
+        },
+        {
+            "name": "Routers",
+            "description": "Hotspot routers"
+        },
+        {
+            "name": "Packages",
+            "description": "Internet packages"
+        },
+        {
+            "name": "Vouchers",
+            "description": "Prepaid voucher codes"
+        },
+        {
+            "name": "Payments",
+            "description": "Customer payments"
+        },
+        {
+            "name": "Sessions",
+            "description": "Active and recent hotspot sessions"
+        },
+        {
+            "name": "Customers",
+            "description": "Hotspot customers"
         },
         {
             "name": "Staff",
-            "description": "Company staff and ownership"
+            "description": "Company staff"
+        },
+        {
+            "name": "Branches",
+            "description": "Business locations"
+        },
+        {
+            "name": "Withdrawals",
+            "description": "Payouts from company wallet"
+        },
+        {
+            "name": "Settings",
+            "description": "Company branding and integrations"
         },
         {
             "name": "Superadmin",

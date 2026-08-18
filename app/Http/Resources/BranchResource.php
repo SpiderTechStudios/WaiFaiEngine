@@ -5,7 +5,7 @@ namespace App\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class CompanyResource extends JsonResource
+class BranchResource extends JsonResource
 {
     /**
      * @return array<string, mixed>
@@ -15,12 +15,9 @@ class CompanyResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
-            'slug' => $this->slug,
-            'subdomain' => $this->subdomain,
-            'email' => $this->email,
-            'phone' => $this->phone,
+            'code' => $this->code,
+            'description' => $this->description,
             'address' => $this->address,
-            'timezone' => $this->timezone,
             'status' => $this->status,
             'created_at' => $this->created_at,
         ];

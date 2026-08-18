@@ -20,6 +20,7 @@ class CompanyFactory extends Factory
             'created_by' => User::factory(),
             'name' => $name,
             'slug' => Str::slug($name).'-'.fake()->unique()->numerify('###'),
+            'subdomain' => Str::slug($name).fake()->unique()->numerify('###'),
             'email' => fake()->companyEmail(),
             'phone' => fake()->phoneNumber(),
             'status' => 'active',

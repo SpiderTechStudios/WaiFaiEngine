@@ -25,7 +25,7 @@ class RegisterRequest extends FormRequest
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'business_email' => ['nullable', 'email', 'max:255'],
             'address' => ['nullable', 'string'],
-            'timezone' => ['nullable', 'string', 'max:64'],
+            'portal_subdomain' => ['nullable', 'string', 'max:63', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/'],
         ];
     }
 }

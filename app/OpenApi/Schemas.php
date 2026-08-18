@@ -45,6 +45,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'id', type: 'integer', example: 1),
         new OA\Property(property: 'name', type: 'string'),
         new OA\Property(property: 'slug', type: 'string'),
+        new OA\Property(property: 'subdomain', type: 'string', nullable: true),
         new OA\Property(property: 'email', type: 'string', nullable: true),
         new OA\Property(property: 'phone', type: 'string', nullable: true),
         new OA\Property(property: 'address', type: 'string', nullable: true),

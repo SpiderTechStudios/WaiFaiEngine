@@ -25,7 +25,7 @@ class AuthDocumentation
         operationId: 'register',
         tags: ['Auth'],
         summary: 'Register business and owner account',
-        description: 'Creates a user and their company in one transaction. The registrant becomes the company owner and the company is set as current_company.',
+        description: 'Creates a user and their company in one transaction. The registrant becomes the company owner. Optional portal_subdomain is used for the captive portal URL.',
         requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(ref: '#/components/schemas/RegisterRequest')),
         responses: [
             new OA\Response(response: 201, description: 'Registered with company', content: new OA\JsonContent(ref: '#/components/schemas/AuthSessionResponse')),
@@ -221,7 +221,7 @@ class AuthDocumentation
         new OA\Property(property: 'password_confirmation', type: 'string', format: 'password'),
         new OA\Property(property: 'business_email', type: 'string', format: 'email', nullable: true, description: 'Defaults to the owner email when omitted'),
         new OA\Property(property: 'address', type: 'string', nullable: true),
-        new OA\Property(property: 'timezone', type: 'string', nullable: true, example: 'Africa/Nairobi'),
+        new OA\Property(property: 'portal_subdomain', type: 'string', nullable: true, example: 'morice', description: 'Auto-assigned from business name if omitted'),
     ]
 )]
 #[OA\Schema(
