@@ -12,13 +12,35 @@
         }
     ],
     "paths": {
+        "/": {
+            "get": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "API root",
+                "description": "Named login fallback. Returns a JSON error instead of a web login page.",
+                "operationId": "authDefaultPage",
+                "responses": {
+                    "401": {
+                        "description": "Insufficient permissions",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/auth/register": {
             "post": {
                 "tags": [
                     "Auth"
                 ],
                 "summary": "Register business and owner account",
-                "description": "Creates a user and their company in one transaction. The registrant becomes the company owner. Optional portal_subdomain is used for the captive portal URL.",
+                "description": "Creates a user and their first company in one transaction. The registrant becomes the company owner. Optional portal_subdomain is used for the captive portal URL. Returns a session payload including a Sanctum token.",
                 "operationId": "register",
                 "requestBody": {
                     "required": true,
@@ -36,7 +58,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/AuthSessionResponse"
+                                    "$ref": "#/components/schemas/AuthSessionCreatedResponse"
                                 }
                             }
                         }
@@ -54,13 +76,212 @@
                 }
             }
         },
+        "/auth/login": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Login",
+                "operationId": "login",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LoginRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Logged in",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AuthSessionTokenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid credentials or inactive account",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/forgot-password": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Request a password reset",
+                "description": "Always returns a generic success message to avoid account enumeration.",
+                "operationId": "forgotPassword",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ForgotPasswordRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Generic success",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MessageResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/reset-password": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Reset password with token",
+                "operationId": "resetPassword",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ResetPasswordRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Password reset",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MessageResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid or expired token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/email/verify/{id}/{hash}": {
+            "get": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Verify email from signed link",
+                "operationId": "verifyEmail",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "hash",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "expires",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "signature",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Email verified",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MessageResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Invalid verification link",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/auth/admin/register": {
             "post": {
                 "tags": [
                     "Auth"
                 ],
                 "summary": "Register a platform administrator",
-                "description": "Superadmin only. Creates another superadmin or a normal platform admin account. A temporary password is generated and emailed to the new administrator.",
+                "description": "Superadmin only. Creates another superadmin or a normal platform admin. A temporary password is generated and emailed. No company is created.",
                 "operationId": "registerAdmin",
                 "requestBody": {
                     "required": true,
@@ -78,7 +299,17 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/UserResponse"
+                                    "$ref": "#/components/schemas/UserCreatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
                                 }
                             }
                         }
@@ -111,71 +342,13 @@
                 ]
             }
         },
-        "/auth/login": {
-            "post": {
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Login",
-                "operationId": "login",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "email",
-                                    "password"
-                                ],
-                                "properties": {
-                                    "email": {
-                                        "type": "string",
-                                        "format": "email"
-                                    },
-                                    "password": {
-                                        "type": "string",
-                                        "format": "password"
-                                    },
-                                    "device_name": {
-                                        "type": "string",
-                                        "nullable": true
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Logged in",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/AuthSessionResponse"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Invalid credentials or inactive account",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/auth/me": {
             "get": {
                 "tags": [
                     "Auth"
                 ],
-                "summary": "Current authenticated user",
+                "summary": "Current authenticated session",
+                "description": "Returns the current user, companies, current company, membership, and permissions. Token is omitted.",
                 "operationId": "me",
                 "responses": {
                     "200": {
@@ -300,16 +473,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "company_id"
-                                ],
-                                "properties": {
-                                    "company_id": {
-                                        "type": "integer",
-                                        "example": 1
-                                    }
-                                },
-                                "type": "object"
+                                "$ref": "#/components/schemas/SwitchCompanyRequest"
                             }
                         }
                     }
@@ -325,8 +489,28 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
                     "403": {
                         "description": "Not a member or company inactive",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -367,6 +551,16 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/MessageResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
                                 }
                             }
                         }
@@ -414,6 +608,26 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -421,152 +635,6 @@
                         "sanctum": []
                     }
                 ]
-            }
-        },
-        "/auth/forgot-password": {
-            "post": {
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Request a password reset",
-                "operationId": "forgotPassword",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "email"
-                                ],
-                                "properties": {
-                                    "email": {
-                                        "type": "string",
-                                        "format": "email"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Generic success to avoid account enumeration",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/MessageResponse"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/auth/reset-password": {
-            "post": {
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Reset password with token",
-                "operationId": "resetPassword",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/ResetPasswordRequest"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Password reset",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/MessageResponse"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Invalid or expired token",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/auth/email/verify/{id}/{hash}": {
-            "get": {
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Verify email from signed link",
-                "operationId": "verifyEmail",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "hash",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "expires",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
-                        "name": "signature",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Email verified",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/MessageResponse"
-                                }
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Invalid verification link",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
-                    }
-                }
             }
         },
         "/auth/email/resend": {
@@ -578,11 +646,21 @@
                 "operationId": "resendVerification",
                 "responses": {
                     "200": {
-                        "description": "Verification email sent",
+                        "description": "Verification email sent, or already verified",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/MessageResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
                                 }
                             }
                         }
@@ -1976,43 +2054,51 @@
                 "properties": {
                     "first_name": {
                         "type": "string",
-                        "example": "Jane"
+                        "example": "Jane",
+                        "maxLength": 255
                     },
                     "last_name": {
                         "type": "string",
-                        "example": "Doe"
+                        "example": "Doe",
+                        "maxLength": 255
                     },
                     "business_name": {
                         "type": "string",
-                        "example": "ABC Internet Services"
+                        "example": "ABC Internet Services",
+                        "maxLength": 255
                     },
                     "email": {
                         "type": "string",
                         "format": "email",
-                        "example": "jane@example.com"
+                        "example": "jane@example.com",
+                        "maxLength": 255
                     },
                     "phone": {
                         "type": "string",
-                        "example": "0700123456"
+                        "example": "0700123456",
+                        "maxLength": 50
                     },
                     "password": {
                         "type": "string",
                         "format": "password",
+                        "example": "password123",
                         "minLength": 8
                     },
                     "password_confirmation": {
                         "type": "string",
-                        "format": "password"
+                        "format": "password",
+                        "example": "password123"
                     },
                     "address": {
                         "type": "string",
                         "example": "Dar es Salaam, Tanzania"
                     },
                     "portal_subdomain": {
-                        "description": "Optional captive portal subdomain. Auto-assigned from business name when omitted.",
+                        "description": "Lowercase slug. Auto-assigned from business name when omitted.",
                         "type": "string",
                         "example": "abc-internet",
-                        "nullable": true
+                        "nullable": true,
+                        "maxLength": 63
                     }
                 },
                 "type": "object"
@@ -2028,20 +2114,24 @@
                 "properties": {
                     "first_name": {
                         "type": "string",
-                        "example": "John"
+                        "example": "John",
+                        "maxLength": 255
                     },
                     "last_name": {
                         "type": "string",
-                        "example": "Admin"
+                        "example": "Admin",
+                        "maxLength": 255
                     },
                     "email": {
                         "type": "string",
                         "format": "email",
-                        "example": "admin@example.com"
+                        "example": "admin@example.com",
+                        "maxLength": 255
                     },
                     "phone": {
                         "type": "string",
-                        "example": "0700123456"
+                        "example": "0700123456",
+                        "maxLength": 50
                     },
                     "account_type": {
                         "type": "string",
@@ -2054,6 +2144,44 @@
                 },
                 "type": "object"
             },
+            "LoginRequest": {
+                "required": [
+                    "email",
+                    "password"
+                ],
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "jane@example.com"
+                    },
+                    "password": {
+                        "type": "string",
+                        "format": "password",
+                        "example": "password123"
+                    },
+                    "device_name": {
+                        "type": "string",
+                        "example": "chrome-desktop",
+                        "nullable": true,
+                        "maxLength": 255
+                    }
+                },
+                "type": "object"
+            },
+            "ForgotPasswordRequest": {
+                "required": [
+                    "email"
+                ],
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "jane@example.com"
+                    }
+                },
+                "type": "object"
+            },
             "UpdatePasswordRequest": {
                 "required": [
                     "current_password",
@@ -2062,14 +2190,17 @@
                 ],
                 "properties": {
                     "current_password": {
-                        "type": "string"
+                        "type": "string",
+                        "format": "password"
                     },
                     "password": {
                         "type": "string",
+                        "format": "password",
                         "minLength": 8
                     },
                     "password_confirmation": {
-                        "type": "string"
+                        "type": "string",
+                        "format": "password"
                     }
                 },
                 "type": "object"
@@ -2091,10 +2222,24 @@
                     },
                     "password": {
                         "type": "string",
+                        "format": "password",
                         "minLength": 8
                     },
                     "password_confirmation": {
-                        "type": "string"
+                        "type": "string",
+                        "format": "password"
+                    }
+                },
+                "type": "object"
+            },
+            "SwitchCompanyRequest": {
+                "required": [
+                    "company_id"
+                ],
+                "properties": {
+                    "company_id": {
+                        "type": "integer",
+                        "example": 1
                     }
                 },
                 "type": "object"
@@ -2110,11 +2255,13 @@
                         "example": 422
                     },
                     "message": {
-                        "type": "string"
+                        "type": "string",
+                        "example": "The given data was invalid."
                     },
                     "data": {
                         "type": "object",
-                        "nullable": true
+                        "nullable": true,
+                        "additionalProperties": true
                     }
                 },
                 "type": "object"
@@ -2130,13 +2277,15 @@
                         "example": 200
                     },
                     "message": {
-                        "type": "string"
+                        "type": "string",
+                        "example": "Success"
                     },
                     "data": {
                         "type": "array",
                         "items": {
                             "type": "object"
-                        }
+                        },
+                        "example": []
                     }
                 },
                 "type": "object"
@@ -2148,22 +2297,26 @@
                         "example": 1
                     },
                     "name": {
-                        "type": "string"
+                        "description": "Computed from first_name and last_name",
+                        "type": "string",
+                        "example": "Jane Doe"
                     },
                     "first_name": {
                         "type": "string",
-                        "nullable": true
+                        "example": "Jane"
                     },
                     "last_name": {
                         "type": "string",
-                        "nullable": true
+                        "example": "Doe"
                     },
                     "email": {
                         "type": "string",
-                        "format": "email"
+                        "format": "email",
+                        "example": "jane@example.com"
                     },
                     "phone": {
                         "type": "string",
+                        "example": "0700123456",
                         "nullable": true
                     },
                     "status": {
@@ -2176,10 +2329,12 @@
                         ]
                     },
                     "is_superadmin": {
-                        "type": "boolean"
+                        "type": "boolean",
+                        "example": false
                     },
                     "is_admin": {
-                        "type": "boolean"
+                        "type": "boolean",
+                        "example": false
                     },
                     "email_verified_at": {
                         "type": "string",
@@ -2188,6 +2343,7 @@
                     },
                     "current_company_id": {
                         "type": "integer",
+                        "example": 1,
                         "nullable": true
                     },
                     "last_login_at": {
@@ -2307,6 +2463,7 @@
                 "type": "object"
             },
             "AuthSessionData": {
+                "description": "Session payload for /auth/me and /auth/company/switch. Token is omitted.",
                 "properties": {
                     "user": {
                         "$ref": "#/components/schemas/User"
@@ -2338,13 +2495,29 @@
                         "items": {
                             "type": "string"
                         }
-                    },
-                    "token": {
-                        "type": "string",
-                        "nullable": true
                     }
                 },
                 "type": "object"
+            },
+            "AuthSessionTokenData": {
+                "description": "Session payload for /auth/login. Includes a Sanctum token.",
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/AuthSessionData"
+                    },
+                    {
+                        "required": [
+                            "token"
+                        ],
+                        "properties": {
+                            "token": {
+                                "type": "string",
+                                "example": "1|xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                            }
+                        },
+                        "type": "object"
+                    }
+                ]
             },
             "AuthSessionResponse": {
                 "properties": {
@@ -2357,10 +2530,71 @@
                         "example": 200
                     },
                     "message": {
-                        "type": "string"
+                        "type": "string",
+                        "example": "Authenticated user"
                     },
                     "data": {
                         "$ref": "#/components/schemas/AuthSessionData"
+                    }
+                },
+                "type": "object"
+            },
+            "AuthSessionTokenResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Logged in successfully"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/AuthSessionTokenData"
+                    }
+                },
+                "type": "object"
+            },
+            "AuthSessionCreatedResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 201
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Registered successfully"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/AuthSessionTokenData"
+                    }
+                },
+                "type": "object"
+            },
+            "UserCreatedResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 201
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Administrator registered successfully"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/User"
                     }
                 },
                 "type": "object"

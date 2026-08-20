@@ -12,7 +12,6 @@ class PaymentTransaction extends Model
         'company_id',
         'customer_id',
         'internet_plan_id',
-        'plan_price_id',
         'payment_gateway_id',
         'network_station_id',
         'voucher_id',
@@ -57,11 +56,6 @@ class PaymentTransaction extends Model
     public function internetPlan(): BelongsTo
     {
         return $this->belongsTo(InternetPlan::class);
-    }
-
-    public function planPrice(): BelongsTo
-    {
-        return $this->belongsTo(PlanPrice::class);
     }
 
     public function paymentGateway(): BelongsTo

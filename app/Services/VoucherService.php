@@ -19,20 +19,18 @@ class VoucherService
             ->where('company_id', $company->id)
             ->findOrFail($data['internet_plan_id']);
 
-        $price = $plan->prices()->where('status', 'active')->latest('id')->first();
-        $digits = (int) $company->voucher_code_digits;
-        $digits = max(4, min(12, $digits));
+        $digits = max(4, min(12, (int) $company->voucher_code_digits));
         $quantity = (int) $data['quantity'];
 
-        return DB::transaction(function () use ($company, $plan, $price, $digits, $quantity, $data, $actor) {
+        return DB::transaction(function () use ($company, $plan, $digits, $quantity, $data, $actor) {
             $batch = VoucherBatch::query()->create([
                 'company_id' => $company->id,
                 'internet_plan_id' => $plan->id,
                 'network_station_id' => $data['network_station_id'] ?? null,
                 'name' => $data['name'] ?? $plan->name.' vouchers',
                 'quantity' => $quantity,
-                'unit_price' => $price?->amount,
-                'currency' => $price?->currency ?? 'TZS',
+                'unit_price' => $plan->price,
+                'currency' => 'TZS',
                 'created_by' => $actor->id,
                 'status' => 'active',
             ]);

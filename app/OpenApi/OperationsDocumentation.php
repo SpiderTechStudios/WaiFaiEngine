@@ -53,14 +53,13 @@ class OperationsDocumentation
         operationId: 'createPackage',
         tags: ['Packages'],
         security: [['sanctum' => []]],
-        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(required: ['name', 'price'], properties: [
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(required: ['name', 'price', 'duration_unit'], properties: [
             new OA\Property(property: 'name', type: 'string', example: '1 Hour'),
-            new OA\Property(property: 'duration', type: 'integer', example: 1),
-            new OA\Property(property: 'duration_unit', type: 'string', example: 'hour'),
-            new OA\Property(property: 'download_speed', type: 'integer', example: 5),
-            new OA\Property(property: 'upload_speed', type: 'integer', example: 5),
             new OA\Property(property: 'price', type: 'number', example: 1000),
-            new OA\Property(property: 'currency', type: 'string', example: 'TZS'),
+            new OA\Property(property: 'duration', type: 'integer', nullable: true, example: 1, description: 'Required unless duration_unit is UNLIMITED_DATA'),
+            new OA\Property(property: 'duration_unit', type: 'string', enum: ['HOURS', 'DAYS', 'WEEKS', 'MONTHS', 'UNLIMITED_DATA'], example: 'HOURS'),
+            new OA\Property(property: 'badge', type: 'string', nullable: true, example: 'Popular'),
+            new OA\Property(property: 'description', type: 'string', nullable: true, example: 'Fast hourly access'),
         ])),
         responses: [new OA\Response(response: 201, description: 'Created')]
     )]

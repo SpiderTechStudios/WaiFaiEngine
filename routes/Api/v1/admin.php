@@ -4,12 +4,9 @@ use App\Http\Controllers\Api\V1\Company\StaffController;
 use App\Http\Controllers\Api\V1\Operations\BranchController;
 use App\Http\Controllers\Api\V1\Operations\CustomerController;
 use App\Http\Controllers\Api\V1\Operations\DashboardController;
-use App\Http\Controllers\Api\V1\Operations\DeviceSetupController;
 use App\Http\Controllers\Api\V1\Operations\HotspotSessionController;
 use App\Http\Controllers\Api\V1\Operations\IncomeController;
-use App\Http\Controllers\Api\V1\Operations\PackageController;
 use App\Http\Controllers\Api\V1\Operations\PaymentController;
-use App\Http\Controllers\Api\V1\Operations\RouterController;
 use App\Http\Controllers\Api\V1\Operations\SettingsController;
 use App\Http\Controllers\Api\V1\Operations\VoucherController;
 use App\Http\Controllers\Api\V1\Operations\WithdrawalController;
@@ -21,19 +18,6 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['auth:sanctum', 'active.user', 'company.context', 'company.required'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'show'])->middleware('permission:'.Permissions::DASHBOARD_VIEW);
     Route::get('/income', [IncomeController::class, 'index'])->middleware('permission:'.Permissions::INCOME_VIEW);
-    Route::get('/device-setup', [DeviceSetupController::class, 'show'])->middleware('permission:'.Permissions::DEVICE_SETUP_VIEW);
-
-    Route::get('/routers', [RouterController::class, 'index'])->middleware('permission:'.Permissions::ROUTERS_VIEW);
-    Route::post('/routers', [RouterController::class, 'store'])->middleware('permission:'.Permissions::ROUTERS_CREATE);
-    Route::get('/routers/{router}', [RouterController::class, 'show'])->middleware('permission:'.Permissions::ROUTERS_VIEW);
-    Route::patch('/routers/{router}', [RouterController::class, 'update'])->middleware('permission:'.Permissions::ROUTERS_UPDATE);
-    Route::delete('/routers/{router}', [RouterController::class, 'destroy'])->middleware('permission:'.Permissions::ROUTERS_DELETE);
-
-    Route::get('/packages', [PackageController::class, 'index'])->middleware('permission:'.Permissions::PACKAGES_VIEW);
-    Route::post('/packages', [PackageController::class, 'store'])->middleware('permission:'.Permissions::PACKAGES_CREATE);
-    Route::get('/packages/{package}', [PackageController::class, 'show'])->middleware('permission:'.Permissions::PACKAGES_VIEW);
-    Route::patch('/packages/{package}', [PackageController::class, 'update'])->middleware('permission:'.Permissions::PACKAGES_UPDATE);
-    Route::delete('/packages/{package}', [PackageController::class, 'destroy'])->middleware('permission:'.Permissions::PACKAGES_DELETE);
 
     Route::get('/vouchers', [VoucherController::class, 'index'])->middleware('permission:'.Permissions::VOUCHERS_VIEW);
     Route::get('/vouchers/batches', [VoucherController::class, 'batches'])->middleware('permission:'.Permissions::VOUCHERS_VIEW);

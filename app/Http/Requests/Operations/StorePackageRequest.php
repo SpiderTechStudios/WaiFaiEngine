@@ -2,7 +2,10 @@
 
 namespace App\Http\Requests\Operations;
 
+use App\Models\InternetPlan;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class StorePackageRequest extends FormRequest
 {
@@ -16,19 +19,24 @@ class StorePackageRequest extends FormRequest
      */
     public function rules(): array
     {
+        $requiredOnCreate = $this->isMethod('post') ? 'required' : 'sometimes';
+
         return [
-            'name' => [$this->isMethod('post') ? 'required' : 'sometimes', 'string', 'max:255'],
+            'name' => [$requiredOnCreate, 'string', 'max:255'],
+            'price' => [$requiredOnCreate, 'numeric', 'min:0'],
+            'duration' => ['nullable', 'integer', 'min:1', 'required_unless:duration_unit,UNLIMITED_DATA'],
+            'duration_unit' => [$requiredOnCreate, 'string', Rule::in(InternetPlan::DURATION_UNITS)],
+            'badge' => ['nullable', 'string', 'max:50'],
             'description' => ['nullable', 'string'],
-            'duration' => ['nullable', 'integer', 'min:1'],
-            'duration_unit' => ['nullable', 'string', 'in:minute,hour,day,week,month'],
-            'data_limit' => ['nullable', 'integer', 'min:0'],
-            'data_limit_unit' => ['nullable', 'string', 'in:MB,GB'],
-            'download_speed' => ['nullable', 'integer', 'min:0'],
-            'upload_speed' => ['nullable', 'integer', 'min:0'],
-            'speed_unit' => ['nullable', 'string', 'max:20'],
-            'max_devices' => ['nullable', 'integer', 'min:1'],
-            'price' => [$this->isMethod('post') ? 'required' : 'sometimes', 'numeric', 'min:0'],
-            'currency' => ['nullable', 'string', 'size:3'],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            if ($this->input('duration_unit') === 'UNLIMITED_DATA' && filled($this->input('duration'))) {
+                $validator->errors()->add('duration', 'Duration is not used when duration_unit is UNLIMITED_DATA.');
+            }
+        });
     }
 }

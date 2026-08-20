@@ -84,7 +84,7 @@ class SuperAdminAndSecurityTest extends TestCase
             ->postJson('/api/v1/packages', [
                 'name' => '1 Hour',
                 'duration' => 1,
-                'duration_unit' => 'hour',
+                'duration_unit' => 'HOURS',
                 'price' => 1000,
             ])->assertCreated()
             ->json('data.id');

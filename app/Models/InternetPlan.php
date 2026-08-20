@@ -12,31 +12,40 @@ class InternetPlan extends Model
 {
     use SoftDeletes;
 
+    public const DURATION_UNITS = [
+        'HOURS',
+        'DAYS',
+        'WEEKS',
+        'MONTHS',
+        'UNLIMITED_DATA',
+    ];
+
     protected $fillable = [
         'company_id',
         'name',
         'slug',
+        'badge',
         'description',
         'duration',
         'duration_unit',
-        'data_limit',
-        'data_limit_unit',
-        'download_speed',
-        'upload_speed',
-        'speed_unit',
-        'max_devices',
-        'activation_mode',
+        'price',
         'status',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'price' => 'decimal:2',
+            'duration' => 'integer',
+        ];
+    }
 
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
-    }
-
-    public function prices(): HasMany
-    {
-        return $this->hasMany(PlanPrice::class);
     }
 
     public function stationPlans(): HasMany

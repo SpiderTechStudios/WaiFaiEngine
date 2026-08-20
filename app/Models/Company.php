@@ -109,11 +109,6 @@ class Company extends Model
         return $this->hasMany(InternetPlan::class);
     }
 
-    public function planPrices(): HasMany
-    {
-        return $this->hasMany(PlanPrice::class);
-    }
-
     public function voucherBatches(): HasMany
     {
         return $this->hasMany(VoucherBatch::class);

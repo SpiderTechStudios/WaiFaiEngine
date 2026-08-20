@@ -13,7 +13,6 @@ return new class extends Migration
             $table->foreignId('company_id')->constrained()->restrictOnDelete();
             $table->unsignedBigInteger('customer_id');
             $table->unsignedBigInteger('internet_plan_id');
-            $table->unsignedBigInteger('plan_price_id')->nullable();
             $table->unsignedBigInteger('payment_transaction_id')->nullable();
             $table->unsignedBigInteger('voucher_id')->nullable();
             $table->unsignedBigInteger('network_station_id')->nullable();
@@ -38,10 +37,6 @@ return new class extends Migration
             $table->foreign(['internet_plan_id', 'company_id'])
                 ->references(['id', 'company_id'])
                 ->on('internet_plans')
-                ->restrictOnDelete();
-            $table->foreign(['plan_price_id', 'company_id'])
-                ->references(['id', 'company_id'])
-                ->on('plan_prices')
                 ->restrictOnDelete();
             $table->foreign(['payment_transaction_id', 'company_id'])
                 ->references(['id', 'company_id'])

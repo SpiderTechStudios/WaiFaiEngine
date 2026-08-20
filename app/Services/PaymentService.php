@@ -23,19 +23,17 @@ class PaymentService
             ->where('company_id', $company->id)
             ->findOrFail($data['internet_plan_id']);
 
-        $price = $plan->prices()->where('status', 'active')->latest('id')->first();
-        $amount = $data['amount'] ?? $price?->amount;
-        $currency = $data['currency'] ?? $price?->currency ?? 'TZS';
+        $amount = $data['amount'] ?? $plan->price;
+        $currency = $data['currency'] ?? 'TZS';
         $status = $data['status'] ?? 'paid';
 
-        return DB::transaction(function () use ($company, $plan, $price, $amount, $currency, $status, $data, $actor) {
+        return DB::transaction(function () use ($company, $plan, $amount, $currency, $status, $data, $actor) {
             $customer = $this->findOrCreateCustomer($company, $data);
 
             $payment = PaymentTransaction::query()->create([
                 'company_id' => $company->id,
                 'customer_id' => $customer->id,
                 'internet_plan_id' => $plan->id,
-                'plan_price_id' => $price?->id,
                 'reference' => 'PAY-'.strtoupper(Str::random(10)),
                 'amount' => $amount,
                 'currency' => $currency,

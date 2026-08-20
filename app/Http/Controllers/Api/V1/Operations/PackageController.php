@@ -17,7 +17,6 @@ class PackageController extends Controller
     public function index(Request $request): JsonResponse
     {
         $paginated = InternetPlan::query()
-            ->with('prices')
             ->where('company_id', $this->currentCompany()->id)
             ->latest('id')
             ->paginate($request->integer('per_page', 15));
@@ -39,7 +38,7 @@ class PackageController extends Controller
     {
         $this->assertCompany($package->company_id);
 
-        return $this->success((new PackageResource($package->load('prices')))->resolve(), 'Package retrieved');
+        return $this->success((new PackageResource($package))->resolve(), 'Package retrieved');
     }
 
     public function update(StorePackageRequest $request, InternetPlan $package): JsonResponse

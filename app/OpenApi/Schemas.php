@@ -9,8 +9,8 @@ use OpenApi\Attributes as OA;
     properties: [
         new OA\Property(property: 'status', type: 'boolean', example: false),
         new OA\Property(property: 'code', type: 'integer', example: 422),
-        new OA\Property(property: 'message', type: 'string'),
-        new OA\Property(property: 'data', type: 'object', nullable: true),
+        new OA\Property(property: 'message', type: 'string', example: 'The given data was invalid.'),
+        new OA\Property(property: 'data', type: 'object', nullable: true, additionalProperties: true),
     ]
 )]
 #[OA\Schema(
@@ -18,24 +18,24 @@ use OpenApi\Attributes as OA;
     properties: [
         new OA\Property(property: 'status', type: 'boolean', example: true),
         new OA\Property(property: 'code', type: 'integer', example: 200),
-        new OA\Property(property: 'message', type: 'string'),
-        new OA\Property(property: 'data', type: 'array', items: new OA\Items(type: 'object')),
+        new OA\Property(property: 'message', type: 'string', example: 'Success'),
+        new OA\Property(property: 'data', type: 'array', items: new OA\Items(type: 'object'), example: []),
     ]
 )]
 #[OA\Schema(
     schema: 'User',
     properties: [
         new OA\Property(property: 'id', type: 'integer', example: 1),
-        new OA\Property(property: 'name', type: 'string'),
-        new OA\Property(property: 'first_name', type: 'string', nullable: true),
-        new OA\Property(property: 'last_name', type: 'string', nullable: true),
-        new OA\Property(property: 'email', type: 'string', format: 'email'),
-        new OA\Property(property: 'phone', type: 'string', nullable: true),
+        new OA\Property(property: 'name', type: 'string', example: 'Jane Doe', description: 'Computed from first_name and last_name'),
+        new OA\Property(property: 'first_name', type: 'string', example: 'Jane'),
+        new OA\Property(property: 'last_name', type: 'string', example: 'Doe'),
+        new OA\Property(property: 'email', type: 'string', format: 'email', example: 'jane@example.com'),
+        new OA\Property(property: 'phone', type: 'string', nullable: true, example: '0700123456'),
         new OA\Property(property: 'status', type: 'string', enum: ['pending', 'active', 'suspended', 'inactive']),
-        new OA\Property(property: 'is_superadmin', type: 'boolean'),
-        new OA\Property(property: 'is_admin', type: 'boolean'),
+        new OA\Property(property: 'is_superadmin', type: 'boolean', example: false),
+        new OA\Property(property: 'is_admin', type: 'boolean', example: false),
         new OA\Property(property: 'email_verified_at', type: 'string', format: 'date-time', nullable: true),
-        new OA\Property(property: 'current_company_id', type: 'integer', nullable: true),
+        new OA\Property(property: 'current_company_id', type: 'integer', nullable: true, example: 1),
         new OA\Property(property: 'last_login_at', type: 'string', format: 'date-time', nullable: true),
         new OA\Property(property: 'created_at', type: 'string', format: 'date-time', nullable: true),
     ]
@@ -78,13 +78,23 @@ use OpenApi\Attributes as OA;
 )]
 #[OA\Schema(
     schema: 'AuthSessionData',
+    description: 'Session payload for /auth/me and /auth/company/switch. Token is omitted.',
     properties: [
         new OA\Property(property: 'user', ref: '#/components/schemas/User'),
         new OA\Property(property: 'companies', type: 'array', items: new OA\Items(ref: '#/components/schemas/Membership')),
         new OA\Property(property: 'current_company', ref: '#/components/schemas/Company', nullable: true),
         new OA\Property(property: 'membership', ref: '#/components/schemas/Membership', nullable: true),
         new OA\Property(property: 'permissions', type: 'array', items: new OA\Items(type: 'string')),
-        new OA\Property(property: 'token', type: 'string', nullable: true),
+    ]
+)]
+#[OA\Schema(
+    schema: 'AuthSessionTokenData',
+    description: 'Session payload for /auth/login. Includes a Sanctum token.',
+    allOf: [
+        new OA\Schema(ref: '#/components/schemas/AuthSessionData'),
+        new OA\Schema(required: ['token'], properties: [
+            new OA\Property(property: 'token', type: 'string', example: '1|xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'),
+        ]),
     ]
 )]
 #[OA\Schema(
@@ -92,8 +102,35 @@ use OpenApi\Attributes as OA;
     properties: [
         new OA\Property(property: 'status', type: 'boolean', example: true),
         new OA\Property(property: 'code', type: 'integer', example: 200),
-        new OA\Property(property: 'message', type: 'string'),
+        new OA\Property(property: 'message', type: 'string', example: 'Authenticated user'),
         new OA\Property(property: 'data', ref: '#/components/schemas/AuthSessionData'),
+    ]
+)]
+#[OA\Schema(
+    schema: 'AuthSessionTokenResponse',
+    properties: [
+        new OA\Property(property: 'status', type: 'boolean', example: true),
+        new OA\Property(property: 'code', type: 'integer', example: 200),
+        new OA\Property(property: 'message', type: 'string', example: 'Logged in successfully'),
+        new OA\Property(property: 'data', ref: '#/components/schemas/AuthSessionTokenData'),
+    ]
+)]
+#[OA\Schema(
+    schema: 'AuthSessionCreatedResponse',
+    properties: [
+        new OA\Property(property: 'status', type: 'boolean', example: true),
+        new OA\Property(property: 'code', type: 'integer', example: 201),
+        new OA\Property(property: 'message', type: 'string', example: 'Registered successfully'),
+        new OA\Property(property: 'data', ref: '#/components/schemas/AuthSessionTokenData'),
+    ]
+)]
+#[OA\Schema(
+    schema: 'UserCreatedResponse',
+    properties: [
+        new OA\Property(property: 'status', type: 'boolean', example: true),
+        new OA\Property(property: 'code', type: 'integer', example: 201),
+        new OA\Property(property: 'message', type: 'string', example: 'Administrator registered successfully'),
+        new OA\Property(property: 'data', ref: '#/components/schemas/User'),
     ]
 )]
 #[OA\Schema(

@@ -61,10 +61,14 @@ class OperationsTest extends TestCase
         $packageId = $this->withHeaders($headers)->postJson('/api/v1/packages', [
             'name' => '1 Hour',
             'duration' => 1,
-            'duration_unit' => 'hour',
+            'duration_unit' => 'HOURS',
             'price' => 1000,
-            'currency' => 'TZS',
-        ])->assertCreated()->json('data.id');
+            'badge' => 'Popular',
+            'description' => 'Hourly hotspot access',
+        ])->assertCreated()
+            ->assertJsonPath('data.duration_unit', 'HOURS')
+            ->assertJsonPath('data.badge', 'Popular')
+            ->json('data.id');
 
         $vouchers = $this->withHeaders($headers)->postJson('/api/v1/vouchers', [
             'internet_plan_id' => $packageId,
