@@ -21,8 +21,14 @@ class Company extends Model
         'address',
         'timezone',
         'status',
-        'settings',
         'subdomain',
+        'primary_color',
+        'logo_url',
+        'voucher_code_digits',
+        'payment_method',
+        'captive_portal_welcome_message',
+        'ruijie_account_id',
+        'ruijie_password',
     ];
 
     /**
@@ -31,7 +37,8 @@ class Company extends Model
     protected function casts(): array
     {
         return [
-            'settings' => 'array',
+            'payment_method' => 'string',
+            'voucher_code_digits' => 'integer',
         ];
     }
 

@@ -2,19 +2,25 @@
 
 use App\Http\Controllers\Api\V1\Auth\EmailVerificationController;
 use App\Http\Controllers\Api\V1\Auth\PasswordController;
+use App\Http\Controllers\Api\V1\Auth\RegisterAdminController;
 use App\Http\Controllers\Api\V1\Auth\SessionController;
-use App\Http\Controllers\RegisterController;
 use Illuminate\Support\Facades\Route;
 
-Route::post('/register', [RegisterController::class, 'index'])->name('signup');
+
+Route::get('/', [SessionController::class, 'defaultPage'])->name('login');
 Route::post('/auth/register', [SessionController::class, 'register'])->middleware('throttle:10,1');
 Route::post('/auth/login', [SessionController::class, 'login'])->middleware('throttle:5,1');
+
 Route::post('/auth/forgot-password', [PasswordController::class, 'forgot'])->middleware('throttle:5,1');
 Route::post('/auth/reset-password', [PasswordController::class, 'reset'])->middleware('throttle:5,1');
 
 Route::get('/auth/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
     ->middleware(['signed'])
     ->name('api.v1.auth.email.verify');
+
+Route::middleware(['auth:sanctum', 'active.user', 'superadmin'])->group(function () {
+    Route::post('/auth/admin/register', [RegisterAdminController::class, 'store'])->name('auth.admin.register');
+});
 
 Route::middleware(['auth:sanctum', 'active.user', 'company.context'])->group(function () {
     Route::get('/auth/me', [SessionController::class, 'me']);

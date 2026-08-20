@@ -12,48 +12,6 @@
         }
     ],
     "paths": {
-        "/register": {
-            "post": {
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Register business + owner (legacy route)",
-                "description": "Same as POST /auth/register. Creates the user and their first company in one request.",
-                "operationId": "legacyRegister",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/RegisterRequest"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "Registered",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/AuthSessionResponse"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/auth/register": {
             "post": {
                 "tags": [
@@ -94,6 +52,63 @@
                         }
                     }
                 }
+            }
+        },
+        "/auth/admin/register": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Register a platform administrator",
+                "description": "Superadmin only. Creates another superadmin or a normal platform admin account. A temporary password is generated and emailed to the new administrator.",
+                "operationId": "registerAdmin",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RegisterAdminRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Administrator registered",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UserResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Not a superadmin",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             }
         },
         "/auth/login": {
@@ -1949,19 +1964,16 @@
         "schemas": {
             "RegisterRequest": {
                 "required": [
-                    "business_name",
                     "first_name",
                     "last_name",
+                    "business_name",
                     "email",
                     "phone",
                     "password",
-                    "password_confirmation"
+                    "password_confirmation",
+                    "address"
                 ],
                 "properties": {
-                    "business_name": {
-                        "type": "string",
-                        "example": "ABC Internet Services"
-                    },
                     "first_name": {
                         "type": "string",
                         "example": "Jane"
@@ -1969,6 +1981,10 @@
                     "last_name": {
                         "type": "string",
                         "example": "Doe"
+                    },
+                    "business_name": {
+                        "type": "string",
+                        "example": "ABC Internet Services"
                     },
                     "email": {
                         "type": "string",
@@ -1988,21 +2004,52 @@
                         "type": "string",
                         "format": "password"
                     },
-                    "business_email": {
-                        "description": "Defaults to the owner email when omitted",
-                        "type": "string",
-                        "format": "email",
-                        "nullable": true
-                    },
                     "address": {
                         "type": "string",
-                        "nullable": true
+                        "example": "Dar es Salaam, Tanzania"
                     },
                     "portal_subdomain": {
-                        "description": "Auto-assigned from business name if omitted",
+                        "description": "Optional captive portal subdomain. Auto-assigned from business name when omitted.",
                         "type": "string",
-                        "example": "morice",
+                        "example": "abc-internet",
                         "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "RegisterAdminRequest": {
+                "required": [
+                    "first_name",
+                    "last_name",
+                    "email",
+                    "phone",
+                    "account_type"
+                ],
+                "properties": {
+                    "first_name": {
+                        "type": "string",
+                        "example": "John"
+                    },
+                    "last_name": {
+                        "type": "string",
+                        "example": "Admin"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "admin@example.com"
+                    },
+                    "phone": {
+                        "type": "string",
+                        "example": "0700123456"
+                    },
+                    "account_type": {
+                        "type": "string",
+                        "example": "admin",
+                        "enum": [
+                            "superadmin",
+                            "admin"
+                        ]
                     }
                 },
                 "type": "object"
@@ -2129,6 +2176,9 @@
                         ]
                     },
                     "is_superadmin": {
+                        "type": "boolean"
+                    },
+                    "is_admin": {
                         "type": "boolean"
                     },
                     "email_verified_at": {

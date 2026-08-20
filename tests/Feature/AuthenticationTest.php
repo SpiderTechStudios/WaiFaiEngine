@@ -25,6 +25,7 @@ class AuthenticationTest extends TestCase
             'phone' => '0700123456',
             'password' => 'password123',
             'password_confirmation' => 'password123',
+            'address' => 'Dar es Salaam, Tanzania',
         ]);
 
         $response->assertCreated()
@@ -59,6 +60,7 @@ class AuthenticationTest extends TestCase
             'phone' => '0700123456',
             'password' => 'password123',
             'password_confirmation' => 'password123',
+            'address' => 'Dar es Salaam, Tanzania',
         ])->assertStatus(422);
     }
 
@@ -72,6 +74,7 @@ class AuthenticationTest extends TestCase
             'phone' => '0700123456',
             'password' => 'short',
             'password_confirmation' => 'short',
+            'address' => 'Dar es Salaam, Tanzania',
         ])->assertStatus(422);
     }
 
@@ -249,19 +252,5 @@ class AuthenticationTest extends TestCase
         $this->getJson($url)->assertOk();
         $this->assertNotNull($user->fresh()->email_verified_at);
         $this->assertSame('active', $user->fresh()->status);
-    }
-
-    public function test_legacy_register_route_still_works(): void
-    {
-        $this->postJson('/api/v1/register', [
-            'business_name' => 'Legacy ISP',
-            'first_name' => 'Legacy',
-            'last_name' => 'User',
-            'email' => 'legacy@example.com',
-            'phone' => '0700999888',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
-        ])->assertCreated()
-            ->assertJsonPath('data.current_company.name', 'Legacy ISP');
     }
 }

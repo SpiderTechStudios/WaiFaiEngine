@@ -26,7 +26,8 @@ class CompanyService
                 'address' => $data['address'] ?? null,
                 'timezone' => $data['timezone'] ?? 'UTC',
                 'status' => 'active',
-                'settings' => $this->defaultSettings(),
+                'captive_portal_welcome_message' => 'Welcome to WiFi. Choose a package or enter a voucher code.',
+                
             ]);
 
             $ownerRole = Role::query()->whereNull('company_id')->where('slug', 'owner')->firstOrFail();
@@ -85,22 +86,6 @@ class CompanyService
         $this->auditLogger->log('company_activated', $actor, $company->id, Company::class, $company->id);
 
         return $company;
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    public function defaultSettings(): array
-    {
-        return [
-            'primary_color' => '#0F4C81',
-            'logo_url' => null,
-            'voucher_code_digits' => 6,
-            'payout_methods' => [],
-            'captive_portal_welcome_message' => 'Welcome to WiFi. Choose a package or enter a voucher code.',
-            'ruijie_account_id' => null,
-            'ruijie_password' => null,
-        ];
     }
 
     private function uniqueSlug(string $name): string

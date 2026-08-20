@@ -14,7 +14,9 @@ use Illuminate\Http\Request;
 
 class SessionController extends Controller
 {
-    public function __construct(private AuthService $authService) {}
+    public function __construct(private AuthService $authService)
+    {
+    }
 
     public function register(RegisterRequest $request): JsonResponse
     {
@@ -77,5 +79,11 @@ class SessionController extends Controller
             $message,
             $code,
         );
+    }
+
+
+    public function defaultPage()
+    {
+        return $this->defaultErrorPage();
     }
 }

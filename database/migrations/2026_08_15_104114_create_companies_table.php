@@ -22,7 +22,13 @@ return new class extends Migration
             $table->text('address')->nullable();
             $table->string('timezone')->default('UTC');
             $table->string('status')->default('pending')->index();
-            $table->json('settings')->nullable();
+            $table->string('primary_color')->default('#0F4C81');
+            $table->string('logo_url')->nullable();
+            $table->unsignedTinyInteger('voucher_code_digits')->default(6);
+            $table->enum('payment_method', ['mobile_money', 'voucher', 'both'])->default('mobile_money');
+            $table->text('captive_portal_welcome_message')->nullable();
+            $table->string('ruijie_account_id')->nullable();
+            $table->text('ruijie_password')->nullable();
             $table->timestamps();
         });
 

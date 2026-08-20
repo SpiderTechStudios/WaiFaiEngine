@@ -20,6 +20,7 @@ return new class extends Migration {
             $table->boolean('is_superadmin')->default(false);
             $table->boolean('is_admin')->default(false);
             $table->timestamp('last_login_at')->nullable();
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
         });
 

@@ -33,6 +33,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'phone', type: 'string', nullable: true),
         new OA\Property(property: 'status', type: 'string', enum: ['pending', 'active', 'suspended', 'inactive']),
         new OA\Property(property: 'is_superadmin', type: 'boolean'),
+        new OA\Property(property: 'is_admin', type: 'boolean'),
         new OA\Property(property: 'email_verified_at', type: 'string', format: 'date-time', nullable: true),
         new OA\Property(property: 'current_company_id', type: 'integer', nullable: true),
         new OA\Property(property: 'last_login_at', type: 'string', format: 'date-time', nullable: true),

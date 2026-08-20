@@ -3,8 +3,9 @@
 namespace App\Http\Requests\Auth;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
-class RegisterRequest extends FormRequest
+class RegisterAdminRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -19,18 +20,9 @@ class RegisterRequest extends FormRequest
         return [
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
-            'business_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'phone' => ['required', 'string', 'max:50'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
-            'address' => ['required', 'string'],
-            'portal_subdomain' => [
-                'nullable',
-                'string',
-                'max:63',
-                'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
-                'unique:companies,subdomain',
-            ],
+            'account_type' => ['required', 'string', Rule::in(['superadmin', 'admin'])],
         ];
     }
 }

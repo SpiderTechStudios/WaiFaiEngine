@@ -32,10 +32,9 @@ class AuthService
 
             $company = $this->companyService->create($user, [
                 'name' => $data['business_name'],
-                'email' => $data['business_email'] ?? $data['email'],
+                'email' => $data['email'],
                 'phone' => $data['phone'],
-                'address' => $data['address'] ?? null,
-                'timezone' => $data['timezone'] ?? 'UTC',
+                'address' => $data['address'],
                 'subdomain' => $data['portal_subdomain'] ?? null,
             ]);
 

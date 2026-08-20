@@ -21,7 +21,7 @@ abstract class Controller
             'message' => $message,
         ];
 
-        if (! empty($data)) {
+        if (!empty($data)) {
             $response['data'] = $data;
         }
 
@@ -42,7 +42,7 @@ abstract class Controller
     {
         $company = app(CompanyContext::class)->company;
 
-        if (! $company) {
+        if (!$company) {
             abort(403, 'No active company is selected for this session.');
         }
 
@@ -62,5 +62,12 @@ abstract class Controller
                 'total' => $paginator->total(),
             ],
         ];
+    }
+
+
+
+    public static function defaultErrorPage()
+    {
+        return self::error([], 'Insufficient permissions', 401);
     }
 }

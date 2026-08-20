@@ -7,20 +7,6 @@ use OpenApi\Attributes as OA;
 class AuthDocumentation
 {
     #[OA\Post(
-        path: '/register',
-        operationId: 'legacyRegister',
-        tags: ['Auth'],
-        summary: 'Register business + owner (legacy route)',
-        description: 'Same as POST /auth/register. Creates the user and their first company in one request.',
-        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(ref: '#/components/schemas/RegisterRequest')),
-        responses: [
-            new OA\Response(response: 201, description: 'Registered', content: new OA\JsonContent(ref: '#/components/schemas/AuthSessionResponse')),
-            new OA\Response(response: 422, description: 'Validation error', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
-        ]
-    )]
-    public function legacyRegister(): void {}
-
-    #[OA\Post(
         path: '/auth/register',
         operationId: 'register',
         tags: ['Auth'],
@@ -33,6 +19,22 @@ class AuthDocumentation
         ]
     )]
     public function register(): void {}
+
+    #[OA\Post(
+        path: '/auth/admin/register',
+        operationId: 'registerAdmin',
+        tags: ['Auth'],
+        summary: 'Register a platform administrator',
+        description: 'Superadmin only. Creates another superadmin or a normal platform admin account. A temporary password is generated and emailed to the new administrator.',
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(ref: '#/components/schemas/RegisterAdminRequest')),
+        responses: [
+            new OA\Response(response: 201, description: 'Administrator registered', content: new OA\JsonContent(ref: '#/components/schemas/UserResponse')),
+            new OA\Response(response: 403, description: 'Not a superadmin', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 422, description: 'Validation error', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
+    public function registerAdmin(): void {}
 
     #[OA\Post(
         path: '/auth/login',
@@ -210,18 +212,28 @@ class AuthDocumentation
 
 #[OA\Schema(
     schema: 'RegisterRequest',
-    required: ['business_name', 'first_name', 'last_name', 'email', 'phone', 'password', 'password_confirmation'],
+    required: ['first_name', 'last_name', 'business_name', 'email', 'phone', 'password', 'password_confirmation', 'address'],
     properties: [
-        new OA\Property(property: 'business_name', type: 'string', example: 'ABC Internet Services'),
         new OA\Property(property: 'first_name', type: 'string', example: 'Jane'),
         new OA\Property(property: 'last_name', type: 'string', example: 'Doe'),
+        new OA\Property(property: 'business_name', type: 'string', example: 'ABC Internet Services'),
         new OA\Property(property: 'email', type: 'string', format: 'email', example: 'jane@example.com'),
         new OA\Property(property: 'phone', type: 'string', example: '0700123456'),
         new OA\Property(property: 'password', type: 'string', minLength: 8, format: 'password'),
         new OA\Property(property: 'password_confirmation', type: 'string', format: 'password'),
-        new OA\Property(property: 'business_email', type: 'string', format: 'email', nullable: true, description: 'Defaults to the owner email when omitted'),
-        new OA\Property(property: 'address', type: 'string', nullable: true),
-        new OA\Property(property: 'portal_subdomain', type: 'string', nullable: true, example: 'morice', description: 'Auto-assigned from business name if omitted'),
+        new OA\Property(property: 'address', type: 'string', example: 'Dar es Salaam, Tanzania'),
+        new OA\Property(property: 'portal_subdomain', type: 'string', nullable: true, example: 'abc-internet', description: 'Optional captive portal subdomain. Auto-assigned from business name when omitted.'),
+    ]
+)]
+#[OA\Schema(
+    schema: 'RegisterAdminRequest',
+    required: ['first_name', 'last_name', 'email', 'phone', 'account_type'],
+    properties: [
+        new OA\Property(property: 'first_name', type: 'string', example: 'John'),
+        new OA\Property(property: 'last_name', type: 'string', example: 'Admin'),
+        new OA\Property(property: 'email', type: 'string', format: 'email', example: 'admin@example.com'),
+        new OA\Property(property: 'phone', type: 'string', example: '0700123456'),
+        new OA\Property(property: 'account_type', type: 'string', enum: ['superadmin', 'admin'], example: 'admin'),
     ]
 )]
 #[OA\Schema(

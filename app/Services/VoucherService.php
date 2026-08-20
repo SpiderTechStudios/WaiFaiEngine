@@ -20,7 +20,7 @@ class VoucherService
             ->findOrFail($data['internet_plan_id']);
 
         $price = $plan->prices()->where('status', 'active')->latest('id')->first();
-        $digits = (int) (($company->settings['voucher_code_digits'] ?? 6));
+        $digits = (int) $company->voucher_code_digits;
         $digits = max(4, min(12, $digits));
         $quantity = (int) $data['quantity'];
 

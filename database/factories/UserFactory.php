@@ -37,6 +37,7 @@ class UserFactory extends Factory
             'remember_token' => Str::random(10),
             'status' => 'active',
             'is_superadmin' => false,
+            'is_admin' => false,
         ];
     }
 

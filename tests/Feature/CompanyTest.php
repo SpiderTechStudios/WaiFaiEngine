@@ -8,6 +8,8 @@ class CompanyTest extends TestCase
 {
     public function test_registration_creates_company_and_owner(): void
     {
+        \Illuminate\Support\Facades\Notification::fake();
+
         $response = $this->postJson('/api/v1/auth/register', [
             'business_name' => 'ABC Internet',
             'first_name' => 'Jane',
@@ -16,6 +18,7 @@ class CompanyTest extends TestCase
             'phone' => '0700123456',
             'password' => 'password123',
             'password_confirmation' => 'password123',
+            'address' => 'Dar es Salaam, Tanzania',
             'portal_subdomain' => 'abc',
         ]);
 
