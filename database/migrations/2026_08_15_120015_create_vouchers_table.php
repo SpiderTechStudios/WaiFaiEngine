@@ -19,6 +19,7 @@ return new class extends Migration
             $table->timestamp('redeemed_at')->nullable();
             $table->timestamp('expires_at')->nullable();
             $table->unsignedBigInteger('customer_id')->nullable();
+            $table->unsignedBigInteger('access_grant_id')->nullable();
             $table->timestamps();
 
             $table->unique(['id', 'company_id']);

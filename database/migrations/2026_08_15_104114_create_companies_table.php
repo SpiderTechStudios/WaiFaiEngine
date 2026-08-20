@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('created_by')->constrained('users')->restrictOnDelete();
             $table->string('name');
             $table->string('slug')->unique();
+            $table->string('subdomain')->nullable()->unique();
             $table->string('email')->nullable();
             $table->string('phone')->nullable();
             $table->text('address')->nullable();

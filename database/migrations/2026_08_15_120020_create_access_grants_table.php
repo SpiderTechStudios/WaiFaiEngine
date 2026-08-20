@@ -56,10 +56,21 @@ return new class extends Migration
                 ->on('network_stations')
                 ->restrictOnDelete();
         });
+
+        Schema::table('vouchers', function (Blueprint $table) {
+            $table->foreign(['access_grant_id', 'company_id'])
+                ->references(['id', 'company_id'])
+                ->on('access_grants')
+                ->restrictOnDelete();
+        });
     }
 
     public function down(): void
     {
+        Schema::table('vouchers', function (Blueprint $table) {
+            $table->dropForeign(['access_grant_id', 'company_id']);
+        });
+
         Schema::dropIfExists('access_grants');
     }
 };

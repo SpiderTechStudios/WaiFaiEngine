@@ -31,9 +31,14 @@ class StaffService
             if ($existingUser) {
                 $user = $existingUser;
             } else {
+                $name = trim((string) ($data['name'] ?? ''));
+                $parts = $name === '' ? [] : preg_split('/\s+/', $name, 2);
+
                 $user = User::query()->create([
-                    'name' => $data['name'] ?? Str::before($data['email'], '@'),
+                    'first_name' => $data['first_name'] ?? ($parts[0] ?? Str::before($data['email'], '@')),
+                    'last_name' => $data['last_name'] ?? ($parts[1] ?? ''),
                     'email' => $data['email'],
+                    'phone' => $data['phone'] ?? null,
                     'password' => Str::password(16),
                     'status' => 'pending',
                 ]);

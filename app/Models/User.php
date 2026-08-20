@@ -8,6 +8,7 @@ use App\Support\Permissions;
 use Database\Factories\UserFactory;
 use Illuminate\Auth\MustVerifyEmail;
 use Illuminate\Contracts\Auth\MustVerifyEmail as MustVerifyEmailContract;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -25,7 +26,6 @@ class User extends Authenticatable implements MustVerifyEmailContract
      * @var list<string>
      */
     protected $fillable = [
-        'name',
         'first_name',
         'last_name',
         'email',
@@ -33,6 +33,7 @@ class User extends Authenticatable implements MustVerifyEmailContract
         'password',
         'status',
         'is_superadmin',
+        'is_admin',
         'last_login_at',
         'current_company_id',
     ];
@@ -56,6 +57,11 @@ class User extends Authenticatable implements MustVerifyEmailContract
             'password' => 'hashed',
             'is_superadmin' => 'boolean',
         ];
+    }
+
+    protected function name(): Attribute
+    {
+        return Attribute::get(fn (): string => trim($this->first_name.' '.$this->last_name));
     }
 
     public function isAccountActive(): bool

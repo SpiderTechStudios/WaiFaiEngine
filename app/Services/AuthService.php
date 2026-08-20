@@ -21,10 +21,7 @@ class AuthService
     public function register(array $data): array
     {
         return DB::transaction(function () use ($data) {
-            $fullName = trim($data['first_name'].' '.$data['last_name']);
-
             $user = User::query()->create([
-                'name' => $fullName,
                 'first_name' => $data['first_name'],
                 'last_name' => $data['last_name'],
                 'email' => $data['email'],

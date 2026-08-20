@@ -19,6 +19,8 @@ class AddCompanyStaffRequest extends FormRequest
     {
         return [
             'name' => ['nullable', 'string', 'max:255'],
+            'first_name' => ['nullable', 'string', 'max:255'],
+            'last_name' => ['nullable', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'role' => ['required', 'string', Rule::in(['manager', 'operator', 'cashier'])],
         ];
