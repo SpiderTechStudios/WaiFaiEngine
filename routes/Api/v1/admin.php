@@ -20,8 +20,8 @@ Route::middleware(['auth:sanctum', 'active.user', 'company.context', 'company.re
     Route::get('/income', [IncomeController::class, 'index'])->middleware('permission:'.Permissions::INCOME_VIEW);
 
     Route::get('/vouchers', [VoucherController::class, 'index'])->middleware('permission:'.Permissions::VOUCHERS_VIEW);
-    Route::get('/vouchers/batches', [VoucherController::class, 'batches'])->middleware('permission:'.Permissions::VOUCHERS_VIEW);
     Route::post('/vouchers', [VoucherController::class, 'store'])->middleware('permission:'.Permissions::VOUCHERS_CREATE);
+    Route::post('/vouchers/{voucher}/revoke', [VoucherController::class, 'revoke'])->middleware('permission:'.Permissions::VOUCHERS_REVOKE);
 
     Route::get('/payments', [PaymentController::class, 'index'])->middleware('permission:'.Permissions::PAYMENTS_VIEW);
     Route::post('/payments', [PaymentController::class, 'store'])->middleware('permission:'.Permissions::PAYMENTS_CREATE);

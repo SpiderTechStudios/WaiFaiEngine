@@ -19,13 +19,12 @@ class OperationsTest extends TestCase
                 'captive_portal_welcome_message' => 'Karibu WiFi',
                 'ruijie_account_id' => 'ruijie-1',
                 'ruijie_password' => 'secret-pass',
-                'payout_methods' => [
-                    ['provider' => 'mpesa', 'phone' => '0700111222', 'name' => 'Jane'],
-                ],
+                'payment_method' => 'both',
             ])->assertOk()
             ->assertJsonPath('data.primary_color', '#112233')
             ->assertJsonPath('data.voucher_code_digits', 8)
             ->assertJsonPath('data.ruijie_account_id', 'ruijie-1')
+            ->assertJsonPath('data.payment_method', 'both')
             ->assertJsonPath('data.ruijie_password_set', true);
 
         $response = $this->withHeaders($this->authHeaders($owner))
@@ -48,15 +47,25 @@ class OperationsTest extends TestCase
             ->assertJsonPath('data.methods.1.key', 'ruijie_cloud');
 
         $router = $this->withHeaders($headers)->postJson('/api/v1/routers', [
-            'name' => 'Main AP',
-            'vendor' => 'mikrotik',
-            'mac_address' => 'AA:BB:CC:DD:EE:FF',
-        ])->assertCreated()->json('data');
+            'gateway_type' => 'mikrotik',
+            'name' => 'MikroTik-Hotspot',
+            'lan_ip' => '192.168.88.1',
+            'api_host' => '41.59.12.34',
+            'api_port' => 443,
+            'api_username' => 'admin',
+            'api_password' => 'secret-pass',
+        ])->assertCreated()
+            ->assertJsonPath('data.gateway_type', 'mikrotik')
+            ->assertJsonPath('data.api_password_set', true)
+            ->json('data');
 
         $this->assertDatabaseHas('network_devices', [
             'id' => $router['id'],
             'type' => 'router',
+            'gateway_type' => 'mikrotik',
+            'lan_ip' => '192.168.88.1',
         ]);
+        $this->assertArrayNotHasKey('api_password', $router);
 
         $packageId = $this->withHeaders($headers)->postJson('/api/v1/packages', [
             'name' => '1 Hour',
@@ -71,12 +80,28 @@ class OperationsTest extends TestCase
             ->json('data.id');
 
         $vouchers = $this->withHeaders($headers)->postJson('/api/v1/vouchers', [
-            'internet_plan_id' => $packageId,
+            'router_id' => $router['id'],
+            'package_id' => $packageId,
             'quantity' => 2,
-        ])->assertCreated();
+            'max_uses' => 1,
+            'note' => 'Front desk pack',
+        ])->assertCreated()
+            ->assertJsonPath('data.quantity', 2)
+            ->assertJsonPath('data.items.0.status', 'active');
 
-        $this->assertCount(2, $vouchers->json('data.vouchers'));
-        $this->assertEquals(6, strlen($vouchers->json('data.vouchers.0.code')));
+        $this->assertCount(2, $vouchers->json('data.items'));
+        $this->assertEquals(6, strlen($vouchers->json('data.items.0.code')));
+
+        $voucherId = $vouchers->json('data.items.0.id');
+
+        $this->withHeaders($headers)
+            ->postJson('/api/v1/vouchers/'.$voucherId.'/revoke')
+            ->assertOk()
+            ->assertJsonPath('data.status', 'revoked');
+
+        $this->withHeaders($headers)->getJson('/api/v1/vouchers?status=revoked')
+            ->assertOk()
+            ->assertJsonPath('data.meta.total', 1);
 
         $this->withHeaders($headers)->postJson('/api/v1/payments', [
             'internet_plan_id' => $packageId,
@@ -111,7 +136,13 @@ class OperationsTest extends TestCase
         $this->createCompanyFor($ownerB);
 
         $routerId = $this->withHeaders($this->authHeaders($ownerA))
-            ->postJson('/api/v1/routers', ['name' => 'A router', 'vendor' => 'ruijie'])
+            ->postJson('/api/v1/routers', [
+                'gateway_type' => 'ruijie',
+                'name' => 'Ruijie AP',
+                'lan_ip' => '192.168.88.1',
+                'gateway_id' => 'G1UQCC8000976',
+                'wifidog_port' => 2060,
+            ])
             ->json('data.id');
 
         $this->withHeaders($this->authHeaders($ownerB))
@@ -130,9 +161,68 @@ class OperationsTest extends TestCase
         $this->createCompanyFor($owner);
 
         $this->withHeaders($this->authHeaders($owner))
-            ->postJson('/api/v1/routers', ['name' => 'Branch AP'])
-            ->assertCreated();
+            ->postJson('/api/v1/routers', [
+                'gateway_type' => 'wavlink',
+                'name' => 'PELEKA-WAVLINK',
+                'lan_ip' => '192.168.10.1',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.gateway_type', 'wavlink');
 
         $this->assertEquals(1, NetworkDevice::query()->count());
+    }
+
+    public function test_mikrotik_rejects_private_api_host(): void
+    {
+        $owner = $this->createUser();
+        $this->createCompanyFor($owner);
+
+        $this->withHeaders($this->authHeaders($owner))
+            ->postJson('/api/v1/routers', [
+                'gateway_type' => 'mikrotik',
+                'name' => 'Bad Host Router',
+                'lan_ip' => '192.168.88.1',
+                'api_host' => '192.168.1.1',
+                'api_username' => 'admin',
+                'api_password' => 'secret',
+            ])
+            ->assertStatus(422)
+            ->assertJsonPath('data.api_host.0', 'API host must be a public IP or DDNS hostname. Do not use private addresses like 192.168.x or 10.x.');
+    }
+
+    public function test_custom_voucher_code_requires_quantity_one(): void
+    {
+        $owner = $this->createUser();
+        $this->createCompanyFor($owner);
+        $headers = $this->authHeaders($owner);
+
+        $routerId = $this->withHeaders($headers)->postJson('/api/v1/routers', [
+            'gateway_type' => 'wavlink',
+            'name' => 'Shop Wavlink',
+        ])->json('data.id');
+
+        $packageId = $this->withHeaders($headers)->postJson('/api/v1/packages', [
+            'name' => 'Day Pass',
+            'duration' => 1,
+            'duration_unit' => 'DAYS',
+            'price' => 2000,
+        ])->json('data.id');
+
+        $this->withHeaders($headers)->postJson('/api/v1/vouchers', [
+            'router_id' => $routerId,
+            'package_id' => $packageId,
+            'quantity' => 2,
+            'custom_code' => '998877',
+        ])->assertStatus(422);
+
+        $this->withHeaders($headers)->postJson('/api/v1/vouchers', [
+            'router_id' => $routerId,
+            'package_id' => $packageId,
+            'quantity' => 1,
+            'custom_code' => '998877',
+            'max_uses' => 3,
+        ])->assertCreated()
+            ->assertJsonPath('data.items.0.code', '998877')
+            ->assertJsonPath('data.items.0.max_uses', 3);
     }
 }

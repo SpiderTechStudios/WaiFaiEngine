@@ -48,6 +48,8 @@ final class Permissions
 
     public const VOUCHERS_CREATE = 'vouchers.create';
 
+    public const VOUCHERS_REVOKE = 'vouchers.revoke';
+
     public const PAYMENTS_VIEW = 'payments.view';
 
     public const PAYMENTS_CREATE = 'payments.create';

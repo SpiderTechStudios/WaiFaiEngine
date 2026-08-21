@@ -758,31 +758,67 @@
                         "application/json": {
                             "schema": {
                                 "required": [
+                                    "gateway_type",
                                     "name"
                                 ],
                                 "properties": {
+                                    "gateway_type": {
+                                        "type": "string",
+                                        "example": "mikrotik",
+                                        "enum": [
+                                            "mikrotik",
+                                            "ruijie",
+                                            "wavlink"
+                                        ]
+                                    },
                                     "name": {
+                                        "description": "MikroTik identity / gateway name / Wavlink router label",
                                         "type": "string",
-                                        "example": "Main AP"
+                                        "example": "MikroTik-Hotspot"
                                     },
-                                    "vendor": {
+                                    "lan_ip": {
+                                        "description": "Required for mikrotik and ruijie. Optional for wavlink.",
                                         "type": "string",
-                                        "example": "mikrotik"
+                                        "example": "192.168.88.1",
+                                        "nullable": true
                                     },
-                                    "model": {
+                                    "api_host": {
+                                        "description": "MikroTik only. Public IP or DDNS. Never a private IP.",
                                         "type": "string",
+                                        "example": "41.59.12.34",
+                                        "nullable": true
+                                    },
+                                    "api_port": {
+                                        "description": "MikroTik only. Defaults to 443.",
+                                        "type": "integer",
+                                        "example": 443,
+                                        "nullable": true
+                                    },
+                                    "api_username": {
+                                        "description": "MikroTik only.",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "api_password": {
+                                        "description": "MikroTik only. Stored encrypted; never returned.",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "gateway_id": {
+                                        "description": "Ruijie only. WiFiDog gw_id.",
+                                        "type": "string",
+                                        "example": "G1UQCC8000976",
                                         "nullable": true
                                     },
                                     "serial_number": {
+                                        "description": "Ruijie only. Optional.",
                                         "type": "string",
                                         "nullable": true
                                     },
-                                    "mac_address": {
-                                        "type": "string",
-                                        "nullable": true
-                                    },
-                                    "ip_address": {
-                                        "type": "string",
+                                    "wifidog_port": {
+                                        "description": "Ruijie only. Defaults to 2060.",
+                                        "type": "integer",
+                                        "example": 2060,
                                         "nullable": true
                                     },
                                     "branch_id": {
@@ -916,36 +952,44 @@
                             "schema": {
                                 "required": [
                                     "name",
-                                    "price"
+                                    "price",
+                                    "duration_unit"
                                 ],
                                 "properties": {
                                     "name": {
                                         "type": "string",
                                         "example": "1 Hour"
                                     },
-                                    "duration": {
-                                        "type": "integer",
-                                        "example": 1
-                                    },
-                                    "duration_unit": {
-                                        "type": "string",
-                                        "example": "hour"
-                                    },
-                                    "download_speed": {
-                                        "type": "integer",
-                                        "example": 5
-                                    },
-                                    "upload_speed": {
-                                        "type": "integer",
-                                        "example": 5
-                                    },
                                     "price": {
                                         "type": "number",
                                         "example": 1000
                                     },
-                                    "currency": {
+                                    "duration": {
+                                        "description": "Required unless duration_unit is UNLIMITED_DATA",
+                                        "type": "integer",
+                                        "example": 1,
+                                        "nullable": true
+                                    },
+                                    "duration_unit": {
                                         "type": "string",
-                                        "example": "TZS"
+                                        "example": "HOURS",
+                                        "enum": [
+                                            "HOURS",
+                                            "DAYS",
+                                            "WEEKS",
+                                            "MONTHS",
+                                            "UNLIMITED_DATA"
+                                        ]
+                                    },
+                                    "badge": {
+                                        "type": "string",
+                                        "example": "Popular",
+                                        "nullable": true
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Fast hourly access",
+                                        "nullable": true
                                     }
                                 },
                                 "type": "object"
@@ -1051,6 +1095,37 @@
                     "Vouchers"
                 ],
                 "operationId": "listVouchers",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "active",
+                                "expired",
+                                "revoked"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "router_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "package_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Vouchers"
@@ -1066,7 +1141,7 @@
                 "tags": [
                     "Vouchers"
                 ],
-                "summary": "Generate voucher codes for a package",
+                "summary": "Generate voucher codes for a router and package",
                 "operationId": "createVouchers",
                 "requestBody": {
                     "required": true,
@@ -1074,18 +1149,42 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "internet_plan_id",
+                                    "router_id",
+                                    "package_id",
                                     "quantity"
                                 ],
                                 "properties": {
-                                    "internet_plan_id": {
-                                        "type": "integer"
+                                    "router_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "package_id": {
+                                        "type": "integer",
+                                        "example": 1
                                     },
                                     "quantity": {
+                                        "description": "Number of codes to generate",
                                         "type": "integer",
                                         "example": 10
                                     },
-                                    "name": {
+                                    "custom_code": {
+                                        "description": "Numbers only. Allowed only when quantity is 1. Leave empty to auto-generate.",
+                                        "type": "string",
+                                        "example": "123456",
+                                        "nullable": true
+                                    },
+                                    "max_uses": {
+                                        "description": "Max uses per code. Defaults to 1.",
+                                        "type": "integer",
+                                        "example": 1,
+                                        "nullable": true
+                                    },
+                                    "expires_at": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "nullable": true
+                                    },
+                                    "note": {
                                         "type": "string",
                                         "nullable": true
                                     }
@@ -1098,6 +1197,38 @@
                 "responses": {
                     "201": {
                         "description": "Created"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/vouchers/{voucher}/revoke": {
+            "post": {
+                "tags": [
+                    "Vouchers"
+                ],
+                "summary": "Revoke an active voucher",
+                "operationId": "revokeVoucher",
+                "parameters": [
+                    {
+                        "name": "voucher",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Revoked"
+                    },
+                    "422": {
+                        "description": "Already revoked or expired"
                     }
                 },
                 "security": [

@@ -16,7 +16,6 @@ return new class extends Migration
             $table->string('source');
             $table->unsignedBigInteger('payment_transaction_id')->nullable();
             $table->unsignedBigInteger('voucher_id')->nullable();
-            $table->unsignedBigInteger('voucher_batch_id')->nullable();
             $table->unsignedBigInteger('access_grant_id')->nullable();
             $table->decimal('amount', 12, 2);
             $table->string('currency', 3);
@@ -41,10 +40,6 @@ return new class extends Migration
             $table->foreign(['voucher_id', 'company_id'])
                 ->references(['id', 'company_id'])
                 ->on('vouchers')
-                ->restrictOnDelete();
-            $table->foreign(['voucher_batch_id', 'company_id'])
-                ->references(['id', 'company_id'])
-                ->on('voucher_batches')
                 ->restrictOnDelete();
             $table->foreign(['access_grant_id', 'company_id'])
                 ->references(['id', 'company_id'])

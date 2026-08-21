@@ -16,9 +16,21 @@ class VoucherResource extends JsonResource
             'id' => $this->id,
             'code' => $this->code,
             'status' => $this->status,
+            'max_uses' => $this->max_uses,
+            'uses_count' => $this->uses_count,
             'expires_at' => $this->expires_at,
-            'redeemed_at' => $this->redeemed_at,
-            'internet_plan_id' => $this->internet_plan_id,
+            'note' => $this->note,
+            'revoked_at' => $this->revoked_at,
+            'router' => $this->whenLoaded('router', fn () => [
+                'id' => $this->router?->id,
+                'name' => $this->router?->name,
+                'gateway_type' => $this->router?->gateway_type,
+            ]),
+            'package' => $this->whenLoaded('internetPlan', fn () => [
+                'id' => $this->internetPlan?->id,
+                'name' => $this->internetPlan?->name,
+                'price' => $this->internetPlan?->price,
+            ]),
             'created_at' => $this->created_at,
         ];
     }

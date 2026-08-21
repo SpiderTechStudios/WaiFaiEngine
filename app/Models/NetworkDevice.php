@@ -11,19 +11,38 @@ class NetworkDevice extends Model
 {
     use SoftDeletes;
 
+    public const GATEWAY_MIKROTIK = 'mikrotik';
+
+    public const GATEWAY_RUIJIE = 'ruijie';
+
+    public const GATEWAY_WAVLINK = 'wavlink';
+
+    public const GATEWAY_TYPES = [
+        self::GATEWAY_MIKROTIK,
+        self::GATEWAY_RUIJIE,
+        self::GATEWAY_WAVLINK,
+    ];
+
     protected $fillable = [
         'company_id',
         'network_station_id',
         'type',
-        'vendor',
-        'model',
+        'gateway_type',
         'name',
+        'lan_ip',
+        'api_host',
+        'api_port',
+        'api_username',
+        'api_password',
+        'gateway_id',
         'serial_number',
-        'mac_address',
-        'ip_address',
+        'wifidog_port',
         'status',
         'last_seen_at',
-        'metadata',
+    ];
+
+    protected $hidden = [
+        'api_password',
     ];
 
     /**
@@ -32,8 +51,9 @@ class NetworkDevice extends Model
     protected function casts(): array
     {
         return [
+            'api_port' => 'integer',
+            'wifidog_port' => 'integer',
             'last_seen_at' => 'datetime',
-            'metadata' => 'array',
         ];
     }
 

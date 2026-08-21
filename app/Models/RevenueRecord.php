@@ -14,7 +14,6 @@ class RevenueRecord extends Model
         'source',
         'payment_transaction_id',
         'voucher_id',
-        'voucher_batch_id',
         'access_grant_id',
         'amount',
         'currency',
@@ -59,11 +58,6 @@ class RevenueRecord extends Model
     public function voucher(): BelongsTo
     {
         return $this->belongsTo(Voucher::class);
-    }
-
-    public function voucherBatch(): BelongsTo
-    {
-        return $this->belongsTo(VoucherBatch::class);
     }
 
     public function accessGrant(): BelongsTo

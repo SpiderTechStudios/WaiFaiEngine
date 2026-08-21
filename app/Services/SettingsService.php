@@ -31,7 +31,7 @@ class SettingsService
             'primary_color' => $company->primary_color,
             'logo_url' => $company->logo_url,
             'voucher_code_digits' => (int) $company->voucher_code_digits,
-            'payout_methods' => $company->payout_methods ?? [],
+            'payment_method' => $company->payment_method,
             'captive_portal_welcome_message' => $company->captive_portal_welcome_message,
             'ruijie_account_id' => $company->ruijie_account_id,
             'ruijie_password_set' => filled($company->ruijie_password),
@@ -48,7 +48,7 @@ class SettingsService
             'primary_color',
             'logo_url',
             'voucher_code_digits',
-            'payout_methods',
+            'payment_method',
             'captive_portal_welcome_message',
             'ruijie_account_id',
         ] as $key) {

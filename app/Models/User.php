@@ -154,11 +154,6 @@ class User extends Authenticatable implements MustVerifyEmailContract
             ->withTimestamps();
     }
 
-    public function voucherBatches(): HasMany
-    {
-        return $this->hasMany(VoucherBatch::class, 'created_by');
-    }
-
     public function auditLogs(): HasMany
     {
         return $this->hasMany(AuditLog::class);

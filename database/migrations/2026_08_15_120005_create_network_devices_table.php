@@ -12,23 +12,27 @@ return new class extends Migration
             $table->id();
             $table->foreignId('company_id')->constrained()->restrictOnDelete();
             $table->unsignedBigInteger('network_station_id');
-            $table->string('type');
-            $table->string('vendor')->nullable();
-            $table->string('model')->nullable();
+            $table->string('type')->default('router');
+            $table->string('gateway_type');
             $table->string('name');
+            $table->string('lan_ip', 45)->nullable();
+            $table->string('api_host')->nullable();
+            $table->unsignedInteger('api_port')->nullable();
+            $table->string('api_username')->nullable();
+            $table->text('api_password')->nullable();
+            $table->string('gateway_id')->nullable();
             $table->string('serial_number')->nullable();
-            $table->string('mac_address')->nullable();
-            $table->string('ip_address', 45)->nullable();
+            $table->unsignedInteger('wifidog_port')->nullable();
             $table->string('status')->default('active')->index();
             $table->timestamp('last_seen_at')->nullable();
-            $table->json('metadata')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
             $table->unique(['id', 'company_id']);
+            $table->unique(['company_id', 'name']);
             $table->index(['company_id', 'status']);
-            $table->index(['company_id', 'mac_address']);
-            $table->index(['company_id', 'serial_number']);
+            $table->index(['company_id', 'gateway_type']);
+            $table->index(['company_id', 'gateway_id']);
             $table->foreign(['network_station_id', 'company_id'])
                 ->references(['id', 'company_id'])
                 ->on('network_stations')
