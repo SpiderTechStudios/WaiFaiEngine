@@ -6,13 +6,46 @@ use OpenApi\Attributes as OA;
 
 class OperationsDocumentation
 {
-    #[OA\Get(path: '/dashboard', operationId: 'dashboard', tags: ['Dashboard'], summary: 'Manager dashboard KPIs', security: [['sanctum' => []]], responses: [new OA\Response(response: 200, description: 'Dashboard')])]
+    #[OA\Get(
+        path: '/dashboard',
+        operationId: 'dashboard',
+        tags: ['Dashboard'],
+        summary: 'Manager dashboard KPIs',
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Dashboard', content: new OA\JsonContent(ref: '#/components/schemas/DashboardResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+        ]
+    )]
     public function dashboard(): void {}
 
-    #[OA\Get(path: '/income', operationId: 'income', tags: ['Income'], summary: 'Income by source and last 14 days', security: [['sanctum' => []]], responses: [new OA\Response(response: 200, description: 'Income')])]
+    #[OA\Get(
+        path: '/income',
+        operationId: 'income',
+        tags: ['Income'],
+        summary: 'Income by source and last 14 days',
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Income', content: new OA\JsonContent(ref: '#/components/schemas/IncomeResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+        ]
+    )]
     public function income(): void {}
 
-    #[OA\Get(path: '/device-setup', operationId: 'deviceSetup', tags: ['Device Setup'], summary: 'MikroTik and Ruijie Cloud setup instructions', security: [['sanctum' => []]], responses: [new OA\Response(response: 200, description: 'Instructions')])]
+    #[OA\Get(
+        path: '/device-setup',
+        operationId: 'deviceSetup',
+        tags: ['Device Setup'],
+        summary: 'MikroTik and Ruijie Cloud setup instructions',
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Instructions', content: new OA\JsonContent(ref: '#/components/schemas/DeviceSetupResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+        ]
+    )]
     public function deviceSetup(): void {}
 
     #[OA\Post(
@@ -26,7 +59,12 @@ class OperationsDocumentation
             new OA\Property(property: 'ruijie_account_id', type: 'string', nullable: true),
             new OA\Property(property: 'ruijie_password', type: 'string', nullable: true),
         ])),
-        responses: [new OA\Response(response: 201, description: 'Saved')]
+        responses: [
+            new OA\Response(response: 201, description: 'Saved', content: new OA\JsonContent(ref: '#/components/schemas/DeviceSetupCreatedResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 422, description: 'Validation error', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
+        ]
     )]
     public function storeDeviceSetup(): void {}
 
@@ -41,11 +79,26 @@ class OperationsDocumentation
             new OA\Property(property: 'ruijie_account_id', type: 'string', nullable: true),
             new OA\Property(property: 'ruijie_password', type: 'string', nullable: true),
         ])),
-        responses: [new OA\Response(response: 200, description: 'Updated')]
+        responses: [
+            new OA\Response(response: 200, description: 'Updated', content: new OA\JsonContent(ref: '#/components/schemas/DeviceSetupResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 422, description: 'Validation error', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
+        ]
     )]
     public function updateDeviceSetup(): void {}
 
-    #[OA\Get(path: '/routers', operationId: 'listRouters', tags: ['Routers'], security: [['sanctum' => []]], responses: [new OA\Response(response: 200, description: 'Routers')])]
+    #[OA\Get(
+        path: '/routers',
+        operationId: 'listRouters',
+        tags: ['Routers'],
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Routers', content: new OA\JsonContent(ref: '#/components/schemas/RouterListResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+        ]
+    )]
     public function listRouters(): void {}
 
     #[OA\Post(
@@ -66,17 +119,73 @@ class OperationsDocumentation
             new OA\Property(property: 'wifidog_port', type: 'integer', nullable: true, example: 2060, description: 'Ruijie only. Defaults to 2060.'),
             new OA\Property(property: 'branch_id', type: 'integer', nullable: true),
         ])),
-        responses: [new OA\Response(response: 201, description: 'Created')]
+        responses: [
+            new OA\Response(response: 201, description: 'Created', content: new OA\JsonContent(ref: '#/components/schemas/RouterCreatedResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 422, description: 'Validation error', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
+        ]
     )]
     public function createRouter(): void {}
 
-    #[OA\Get(path: '/routers/{router}', operationId: 'showRouter', tags: ['Routers'], security: [['sanctum' => []]], parameters: [new OA\Parameter(name: 'router', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))], responses: [new OA\Response(response: 200, description: 'Router')])]
+    #[OA\Get(
+        path: '/routers/{router}',
+        operationId: 'showRouter',
+        tags: ['Routers'],
+        security: [['sanctum' => []]],
+        parameters: [new OA\Parameter(name: 'router', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        responses: [
+            new OA\Response(response: 200, description: 'Router', content: new OA\JsonContent(ref: '#/components/schemas/RouterResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 404, description: 'Not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
+        ]
+    )]
     public function showRouter(): void {}
 
-    #[OA\Patch(path: '/routers/{router}', operationId: 'updateRouter', tags: ['Routers'], security: [['sanctum' => []]], parameters: [new OA\Parameter(name: 'router', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))], responses: [new OA\Response(response: 200, description: 'Updated')])]
+    #[OA\Patch(
+        path: '/routers/{router}',
+        operationId: 'updateRouter',
+        tags: ['Routers'],
+        security: [['sanctum' => []]],
+        parameters: [new OA\Parameter(name: 'router', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        requestBody: new OA\RequestBody(content: new OA\JsonContent(properties: [
+            new OA\Property(property: 'gateway_type', type: 'string', enum: ['mikrotik', 'ruijie', 'wavlink'], example: 'mikrotik'),
+            new OA\Property(property: 'name', type: 'string', example: 'MikroTik-Hotspot', description: 'MikroTik identity / gateway name / Wavlink router label'),
+            new OA\Property(property: 'lan_ip', type: 'string', nullable: true, example: '192.168.88.1', description: 'Required for mikrotik and ruijie. Optional for wavlink.'),
+            new OA\Property(property: 'api_host', type: 'string', nullable: true, example: '41.59.12.34', description: 'MikroTik only. Public IP or DDNS. Never a private IP.'),
+            new OA\Property(property: 'api_port', type: 'integer', nullable: true, example: 443, description: 'MikroTik only. Defaults to 443.'),
+            new OA\Property(property: 'api_username', type: 'string', nullable: true, description: 'MikroTik only.'),
+            new OA\Property(property: 'api_password', type: 'string', nullable: true, description: 'MikroTik only. Stored encrypted; never returned.'),
+            new OA\Property(property: 'gateway_id', type: 'string', nullable: true, example: 'G1UQCC8000976', description: 'Ruijie only. WiFiDog gw_id.'),
+            new OA\Property(property: 'serial_number', type: 'string', nullable: true, description: 'Ruijie only. Optional.'),
+            new OA\Property(property: 'wifidog_port', type: 'integer', nullable: true, example: 2060, description: 'Ruijie only. Defaults to 2060.'),
+            new OA\Property(property: 'branch_id', type: 'integer', nullable: true),
+            new OA\Property(property: 'status', type: 'string', enum: ['active', 'inactive', 'offline'], nullable: true),
+        ])),
+        responses: [
+            new OA\Response(response: 200, description: 'Updated', content: new OA\JsonContent(ref: '#/components/schemas/RouterResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 404, description: 'Not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
+            new OA\Response(response: 422, description: 'Validation error', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
+        ]
+    )]
     public function updateRouter(): void {}
 
-    #[OA\Delete(path: '/routers/{router}', operationId: 'deleteRouter', tags: ['Routers'], security: [['sanctum' => []]], parameters: [new OA\Parameter(name: 'router', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))], responses: [new OA\Response(response: 200, description: 'Deleted')])]
+    #[OA\Delete(
+        path: '/routers/{router}',
+        operationId: 'deleteRouter',
+        tags: ['Routers'],
+        security: [['sanctum' => []]],
+        parameters: [new OA\Parameter(name: 'router', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        responses: [
+            new OA\Response(response: 200, description: 'Deleted', content: new OA\JsonContent(ref: '#/components/schemas/MessageResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 404, description: 'Not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
+        ]
+    )]
     public function deleteRouter(): void {}
 
     #[OA\Post(
@@ -87,14 +196,27 @@ class OperationsDocumentation
         security: [['sanctum' => []]],
         parameters: [new OA\Parameter(name: 'router', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
         responses: [
-            new OA\Response(response: 200, description: 'Synced'),
-            new OA\Response(response: 422, description: 'Not a Ruijie router or credentials missing'),
-            new OA\Response(response: 502, description: 'Ruijie Cloud sync failed'),
+            new OA\Response(response: 200, description: 'Synced', content: new OA\JsonContent(ref: '#/components/schemas/RouterResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 404, description: 'Not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
+            new OA\Response(response: 422, description: 'Not a Ruijie router or credentials missing', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
+            new OA\Response(response: 502, description: 'Ruijie Cloud sync failed', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
         ]
     )]
     public function syncRouter(): void {}
 
-    #[OA\Get(path: '/packages', operationId: 'listPackages', tags: ['Packages'], security: [['sanctum' => []]], responses: [new OA\Response(response: 200, description: 'Packages')])]
+    #[OA\Get(
+        path: '/packages',
+        operationId: 'listPackages',
+        tags: ['Packages'],
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Packages', content: new OA\JsonContent(ref: '#/components/schemas/PackageListResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+        ]
+    )]
     public function listPackages(): void {}
 
     #[OA\Post(
@@ -110,17 +232,67 @@ class OperationsDocumentation
             new OA\Property(property: 'badge', type: 'string', nullable: true, example: 'Popular'),
             new OA\Property(property: 'description', type: 'string', nullable: true, example: 'Fast hourly access'),
         ])),
-        responses: [new OA\Response(response: 201, description: 'Created')]
+        responses: [
+            new OA\Response(response: 201, description: 'Created', content: new OA\JsonContent(ref: '#/components/schemas/PackageCreatedResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 422, description: 'Validation error', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
+        ]
     )]
     public function createPackage(): void {}
 
-    #[OA\Get(path: '/packages/{package}', operationId: 'showPackage', tags: ['Packages'], security: [['sanctum' => []]], parameters: [new OA\Parameter(name: 'package', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))], responses: [new OA\Response(response: 200, description: 'Package')])]
+    #[OA\Get(
+        path: '/packages/{package}',
+        operationId: 'showPackage',
+        tags: ['Packages'],
+        security: [['sanctum' => []]],
+        parameters: [new OA\Parameter(name: 'package', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        responses: [
+            new OA\Response(response: 200, description: 'Package', content: new OA\JsonContent(ref: '#/components/schemas/PackageResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 404, description: 'Not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
+        ]
+    )]
     public function showPackage(): void {}
 
-    #[OA\Patch(path: '/packages/{package}', operationId: 'updatePackage', tags: ['Packages'], security: [['sanctum' => []]], parameters: [new OA\Parameter(name: 'package', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))], responses: [new OA\Response(response: 200, description: 'Updated')])]
+    #[OA\Patch(
+        path: '/packages/{package}',
+        operationId: 'updatePackage',
+        tags: ['Packages'],
+        security: [['sanctum' => []]],
+        parameters: [new OA\Parameter(name: 'package', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        requestBody: new OA\RequestBody(content: new OA\JsonContent(properties: [
+            new OA\Property(property: 'name', type: 'string', example: '1 Hour'),
+            new OA\Property(property: 'price', type: 'number', example: 1000),
+            new OA\Property(property: 'duration', type: 'integer', nullable: true, example: 1, description: 'Required unless duration_unit is UNLIMITED_DATA'),
+            new OA\Property(property: 'duration_unit', type: 'string', enum: ['HOURS', 'DAYS', 'WEEKS', 'MONTHS', 'UNLIMITED_DATA'], example: 'HOURS'),
+            new OA\Property(property: 'badge', type: 'string', nullable: true, example: 'Popular'),
+            new OA\Property(property: 'description', type: 'string', nullable: true, example: 'Fast hourly access'),
+        ])),
+        responses: [
+            new OA\Response(response: 200, description: 'Updated', content: new OA\JsonContent(ref: '#/components/schemas/PackageResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 404, description: 'Not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
+            new OA\Response(response: 422, description: 'Validation error', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
+        ]
+    )]
     public function updatePackage(): void {}
 
-    #[OA\Delete(path: '/packages/{package}', operationId: 'deletePackage', tags: ['Packages'], security: [['sanctum' => []]], parameters: [new OA\Parameter(name: 'package', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))], responses: [new OA\Response(response: 200, description: 'Deleted')])]
+    #[OA\Delete(
+        path: '/packages/{package}',
+        operationId: 'deletePackage',
+        tags: ['Packages'],
+        security: [['sanctum' => []]],
+        parameters: [new OA\Parameter(name: 'package', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        responses: [
+            new OA\Response(response: 200, description: 'Deleted', content: new OA\JsonContent(ref: '#/components/schemas/MessageResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 404, description: 'Not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
+        ]
+    )]
     public function deletePackage(): void {}
 
     #[OA\Get(
@@ -133,7 +305,11 @@ class OperationsDocumentation
             new OA\Parameter(name: 'router_id', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
             new OA\Parameter(name: 'package_id', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
         ],
-        responses: [new OA\Response(response: 200, description: 'Vouchers')]
+        responses: [
+            new OA\Response(response: 200, description: 'Vouchers', content: new OA\JsonContent(ref: '#/components/schemas/VoucherListResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+        ]
     )]
     public function listVouchers(): void {}
 
@@ -152,7 +328,12 @@ class OperationsDocumentation
             new OA\Property(property: 'expires_at', type: 'string', format: 'date-time', nullable: true),
             new OA\Property(property: 'note', type: 'string', nullable: true),
         ])),
-        responses: [new OA\Response(response: 201, description: 'Created')]
+        responses: [
+            new OA\Response(response: 201, description: 'Created', content: new OA\JsonContent(ref: '#/components/schemas/VouchersCreatedResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 422, description: 'Validation error', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
+        ]
     )]
     public function createVouchers(): void {}
 
@@ -164,8 +345,11 @@ class OperationsDocumentation
         security: [['sanctum' => []]],
         parameters: [new OA\Parameter(name: 'voucher', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
         responses: [
-            new OA\Response(response: 200, description: 'Revoked'),
-            new OA\Response(response: 422, description: 'Already revoked or expired'),
+            new OA\Response(response: 200, description: 'Revoked', content: new OA\JsonContent(ref: '#/components/schemas/VoucherResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 404, description: 'Not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
+            new OA\Response(response: 422, description: 'Already revoked or expired', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
         ]
     )]
     public function revokeVoucher(): void {}
@@ -184,13 +368,26 @@ class OperationsDocumentation
             new OA\Property(property: 'customer_id', type: 'integer', nullable: true),
         ])),
         responses: [
-            new OA\Response(response: 200, description: 'Consumed'),
-            new OA\Response(response: 422, description: 'Voucher not usable'),
+            new OA\Response(response: 200, description: 'Consumed', content: new OA\JsonContent(ref: '#/components/schemas/VoucherConsumeResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 404, description: 'Not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
+            new OA\Response(response: 422, description: 'Voucher not usable', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
         ]
     )]
     public function consumeVoucher(): void {}
 
-    #[OA\Get(path: '/payments', operationId: 'listPayments', tags: ['Payments'], security: [['sanctum' => []]], responses: [new OA\Response(response: 200, description: 'Payments')])]
+    #[OA\Get(
+        path: '/payments',
+        operationId: 'listPayments',
+        tags: ['Payments'],
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Payments', content: new OA\JsonContent(ref: '#/components/schemas/PaymentListResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+        ]
+    )]
     public function listPayments(): void {}
 
     #[OA\Post(
@@ -205,7 +402,12 @@ class OperationsDocumentation
             new OA\Property(property: 'payment_method', type: 'string', example: 'mpesa'),
             new OA\Property(property: 'amount', type: 'number', nullable: true),
         ])),
-        responses: [new OA\Response(response: 201, description: 'Recorded')]
+        responses: [
+            new OA\Response(response: 201, description: 'Recorded', content: new OA\JsonContent(ref: '#/components/schemas/PaymentCreatedResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 422, description: 'Validation error', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
+        ]
     )]
     public function createPayment(): void {}
 
@@ -215,11 +417,26 @@ class OperationsDocumentation
         tags: ['Payments'],
         security: [['sanctum' => []]],
         parameters: [new OA\Parameter(name: 'payment', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
-        responses: [new OA\Response(response: 200, description: 'Payment')]
+        responses: [
+            new OA\Response(response: 200, description: 'Payment', content: new OA\JsonContent(ref: '#/components/schemas/PaymentResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 404, description: 'Not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
+        ]
     )]
     public function showPayment(): void {}
 
-    #[OA\Get(path: '/sessions', operationId: 'listSessions', tags: ['Sessions'], security: [['sanctum' => []]], responses: [new OA\Response(response: 200, description: 'Sessions')])]
+    #[OA\Get(
+        path: '/sessions',
+        operationId: 'listSessions',
+        tags: ['Sessions'],
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Sessions', content: new OA\JsonContent(ref: '#/components/schemas/SessionListResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+        ]
+    )]
     public function listSessions(): void {}
 
     #[OA\Get(
@@ -228,11 +445,26 @@ class OperationsDocumentation
         tags: ['Sessions'],
         security: [['sanctum' => []]],
         parameters: [new OA\Parameter(name: 'session', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
-        responses: [new OA\Response(response: 200, description: 'Session')]
+        responses: [
+            new OA\Response(response: 200, description: 'Session', content: new OA\JsonContent(ref: '#/components/schemas/SessionResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 404, description: 'Not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
+        ]
     )]
     public function showSession(): void {}
 
-    #[OA\Get(path: '/customers', operationId: 'listCustomers', tags: ['Customers'], security: [['sanctum' => []]], responses: [new OA\Response(response: 200, description: 'Customers')])]
+    #[OA\Get(
+        path: '/customers',
+        operationId: 'listCustomers',
+        tags: ['Customers'],
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Customers', content: new OA\JsonContent(ref: '#/components/schemas/CustomerListResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+        ]
+    )]
     public function listCustomers(): void {}
 
     #[OA\Get(
@@ -241,14 +473,44 @@ class OperationsDocumentation
         tags: ['Customers'],
         security: [['sanctum' => []]],
         parameters: [new OA\Parameter(name: 'customer', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
-        responses: [new OA\Response(response: 200, description: 'Customer')]
+        responses: [
+            new OA\Response(response: 200, description: 'Customer', content: new OA\JsonContent(ref: '#/components/schemas/CustomerResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 404, description: 'Not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
+        ]
     )]
     public function showCustomer(): void {}
 
-    #[OA\Get(path: '/branches', operationId: 'listBranches', tags: ['Branches'], security: [['sanctum' => []]], responses: [new OA\Response(response: 200, description: 'Branches')])]
+    #[OA\Get(
+        path: '/branches',
+        operationId: 'listBranches',
+        tags: ['Branches'],
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Branches', content: new OA\JsonContent(ref: '#/components/schemas/BranchListResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+        ]
+    )]
     public function listBranches(): void {}
 
-    #[OA\Post(path: '/branches', operationId: 'createBranch', tags: ['Branches'], security: [['sanctum' => []]], requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(required: ['name'], properties: [new OA\Property(property: 'name', type: 'string'), new OA\Property(property: 'address', type: 'string', nullable: true)])), responses: [new OA\Response(response: 201, description: 'Created')])]
+    #[OA\Post(
+        path: '/branches',
+        operationId: 'createBranch',
+        tags: ['Branches'],
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(required: ['name'], properties: [
+            new OA\Property(property: 'name', type: 'string'),
+            new OA\Property(property: 'address', type: 'string', nullable: true),
+        ])),
+        responses: [
+            new OA\Response(response: 201, description: 'Created', content: new OA\JsonContent(ref: '#/components/schemas/BranchCreatedResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 422, description: 'Validation error', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
+        ]
+    )]
     public function createBranch(): void {}
 
     #[OA\Get(
@@ -257,7 +519,12 @@ class OperationsDocumentation
         tags: ['Branches'],
         security: [['sanctum' => []]],
         parameters: [new OA\Parameter(name: 'branch', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
-        responses: [new OA\Response(response: 200, description: 'Branch')]
+        responses: [
+            new OA\Response(response: 200, description: 'Branch', content: new OA\JsonContent(ref: '#/components/schemas/BranchResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 404, description: 'Not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
+        ]
     )]
     public function showBranch(): void {}
 
@@ -267,7 +534,17 @@ class OperationsDocumentation
         tags: ['Branches'],
         security: [['sanctum' => []]],
         parameters: [new OA\Parameter(name: 'branch', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
-        responses: [new OA\Response(response: 200, description: 'Updated')]
+        requestBody: new OA\RequestBody(content: new OA\JsonContent(properties: [
+            new OA\Property(property: 'name', type: 'string'),
+            new OA\Property(property: 'address', type: 'string', nullable: true),
+        ])),
+        responses: [
+            new OA\Response(response: 200, description: 'Updated', content: new OA\JsonContent(ref: '#/components/schemas/BranchResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 404, description: 'Not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
+            new OA\Response(response: 422, description: 'Validation error', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
+        ]
     )]
     public function updateBranch(): void {}
 
@@ -277,11 +554,26 @@ class OperationsDocumentation
         tags: ['Branches'],
         security: [['sanctum' => []]],
         parameters: [new OA\Parameter(name: 'branch', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
-        responses: [new OA\Response(response: 200, description: 'Deleted')]
+        responses: [
+            new OA\Response(response: 200, description: 'Deleted', content: new OA\JsonContent(ref: '#/components/schemas/MessageResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 404, description: 'Not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
+        ]
     )]
     public function deleteBranch(): void {}
 
-    #[OA\Get(path: '/withdrawals', operationId: 'listWithdrawals', tags: ['Withdrawals'], security: [['sanctum' => []]], responses: [new OA\Response(response: 200, description: 'Withdrawals and wallet balance')])]
+    #[OA\Get(
+        path: '/withdrawals',
+        operationId: 'listWithdrawals',
+        tags: ['Withdrawals'],
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Withdrawals and wallet balance', content: new OA\JsonContent(ref: '#/components/schemas/WithdrawalListResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+        ]
+    )]
     public function listWithdrawals(): void {}
 
     #[OA\Get(
@@ -290,7 +582,11 @@ class OperationsDocumentation
         tags: ['Withdrawals'],
         summary: 'Wallet and withdrawal totals by status',
         security: [['sanctum' => []]],
-        responses: [new OA\Response(response: 200, description: 'Stats')]
+        responses: [
+            new OA\Response(response: 200, description: 'Stats', content: new OA\JsonContent(ref: '#/components/schemas/WithdrawalStatsResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+        ]
     )]
     public function withdrawalStats(): void {}
 
@@ -305,7 +601,12 @@ class OperationsDocumentation
             new OA\Property(property: 'destination_phone', type: 'string'),
             new OA\Property(property: 'destination_name', type: 'string', nullable: true),
         ])),
-        responses: [new OA\Response(response: 201, description: 'Requested')]
+        responses: [
+            new OA\Response(response: 201, description: 'Requested', content: new OA\JsonContent(ref: '#/components/schemas/WithdrawalCreatedResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 422, description: 'Validation error', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
+        ]
     )]
     public function createWithdrawal(): void {}
 
@@ -315,11 +616,27 @@ class OperationsDocumentation
         tags: ['Withdrawals'],
         security: [['sanctum' => []]],
         parameters: [new OA\Parameter(name: 'withdrawal', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
-        responses: [new OA\Response(response: 200, description: 'Withdrawal')]
+        responses: [
+            new OA\Response(response: 200, description: 'Withdrawal', content: new OA\JsonContent(ref: '#/components/schemas/WithdrawalResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 404, description: 'Not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
+        ]
     )]
     public function showWithdrawal(): void {}
 
-    #[OA\Get(path: '/settings', operationId: 'showSettings', tags: ['Settings'], summary: 'Current company settings', security: [['sanctum' => []]], responses: [new OA\Response(response: 200, description: 'Settings')])]
+    #[OA\Get(
+        path: '/settings',
+        operationId: 'showSettings',
+        tags: ['Settings'],
+        summary: 'Current company settings',
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Settings', content: new OA\JsonContent(ref: '#/components/schemas/SettingsResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+        ]
+    )]
     public function showSettings(): void {}
 
     #[OA\Patch(
@@ -339,7 +656,12 @@ class OperationsDocumentation
             new OA\Property(property: 'portal_subdomain', type: 'string'),
             new OA\Property(property: 'payout_methods', type: 'array', items: new OA\Items(type: 'object')),
         ])),
-        responses: [new OA\Response(response: 200, description: 'Updated')]
+        responses: [
+            new OA\Response(response: 200, description: 'Updated', content: new OA\JsonContent(ref: '#/components/schemas/SettingsResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 422, description: 'Validation error', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
+        ]
     )]
     public function updateSettings(): void {}
 }

@@ -682,7 +682,34 @@
                 "operationId": "dashboard",
                 "responses": {
                     "200": {
-                        "description": "Dashboard"
+                        "description": "Dashboard",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DashboardResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -701,7 +728,34 @@
                 "operationId": "income",
                 "responses": {
                     "200": {
-                        "description": "Income"
+                        "description": "Income",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/IncomeResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -720,7 +774,34 @@
                 "operationId": "deviceSetup",
                 "responses": {
                     "200": {
-                        "description": "Instructions"
+                        "description": "Instructions",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeviceSetupResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -760,7 +841,44 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Saved"
+                        "description": "Saved",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeviceSetupCreatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -800,7 +918,44 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Updated"
+                        "description": "Updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeviceSetupResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -818,7 +973,34 @@
                 "operationId": "listRouters",
                 "responses": {
                     "200": {
-                        "description": "Routers"
+                        "description": "Routers",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouterListResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -913,7 +1095,44 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Created"
+                        "description": "Created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouterCreatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -941,7 +1160,44 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Router"
+                        "description": "Router",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouterResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -967,7 +1223,44 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Deleted"
+                        "description": "Deleted",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MessageResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -991,9 +1284,139 @@
                         }
                     }
                 ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "gateway_type": {
+                                        "type": "string",
+                                        "example": "mikrotik",
+                                        "enum": [
+                                            "mikrotik",
+                                            "ruijie",
+                                            "wavlink"
+                                        ]
+                                    },
+                                    "name": {
+                                        "description": "MikroTik identity / gateway name / Wavlink router label",
+                                        "type": "string",
+                                        "example": "MikroTik-Hotspot"
+                                    },
+                                    "lan_ip": {
+                                        "description": "Required for mikrotik and ruijie. Optional for wavlink.",
+                                        "type": "string",
+                                        "example": "192.168.88.1",
+                                        "nullable": true
+                                    },
+                                    "api_host": {
+                                        "description": "MikroTik only. Public IP or DDNS. Never a private IP.",
+                                        "type": "string",
+                                        "example": "41.59.12.34",
+                                        "nullable": true
+                                    },
+                                    "api_port": {
+                                        "description": "MikroTik only. Defaults to 443.",
+                                        "type": "integer",
+                                        "example": 443,
+                                        "nullable": true
+                                    },
+                                    "api_username": {
+                                        "description": "MikroTik only.",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "api_password": {
+                                        "description": "MikroTik only. Stored encrypted; never returned.",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "gateway_id": {
+                                        "description": "Ruijie only. WiFiDog gw_id.",
+                                        "type": "string",
+                                        "example": "G1UQCC8000976",
+                                        "nullable": true
+                                    },
+                                    "serial_number": {
+                                        "description": "Ruijie only. Optional.",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "wifidog_port": {
+                                        "description": "Ruijie only. Defaults to 2060.",
+                                        "type": "integer",
+                                        "example": 2060,
+                                        "nullable": true
+                                    },
+                                    "branch_id": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "enum": [
+                                            "active",
+                                            "inactive",
+                                            "offline"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
-                        "description": "Updated"
+                        "description": "Updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouterResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1022,13 +1445,64 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Synced"
+                        "description": "Synced",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouterResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
                     },
                     "422": {
-                        "description": "Not a Ruijie router or credentials missing"
+                        "description": "Not a Ruijie router or credentials missing",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     },
                     "502": {
-                        "description": "Ruijie Cloud sync failed"
+                        "description": "Ruijie Cloud sync failed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1046,7 +1520,34 @@
                 "operationId": "listPackages",
                 "responses": {
                     "200": {
-                        "description": "Packages"
+                        "description": "Packages",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PackageListResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1114,7 +1615,44 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Created"
+                        "description": "Created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PackageCreatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1142,7 +1680,44 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Package"
+                        "description": "Package",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PackageResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1168,7 +1743,44 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Deleted"
+                        "description": "Deleted",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MessageResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1192,9 +1804,102 @@
                         }
                     }
                 ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "1 Hour"
+                                    },
+                                    "price": {
+                                        "type": "number",
+                                        "example": 1000
+                                    },
+                                    "duration": {
+                                        "description": "Required unless duration_unit is UNLIMITED_DATA",
+                                        "type": "integer",
+                                        "example": 1,
+                                        "nullable": true
+                                    },
+                                    "duration_unit": {
+                                        "type": "string",
+                                        "example": "HOURS",
+                                        "enum": [
+                                            "HOURS",
+                                            "DAYS",
+                                            "WEEKS",
+                                            "MONTHS",
+                                            "UNLIMITED_DATA"
+                                        ]
+                                    },
+                                    "badge": {
+                                        "type": "string",
+                                        "example": "Popular",
+                                        "nullable": true
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Fast hourly access",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
-                        "description": "Updated"
+                        "description": "Updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PackageResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1243,7 +1948,34 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Vouchers"
+                        "description": "Vouchers",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/VoucherListResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1311,7 +2043,44 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Created"
+                        "description": "Created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/VouchersCreatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1340,10 +2109,54 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Revoked"
+                        "description": "Revoked",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/VoucherResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
                     },
                     "422": {
-                        "description": "Already revoked or expired"
+                        "description": "Already revoked or expired",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1399,10 +2212,54 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Consumed"
+                        "description": "Consumed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/VoucherConsumeResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
                     },
                     "422": {
-                        "description": "Voucher not usable"
+                        "description": "Voucher not usable",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1420,7 +2277,34 @@
                 "operationId": "listPayments",
                 "responses": {
                     "200": {
-                        "description": "Payments"
+                        "description": "Payments",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaymentListResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1468,7 +2352,44 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Recorded"
+                        "description": "Recorded",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaymentCreatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1496,7 +2417,44 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Payment"
+                        "description": "Payment",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaymentResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1514,7 +2472,34 @@
                 "operationId": "listSessions",
                 "responses": {
                     "200": {
-                        "description": "Sessions"
+                        "description": "Sessions",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SessionListResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1542,7 +2527,44 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Session"
+                        "description": "Session",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SessionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1560,7 +2582,34 @@
                 "operationId": "listCustomers",
                 "responses": {
                     "200": {
-                        "description": "Customers"
+                        "description": "Customers",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CustomerListResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1588,7 +2637,44 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Customer"
+                        "description": "Customer",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CustomerResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1606,7 +2692,34 @@
                 "operationId": "listBranches",
                 "responses": {
                     "200": {
-                        "description": "Branches"
+                        "description": "Branches",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BranchListResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1644,7 +2757,44 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Created"
+                        "description": "Created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BranchCreatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1672,7 +2822,44 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Branch"
+                        "description": "Branch",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BranchResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1698,7 +2885,44 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Deleted"
+                        "description": "Deleted",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MessageResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1722,9 +2946,74 @@
                         }
                     }
                 ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "address": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
-                        "description": "Updated"
+                        "description": "Updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BranchResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1742,7 +3031,34 @@
                 "operationId": "listWithdrawals",
                 "responses": {
                     "200": {
-                        "description": "Withdrawals and wallet balance"
+                        "description": "Withdrawals and wallet balance",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WithdrawalListResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1790,7 +3106,44 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Requested"
+                        "description": "Requested",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WithdrawalCreatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1809,7 +3162,34 @@
                 "operationId": "withdrawalStats",
                 "responses": {
                     "200": {
-                        "description": "Stats"
+                        "description": "Stats",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WithdrawalStatsResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1837,7 +3217,44 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Withdrawal"
+                        "description": "Withdrawal",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WithdrawalResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1856,7 +3273,34 @@
                 "operationId": "showSettings",
                 "responses": {
                     "200": {
-                        "description": "Settings"
+                        "description": "Settings",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SettingsResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1917,7 +3361,44 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Updated"
+                        "description": "Updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SettingsResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1981,14 +3462,31 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Routers"
-                    },
-                    "403": {
-                        "description": "Not a platform admin",
+                        "description": "Routers",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
+                                    "$ref": "#/components/schemas/AdminRouterListResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
                                 }
                             }
                         }
@@ -2083,14 +3581,41 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Created"
-                    },
-                    "403": {
-                        "description": "Not a platform admin",
+                        "description": "Created",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
+                                    "$ref": "#/components/schemas/AdminRouterCreatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
                                 }
                             }
                         }
@@ -2122,10 +3647,44 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Router and company"
+                        "description": "Router and company",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminRouterDetailResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
                     },
                     "404": {
-                        "description": "Not found"
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2152,10 +3711,44 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Deleted"
+                        "description": "Deleted",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MessageResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
                     },
                     "404": {
-                        "description": "Not found"
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2180,12 +3773,134 @@
                         }
                     }
                 ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "company_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "gateway_type": {
+                                        "type": "string",
+                                        "example": "mikrotik",
+                                        "enum": [
+                                            "mikrotik",
+                                            "ruijie",
+                                            "wavlink"
+                                        ]
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "example": "MikroTik-Hotspot"
+                                    },
+                                    "lan_ip": {
+                                        "type": "string",
+                                        "example": "192.168.88.1",
+                                        "nullable": true
+                                    },
+                                    "api_host": {
+                                        "type": "string",
+                                        "example": "41.59.12.34",
+                                        "nullable": true
+                                    },
+                                    "api_port": {
+                                        "type": "integer",
+                                        "example": 443,
+                                        "nullable": true
+                                    },
+                                    "api_username": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "api_password": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "gateway_id": {
+                                        "type": "string",
+                                        "example": "G1UQCC8000976",
+                                        "nullable": true
+                                    },
+                                    "serial_number": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "wifidog_port": {
+                                        "type": "integer",
+                                        "example": 2060,
+                                        "nullable": true
+                                    },
+                                    "branch_id": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "enum": [
+                                            "active",
+                                            "inactive",
+                                            "offline"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
-                        "description": "Updated"
+                        "description": "Updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminRouterResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
                     },
                     "404": {
-                        "description": "Not found"
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2214,13 +3929,64 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Synced"
+                        "description": "Synced",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminRouterResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
                     },
                     "422": {
-                        "description": "Not a Ruijie router or credentials missing"
+                        "description": "Not a Ruijie router or credentials missing",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     },
                     "502": {
-                        "description": "Ruijie Cloud sync failed"
+                        "description": "Ruijie Cloud sync failed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2239,10 +4005,34 @@
                 "operationId": "listStaff",
                 "responses": {
                     "200": {
-                        "description": "Staff list"
+                        "description": "Staff list",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MembershipListResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
                     },
                     "403": {
-                        "description": "Forbidden"
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2291,7 +4081,44 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Staff added"
+                        "description": "Staff added",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MembershipCreatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2319,7 +4146,44 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Membership"
+                        "description": "Membership",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MembershipResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2345,7 +4209,44 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Removed"
+                        "description": "Removed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MessageResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2394,7 +4295,54 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Updated"
+                        "description": "Updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MembershipResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2445,7 +4393,54 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Updated"
+                        "description": "Updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MembershipResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2473,7 +4468,44 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Suspended"
+                        "description": "Suspended",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MembershipResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2501,7 +4533,44 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Activated"
+                        "description": "Activated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MembershipResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2538,7 +4607,44 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Transferred"
+                        "description": "Transferred",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MessageResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2576,12 +4682,22 @@
                             }
                         }
                     },
-                    "403": {
-                        "description": "Not a superadmin",
+                    "401": {
+                        "description": "Unauthenticated",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
                                 }
                             }
                         }
@@ -2618,6 +4734,36 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/UserResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
                                 }
                             }
                         }
@@ -2658,12 +4804,42 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    },
                     "422": {
                         "description": "Cannot suspend self",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
                                 }
                             }
                         }
@@ -2703,6 +4879,36 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2736,6 +4942,26 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/PaginatedCompaniesResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
                                 }
                             }
                         }
@@ -2775,6 +5001,36 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2811,6 +5067,36 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2844,6 +5130,36 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/CompanyResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
                                 }
                             }
                         }
@@ -2892,7 +5208,34 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Payments"
+                        "description": "Payments",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaymentListResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2921,7 +5264,44 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Payment"
+                        "description": "Payment",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaymentResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2967,7 +5347,34 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Withdrawals"
+                        "description": "Withdrawals",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WithdrawalListResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -2996,7 +5403,44 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Withdrawal"
+                        "description": "Withdrawal",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WithdrawalResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -3209,6 +5653,1753 @@
                     "company_id": {
                         "type": "integer",
                         "example": 1
+                    }
+                },
+                "type": "object"
+            },
+            "Router": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "gateway_type": {
+                        "type": "string",
+                        "example": "mikrotik",
+                        "enum": [
+                            "mikrotik",
+                            "ruijie",
+                            "wavlink"
+                        ]
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "MikroTik-Hotspot"
+                    },
+                    "lan_ip": {
+                        "type": "string",
+                        "example": "192.168.88.1",
+                        "nullable": true
+                    },
+                    "api_host": {
+                        "type": "string",
+                        "example": "41.59.12.34",
+                        "nullable": true
+                    },
+                    "api_port": {
+                        "type": "integer",
+                        "example": 443,
+                        "nullable": true
+                    },
+                    "api_username": {
+                        "type": "string",
+                        "example": "admin",
+                        "nullable": true
+                    },
+                    "api_password_set": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "gateway_id": {
+                        "type": "string",
+                        "example": "G1UQCC8000976",
+                        "nullable": true
+                    },
+                    "serial_number": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "wifidog_port": {
+                        "type": "integer",
+                        "example": 2060,
+                        "nullable": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "example": "active"
+                    },
+                    "online": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "last_seen_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "branch": {
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "Main Branch"
+                            },
+                            "station_id": {
+                                "type": "integer",
+                                "example": 1
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "AdminRouter": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/Router"
+                    },
+                    {
+                        "properties": {
+                            "company": {
+                                "$ref": "#/components/schemas/Company"
+                            }
+                        },
+                        "type": "object"
+                    }
+                ]
+            },
+            "Package": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "1 Hour"
+                    },
+                    "badge": {
+                        "type": "string",
+                        "example": "Popular",
+                        "nullable": true
+                    },
+                    "description": {
+                        "type": "string",
+                        "example": "Fast hourly access",
+                        "nullable": true
+                    },
+                    "duration": {
+                        "type": "integer",
+                        "example": 1,
+                        "nullable": true
+                    },
+                    "duration_unit": {
+                        "type": "string",
+                        "example": "HOURS",
+                        "enum": [
+                            "HOURS",
+                            "DAYS",
+                            "WEEKS",
+                            "MONTHS",
+                            "UNLIMITED_DATA"
+                        ]
+                    },
+                    "price": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 1000
+                    },
+                    "status": {
+                        "type": "string",
+                        "example": "active"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "Voucher": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "code": {
+                        "type": "string",
+                        "example": "123456"
+                    },
+                    "status": {
+                        "type": "string",
+                        "example": "active",
+                        "enum": [
+                            "active",
+                            "expired",
+                            "revoked"
+                        ]
+                    },
+                    "max_uses": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "uses_count": {
+                        "type": "integer",
+                        "example": 0
+                    },
+                    "expires_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "note": {
+                        "type": "string",
+                        "example": "Front desk pack",
+                        "nullable": true
+                    },
+                    "revoked_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "router": {
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "MikroTik-Hotspot"
+                            },
+                            "gateway_type": {
+                                "type": "string",
+                                "example": "mikrotik"
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "package": {
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "1 Hour"
+                            },
+                            "price": {
+                                "type": "number",
+                                "example": 1000
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "Customer": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Walk in",
+                        "nullable": true
+                    },
+                    "phone": {
+                        "type": "string",
+                        "example": "0700555666",
+                        "nullable": true
+                    },
+                    "email": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "example": "active"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "Payment": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "reference": {
+                        "type": "string",
+                        "example": "PAY-ABC123XYZ"
+                    },
+                    "amount": {
+                        "type": "number",
+                        "example": 1000
+                    },
+                    "currency": {
+                        "type": "string",
+                        "example": "TZS"
+                    },
+                    "payment_method": {
+                        "type": "string",
+                        "example": "mpesa",
+                        "nullable": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "example": "paid"
+                    },
+                    "paid_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "customer": {
+                        "$ref": "#/components/schemas/Customer"
+                    },
+                    "package": {
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "1 Hour"
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "company": {
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/Company"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "Withdrawal": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "reference": {
+                        "type": "string",
+                        "example": "WD-ABC123XYZ0"
+                    },
+                    "provider": {
+                        "type": "string",
+                        "example": "mpesa"
+                    },
+                    "destination_phone": {
+                        "type": "string",
+                        "example": "0700111222"
+                    },
+                    "destination_name": {
+                        "type": "string",
+                        "example": "Jane Doe",
+                        "nullable": true
+                    },
+                    "amount": {
+                        "type": "number",
+                        "example": 400
+                    },
+                    "currency": {
+                        "type": "string",
+                        "example": "TZS"
+                    },
+                    "status": {
+                        "type": "string",
+                        "example": "pending"
+                    },
+                    "requested_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "processed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "failure_reason": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "company": {
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/Company"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "Branch": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Main Branch"
+                    },
+                    "code": {
+                        "type": "string",
+                        "example": "main-branch",
+                        "nullable": true
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "address": {
+                        "type": "string",
+                        "example": "Dar es Salaam",
+                        "nullable": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "example": "active"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "HotspotSession": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "mac_address": {
+                        "type": "string",
+                        "example": "AA:BB:CC:DD:EE:FF",
+                        "nullable": true
+                    },
+                    "ip_address": {
+                        "type": "string",
+                        "example": "192.168.88.50",
+                        "nullable": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "example": "active"
+                    },
+                    "started_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "ended_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "last_activity_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "upload_bytes": {
+                        "type": "integer",
+                        "example": 1024,
+                        "nullable": true
+                    },
+                    "download_bytes": {
+                        "type": "integer",
+                        "example": 2048,
+                        "nullable": true
+                    },
+                    "customer": {
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/Customer"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "router": {
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "MikroTik-Hotspot"
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "DashboardData": {
+                "properties": {
+                    "currency": {
+                        "type": "string",
+                        "example": "TZS"
+                    },
+                    "today_revenue": {
+                        "type": "number",
+                        "example": 15000
+                    },
+                    "today_payments": {
+                        "type": "integer",
+                        "example": 12
+                    },
+                    "total_revenue": {
+                        "type": "number",
+                        "example": 250000
+                    },
+                    "active_sessions": {
+                        "type": "integer",
+                        "example": 8
+                    },
+                    "routers_online": {
+                        "type": "integer",
+                        "example": 3
+                    },
+                    "routers_total": {
+                        "type": "integer",
+                        "example": 4
+                    },
+                    "recent_sessions": {
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "id": {
+                                    "type": "integer",
+                                    "example": 1
+                                },
+                                "mac_address": {
+                                    "type": "string",
+                                    "example": "AA:BB:CC:DD:EE:FF"
+                                },
+                                "status": {
+                                    "type": "string",
+                                    "example": "active"
+                                },
+                                "description": {
+                                    "type": "string",
+                                    "example": "Walk in - ABC Internet"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "IncomeData": {
+                "properties": {
+                    "currency": {
+                        "type": "string",
+                        "example": "TZS"
+                    },
+                    "by_source": {
+                        "properties": {
+                            "mobile_money": {
+                                "type": "number",
+                                "example": 80000
+                            },
+                            "voucher": {
+                                "type": "number",
+                                "example": 20000
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "last_14_days": {
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "date": {
+                                    "type": "string",
+                                    "example": "2026-08-20"
+                                },
+                                "total": {
+                                    "type": "number",
+                                    "example": 5000
+                                }
+                            },
+                            "type": "object"
+                        }
+                    },
+                    "total": {
+                        "type": "number",
+                        "example": 100000
+                    }
+                },
+                "type": "object"
+            },
+            "DeviceSetupData": {
+                "properties": {
+                    "portal_url": {
+                        "type": "string",
+                        "example": "https://api.example.com/connect?subdomain=abc-internet",
+                        "nullable": true
+                    },
+                    "subdomain": {
+                        "type": "string",
+                        "example": "abc-internet",
+                        "nullable": true
+                    },
+                    "methods": {
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "key": {
+                                    "type": "string",
+                                    "example": "mikrotik"
+                                },
+                                "name": {
+                                    "type": "string",
+                                    "example": "MikroTik hotspot"
+                                },
+                                "steps": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                },
+                                "portal_url": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "ruijie_account_configured": {
+                                    "type": "boolean",
+                                    "nullable": true
+                                }
+                            },
+                            "type": "object"
+                        }
+                    },
+                    "ruijie_account_id": {
+                        "type": "string",
+                        "example": "ruijie-user",
+                        "nullable": true
+                    },
+                    "ruijie_password_set": {
+                        "type": "boolean",
+                        "example": true
+                    }
+                },
+                "type": "object"
+            },
+            "SettingsData": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "ABC Internet"
+                    },
+                    "email": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "phone": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "address": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "timezone": {
+                        "type": "string",
+                        "example": "Africa/Dar_es_Salaam",
+                        "nullable": true
+                    },
+                    "subdomain": {
+                        "type": "string",
+                        "example": "abc-internet",
+                        "nullable": true
+                    },
+                    "portal_url": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "example": "active"
+                    },
+                    "primary_color": {
+                        "type": "string",
+                        "example": "#0F4C81",
+                        "nullable": true
+                    },
+                    "logo_url": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "voucher_code_digits": {
+                        "type": "integer",
+                        "example": 6
+                    },
+                    "payment_method": {
+                        "type": "string",
+                        "example": "both",
+                        "nullable": true
+                    },
+                    "captive_portal_welcome_message": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "ruijie_account_id": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "ruijie_password_set": {
+                        "type": "boolean",
+                        "example": false
+                    }
+                },
+                "type": "object"
+            },
+            "WithdrawalStatsData": {
+                "properties": {
+                    "currency": {
+                        "type": "string",
+                        "example": "TZS"
+                    },
+                    "wallet_balance": {
+                        "type": "number",
+                        "example": 600
+                    },
+                    "pending_count": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "pending_amount": {
+                        "type": "number",
+                        "example": 400
+                    },
+                    "completed_count": {
+                        "type": "integer",
+                        "example": 5
+                    },
+                    "completed_amount": {
+                        "type": "number",
+                        "example": 20000
+                    },
+                    "failed_count": {
+                        "type": "integer",
+                        "example": 0
+                    },
+                    "failed_amount": {
+                        "type": "number",
+                        "example": 0
+                    },
+                    "total_count": {
+                        "type": "integer",
+                        "example": 6
+                    },
+                    "total_amount": {
+                        "type": "number",
+                        "example": 20400
+                    }
+                },
+                "type": "object"
+            },
+            "VoucherConsumeData": {
+                "properties": {
+                    "voucher": {
+                        "$ref": "#/components/schemas/Voucher"
+                    },
+                    "customer": {
+                        "$ref": "#/components/schemas/Customer"
+                    },
+                    "access_grant": {
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "status": {
+                                "type": "string",
+                                "example": "active"
+                            },
+                            "starts_at": {
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            "expires_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": true
+                            },
+                            "source": {
+                                "type": "string",
+                                "example": "voucher"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "VouchersCreatedData": {
+                "properties": {
+                    "quantity": {
+                        "type": "integer",
+                        "example": 2
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Voucher"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "AdminRouterDetailData": {
+                "properties": {
+                    "router": {
+                        "$ref": "#/components/schemas/AdminRouter"
+                    },
+                    "company": {
+                        "$ref": "#/components/schemas/Company"
+                    }
+                },
+                "type": "object"
+            },
+            "DashboardResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Dashboard retrieved"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/DashboardData"
+                    }
+                },
+                "type": "object"
+            },
+            "IncomeResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Income retrieved"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/IncomeData"
+                    }
+                },
+                "type": "object"
+            },
+            "DeviceSetupResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Device setup instructions"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/DeviceSetupData"
+                    }
+                },
+                "type": "object"
+            },
+            "DeviceSetupCreatedResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 201
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Device setup saved"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/DeviceSetupData"
+                    }
+                },
+                "type": "object"
+            },
+            "RouterResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Router retrieved"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/Router"
+                    }
+                },
+                "type": "object"
+            },
+            "RouterCreatedResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 201
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Router created"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/Router"
+                    }
+                },
+                "type": "object"
+            },
+            "RouterListResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Routers retrieved"
+                    },
+                    "data": {
+                        "properties": {
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/Router"
+                                }
+                            },
+                            "meta": {
+                                "$ref": "#/components/schemas/PaginationMeta"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "AdminRouterResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Router retrieved"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/AdminRouter"
+                    }
+                },
+                "type": "object"
+            },
+            "AdminRouterCreatedResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 201
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Router created for client"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/AdminRouter"
+                    }
+                },
+                "type": "object"
+            },
+            "AdminRouterListResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Routers retrieved"
+                    },
+                    "data": {
+                        "properties": {
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/AdminRouter"
+                                }
+                            },
+                            "meta": {
+                                "$ref": "#/components/schemas/PaginationMeta"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "AdminRouterDetailResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Router and client retrieved"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/AdminRouterDetailData"
+                    }
+                },
+                "type": "object"
+            },
+            "PackageResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Package retrieved"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/Package"
+                    }
+                },
+                "type": "object"
+            },
+            "PackageCreatedResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 201
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Package created"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/Package"
+                    }
+                },
+                "type": "object"
+            },
+            "PackageListResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Packages retrieved"
+                    },
+                    "data": {
+                        "properties": {
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/Package"
+                                }
+                            },
+                            "meta": {
+                                "$ref": "#/components/schemas/PaginationMeta"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "VoucherResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Voucher retrieved"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/Voucher"
+                    }
+                },
+                "type": "object"
+            },
+            "VoucherListResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Vouchers retrieved"
+                    },
+                    "data": {
+                        "properties": {
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/Voucher"
+                                }
+                            },
+                            "meta": {
+                                "$ref": "#/components/schemas/PaginationMeta"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "VouchersCreatedResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 201
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Vouchers created"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/VouchersCreatedData"
+                    }
+                },
+                "type": "object"
+            },
+            "VoucherConsumeResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Voucher consumed"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/VoucherConsumeData"
+                    }
+                },
+                "type": "object"
+            },
+            "PaymentResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Payment retrieved"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/Payment"
+                    }
+                },
+                "type": "object"
+            },
+            "PaymentCreatedResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 201
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Payment recorded"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/Payment"
+                    }
+                },
+                "type": "object"
+            },
+            "PaymentListResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Payments retrieved"
+                    },
+                    "data": {
+                        "properties": {
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/Payment"
+                                }
+                            },
+                            "meta": {
+                                "$ref": "#/components/schemas/PaginationMeta"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "WithdrawalResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Withdrawal retrieved"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/Withdrawal"
+                    }
+                },
+                "type": "object"
+            },
+            "WithdrawalCreatedResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 201
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Withdrawal requested"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/Withdrawal"
+                    }
+                },
+                "type": "object"
+            },
+            "WithdrawalListResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Withdrawals retrieved"
+                    },
+                    "data": {
+                        "properties": {
+                            "wallet_balance": {
+                                "type": "number",
+                                "example": 600
+                            },
+                            "currency": {
+                                "type": "string",
+                                "example": "TZS"
+                            },
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/Withdrawal"
+                                }
+                            },
+                            "meta": {
+                                "$ref": "#/components/schemas/PaginationMeta"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "WithdrawalStatsResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Withdrawal stats retrieved"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/WithdrawalStatsData"
+                    }
+                },
+                "type": "object"
+            },
+            "BranchResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Branch retrieved"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/Branch"
+                    }
+                },
+                "type": "object"
+            },
+            "BranchCreatedResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 201
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Branch created"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/Branch"
+                    }
+                },
+                "type": "object"
+            },
+            "BranchListResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Branches retrieved"
+                    },
+                    "data": {
+                        "properties": {
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/Branch"
+                                }
+                            },
+                            "meta": {
+                                "$ref": "#/components/schemas/PaginationMeta"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "CustomerResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Customer retrieved"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/Customer"
+                    }
+                },
+                "type": "object"
+            },
+            "CustomerListResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Customers retrieved"
+                    },
+                    "data": {
+                        "properties": {
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/Customer"
+                                }
+                            },
+                            "meta": {
+                                "$ref": "#/components/schemas/PaginationMeta"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "SessionResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Session retrieved"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/HotspotSession"
+                    }
+                },
+                "type": "object"
+            },
+            "SessionListResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Sessions retrieved"
+                    },
+                    "data": {
+                        "properties": {
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/HotspotSession"
+                                }
+                            },
+                            "meta": {
+                                "$ref": "#/components/schemas/PaginationMeta"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "SettingsResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Settings retrieved"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/SettingsData"
+                    }
+                },
+                "type": "object"
+            },
+            "MembershipListResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Staff retrieved"
+                    },
+                    "data": {
+                        "properties": {
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/Membership"
+                                }
+                            },
+                            "meta": {
+                                "$ref": "#/components/schemas/PaginationMeta"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "MembershipCreatedResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 201
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Staff added"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/Membership"
+                    }
+                },
+                "type": "object"
+            },
+            "UnauthenticatedResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 401
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Unauthenticated."
+                    }
+                },
+                "type": "object"
+            },
+            "ForbiddenResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 403
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "You are not authorized to perform this action."
+                    }
+                },
+                "type": "object"
+            },
+            "NotFoundResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 404
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Resource not found."
+                    }
+                },
+                "type": "object"
+            },
+            "ValidationErrorResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 422
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Validation Error"
+                    },
+                    "data": {
+                        "description": "Field-keyed validation messages",
+                        "type": "object",
+                        "example": {
+                            "email": [
+                                "The email field is required."
+                            ],
+                            "password": [
+                                "The password must be at least 8 characters."
+                            ]
+                        }
                     }
                 },
                 "type": "object"

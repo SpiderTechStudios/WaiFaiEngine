@@ -15,7 +15,8 @@ class SuperAdminDocumentation
         parameters: [new OA\Parameter(name: 'per_page', in: 'query', schema: new OA\Schema(type: 'integer', default: 15))],
         responses: [
             new OA\Response(response: 200, description: 'Users', content: new OA\JsonContent(ref: '#/components/schemas/PaginatedUsersResponse')),
-            new OA\Response(response: 403, description: 'Not a superadmin', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
         ]
     )]
     public function usersIndex(): void {}
@@ -29,6 +30,9 @@ class SuperAdminDocumentation
         parameters: [new OA\Parameter(name: 'user', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
         responses: [
             new OA\Response(response: 200, description: 'User', content: new OA\JsonContent(ref: '#/components/schemas/UserResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 404, description: 'Not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
         ]
     )]
     public function usersShow(): void {}
@@ -42,7 +46,10 @@ class SuperAdminDocumentation
         parameters: [new OA\Parameter(name: 'user', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
         responses: [
             new OA\Response(response: 200, description: 'Suspended', content: new OA\JsonContent(ref: '#/components/schemas/UserResponse')),
-            new OA\Response(response: 422, description: 'Cannot suspend self', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 404, description: 'Not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
+            new OA\Response(response: 422, description: 'Cannot suspend self', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
         ]
     )]
     public function usersSuspend(): void {}
@@ -56,6 +63,9 @@ class SuperAdminDocumentation
         parameters: [new OA\Parameter(name: 'user', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
         responses: [
             new OA\Response(response: 200, description: 'Activated', content: new OA\JsonContent(ref: '#/components/schemas/UserResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 404, description: 'Not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
         ]
     )]
     public function usersActivate(): void {}
@@ -69,6 +79,8 @@ class SuperAdminDocumentation
         parameters: [new OA\Parameter(name: 'per_page', in: 'query', schema: new OA\Schema(type: 'integer', default: 15))],
         responses: [
             new OA\Response(response: 200, description: 'Companies', content: new OA\JsonContent(ref: '#/components/schemas/PaginatedCompaniesResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
         ]
     )]
     public function companiesIndex(): void {}
@@ -82,6 +94,9 @@ class SuperAdminDocumentation
         parameters: [new OA\Parameter(name: 'company', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
         responses: [
             new OA\Response(response: 200, description: 'Company', content: new OA\JsonContent(ref: '#/components/schemas/CompanyResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 404, description: 'Not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
         ]
     )]
     public function companiesShow(): void {}
@@ -95,6 +110,9 @@ class SuperAdminDocumentation
         parameters: [new OA\Parameter(name: 'company', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
         responses: [
             new OA\Response(response: 200, description: 'Suspended', content: new OA\JsonContent(ref: '#/components/schemas/CompanyResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 404, description: 'Not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
         ]
     )]
     public function companiesSuspend(): void {}
@@ -108,6 +126,9 @@ class SuperAdminDocumentation
         parameters: [new OA\Parameter(name: 'company', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
         responses: [
             new OA\Response(response: 200, description: 'Activated', content: new OA\JsonContent(ref: '#/components/schemas/CompanyResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 404, description: 'Not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
         ]
     )]
     public function companiesActivate(): void {}
@@ -123,7 +144,11 @@ class SuperAdminDocumentation
             new OA\Parameter(name: 'status', in: 'query', required: false, schema: new OA\Schema(type: 'string')),
             new OA\Parameter(name: 'per_page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 15)),
         ],
-        responses: [new OA\Response(response: 200, description: 'Payments')]
+        responses: [
+            new OA\Response(response: 200, description: 'Payments', content: new OA\JsonContent(ref: '#/components/schemas/PaymentListResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+        ]
     )]
     public function paymentsIndex(): void {}
 
@@ -134,7 +159,12 @@ class SuperAdminDocumentation
         summary: 'View any payment',
         security: [['sanctum' => []]],
         parameters: [new OA\Parameter(name: 'payment', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
-        responses: [new OA\Response(response: 200, description: 'Payment')]
+        responses: [
+            new OA\Response(response: 200, description: 'Payment', content: new OA\JsonContent(ref: '#/components/schemas/PaymentResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 404, description: 'Not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
+        ]
     )]
     public function paymentsShow(): void {}
 
@@ -149,7 +179,11 @@ class SuperAdminDocumentation
             new OA\Parameter(name: 'status', in: 'query', required: false, schema: new OA\Schema(type: 'string')),
             new OA\Parameter(name: 'per_page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 15)),
         ],
-        responses: [new OA\Response(response: 200, description: 'Withdrawals')]
+        responses: [
+            new OA\Response(response: 200, description: 'Withdrawals', content: new OA\JsonContent(ref: '#/components/schemas/WithdrawalListResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+        ]
     )]
     public function withdrawalsIndex(): void {}
 
@@ -160,7 +194,12 @@ class SuperAdminDocumentation
         summary: 'View any withdrawal',
         security: [['sanctum' => []]],
         parameters: [new OA\Parameter(name: 'withdrawal', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
-        responses: [new OA\Response(response: 200, description: 'Withdrawal')]
+        responses: [
+            new OA\Response(response: 200, description: 'Withdrawal', content: new OA\JsonContent(ref: '#/components/schemas/WithdrawalResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 404, description: 'Not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
+        ]
     )]
     public function withdrawalsShow(): void {}
 }
