@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Operations;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Operations\StoreDeviceSetupRequest;
 use App\Services\SettingsService;
 use Illuminate\Http\JsonResponse;
 
@@ -12,10 +13,32 @@ class DeviceSetupController extends Controller
 
     public function show(): JsonResponse
     {
-        $company = $this->currentCompany();
+        return $this->success($this->payload(), 'Device setup instructions');
+    }
+
+    public function store(StoreDeviceSetupRequest $request): JsonResponse
+    {
+        $this->settingsService->update($this->currentCompany(), $request->validated(), $request->user());
+
+        return $this->success($this->payload(), 'Device setup saved', 201);
+    }
+
+    public function update(StoreDeviceSetupRequest $request): JsonResponse
+    {
+        $this->settingsService->update($this->currentCompany(), $request->validated(), $request->user());
+
+        return $this->success($this->payload(), 'Device setup updated');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function payload(): array
+    {
+        $company = $this->currentCompany()->fresh();
         $settings = $this->settingsService->show($company);
 
-        return $this->success([
+        return [
             'portal_url' => $settings['portal_url'],
             'subdomain' => $company->subdomain,
             'methods' => [
@@ -45,6 +68,8 @@ class DeviceSetupController extends Controller
                     'ruijie_account_configured' => $settings['ruijie_password_set'] || filled($settings['ruijie_account_id']),
                 ],
             ],
-        ], 'Device setup instructions');
+            'ruijie_account_id' => $settings['ruijie_account_id'],
+            'ruijie_password_set' => $settings['ruijie_password_set'],
+        ];
     }
 }

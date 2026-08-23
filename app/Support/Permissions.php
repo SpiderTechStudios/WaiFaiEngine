@@ -27,6 +27,8 @@ final class Permissions
     public const INCOME_VIEW = 'income.view';
 
     public const DEVICE_SETUP_VIEW = 'device_setup.view';
+    public const DEVICE_SETUP_CREATE = 'device_setup.create';
+    public const DEVICE_SETUP_UPDATE = 'device_setup.update';
 
     public const ROUTERS_VIEW = 'routers.view';
 
@@ -35,6 +37,7 @@ final class Permissions
     public const ROUTERS_UPDATE = 'routers.update';
 
     public const ROUTERS_DELETE = 'routers.delete';
+    public const ROUTERS_SYNC = 'routers.sync';
 
     public const PACKAGES_VIEW = 'packages.view';
 
@@ -49,6 +52,8 @@ final class Permissions
     public const VOUCHERS_CREATE = 'vouchers.create';
 
     public const VOUCHERS_REVOKE = 'vouchers.revoke';
+
+    public const VOUCHERS_CONSUME = 'vouchers.consume';
 
     public const PAYMENTS_VIEW = 'payments.view';
 

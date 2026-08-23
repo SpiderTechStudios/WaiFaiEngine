@@ -12,6 +12,7 @@ class RouterService
     public function __construct(
         private AuditLogger $auditLogger,
         private BranchService $branchService,
+        private RuijieCloudService $ruijieCloudService,
     ) {}
 
     public function create(Company $company, array $data, User $actor): NetworkDevice
@@ -81,5 +82,14 @@ class RouterService
     {
         $this->auditLogger->log('router_deleted', $actor, $router->company_id, NetworkDevice::class, $router->id);
         $router->delete();
+    }
+
+    public function syncFromRuijie(NetworkDevice $router, User $actor): NetworkDevice
+    {
+        $router = $this->ruijieCloudService->syncRouter($router->load('company'));
+
+        $this->auditLogger->log('router_synced', $actor, $router->company_id, NetworkDevice::class, $router->id);
+
+        return $router->load('networkStation.location');
     }
 }

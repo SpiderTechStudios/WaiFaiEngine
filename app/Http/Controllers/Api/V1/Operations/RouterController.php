@@ -60,6 +60,15 @@ class RouterController extends Controller
         return $this->success([], 'Router removed');
     }
 
+    public function sync(Request $request, NetworkDevice $router): JsonResponse
+    {
+        $this->assertCompany($router->company_id);
+        $router = $this->routerService->syncFromRuijie($router, $request->user());
+        $router->load('networkStation.location');
+
+        return $this->success((new RouterResource($router))->resolve(), 'Router synced from Ruijie Cloud');
+    }
+
     private function assertCompany(int $companyId): void
     {
         if ($companyId !== $this->currentCompany()->id) {

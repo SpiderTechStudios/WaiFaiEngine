@@ -111,6 +111,58 @@ class SuperAdminDocumentation
         ]
     )]
     public function companiesActivate(): void {}
+
+    #[OA\Get(
+        path: '/superadmin/payments',
+        operationId: 'superadminListPayments',
+        tags: ['Superadmin'],
+        summary: 'List payments across all companies',
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'company_id', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'status', in: 'query', required: false, schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'per_page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 15)),
+        ],
+        responses: [new OA\Response(response: 200, description: 'Payments')]
+    )]
+    public function paymentsIndex(): void {}
+
+    #[OA\Get(
+        path: '/superadmin/payments/{payment}',
+        operationId: 'superadminShowPayment',
+        tags: ['Superadmin'],
+        summary: 'View any payment',
+        security: [['sanctum' => []]],
+        parameters: [new OA\Parameter(name: 'payment', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        responses: [new OA\Response(response: 200, description: 'Payment')]
+    )]
+    public function paymentsShow(): void {}
+
+    #[OA\Get(
+        path: '/superadmin/withdrawals',
+        operationId: 'superadminListWithdrawals',
+        tags: ['Superadmin'],
+        summary: 'List withdrawals across all companies',
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'company_id', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'status', in: 'query', required: false, schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'per_page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 15)),
+        ],
+        responses: [new OA\Response(response: 200, description: 'Withdrawals')]
+    )]
+    public function withdrawalsIndex(): void {}
+
+    #[OA\Get(
+        path: '/superadmin/withdrawals/{withdrawal}',
+        operationId: 'superadminShowWithdrawal',
+        tags: ['Superadmin'],
+        summary: 'View any withdrawal',
+        security: [['sanctum' => []]],
+        parameters: [new OA\Parameter(name: 'withdrawal', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        responses: [new OA\Response(response: 200, description: 'Withdrawal')]
+    )]
+    public function withdrawalsShow(): void {}
 }
 
 #[OA\Schema(

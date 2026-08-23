@@ -24,6 +24,7 @@ class WithdrawalResource extends JsonResource
             'requested_at' => $this->requested_at,
             'processed_at' => $this->processed_at,
             'failure_reason' => $this->failure_reason,
+            'company' => $this->whenLoaded('company', fn () => (new CompanyResource($this->company))->resolve()),
             'created_at' => $this->created_at,
         ];
     }

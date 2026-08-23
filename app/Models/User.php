@@ -73,6 +73,11 @@ class User extends Authenticatable implements MustVerifyEmailContract
         return in_array($this->status, ['active', 'pending'], true);
     }
 
+    public function isPlatformAdmin(): bool
+    {
+        return $this->is_superadmin || $this->is_admin;
+    }
+
     public function canAuthenticate(): bool
     {
         return $this->isAccountActive();

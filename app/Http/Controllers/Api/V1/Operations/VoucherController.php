@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api\V1\Operations;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Operations\ConsumeVoucherRequest;
 use App\Http\Requests\Operations\StoreVoucherRequest;
+use App\Http\Resources\CustomerResource;
 use App\Http\Resources\VoucherResource;
 use App\Models\Voucher;
 use App\Services\VoucherService;
@@ -54,6 +56,25 @@ class VoucherController extends Controller
         $voucher = $this->voucherService->revoke($voucher, $request->user());
 
         return $this->success((new VoucherResource($voucher))->resolve(), 'Voucher revoked');
+    }
+
+    public function consume(ConsumeVoucherRequest $request, Voucher $voucher): JsonResponse
+    {
+        $this->assertCompany($voucher->company_id);
+
+        $result = $this->voucherService->consume($voucher, $request->validated(), $request->user());
+
+        return $this->success([
+            'voucher' => (new VoucherResource($result['voucher']))->resolve(),
+            'customer' => (new CustomerResource($result['customer']))->resolve(),
+            'access_grant' => [
+                'id' => $result['access_grant']->id,
+                'status' => $result['access_grant']->status,
+                'starts_at' => $result['access_grant']->starts_at,
+                'expires_at' => $result['access_grant']->expires_at,
+                'source' => $result['access_grant']->source,
+            ],
+        ], 'Voucher consumed');
     }
 
     private function assertCompany(int $companyId): void

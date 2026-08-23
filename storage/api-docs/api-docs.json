@@ -728,6 +728,86 @@
                         "sanctum": []
                     }
                 ]
+            },
+            "post": {
+                "tags": [
+                    "Device Setup"
+                ],
+                "summary": "Save device setup credentials (Ruijie / portal subdomain)",
+                "operationId": "storeDeviceSetup",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "portal_subdomain": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "ruijie_account_id": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "ruijie_password": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Saved"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Device Setup"
+                ],
+                "summary": "Update device setup credentials",
+                "operationId": "updateDeviceSetup",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "portal_subdomain": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "ruijie_account_id": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "ruijie_password": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             }
         },
         "/routers": {
@@ -914,6 +994,41 @@
                 "responses": {
                     "200": {
                         "description": "Updated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/routers/{router}/sync": {
+            "post": {
+                "tags": [
+                    "Routers"
+                ],
+                "summary": "Sync a Ruijie router from Ruijie Cloud",
+                "operationId": "syncRouter",
+                "parameters": [
+                    {
+                        "name": "router",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Synced"
+                    },
+                    "422": {
+                        "description": "Not a Ruijie router or credentials missing"
+                    },
+                    "502": {
+                        "description": "Ruijie Cloud sync failed"
                     }
                 },
                 "security": [
@@ -1238,6 +1353,65 @@
                 ]
             }
         },
+        "/vouchers/{voucher}/consume": {
+            "post": {
+                "tags": [
+                    "Vouchers"
+                ],
+                "summary": "Consume a voucher and create an access grant",
+                "operationId": "consumeVoucher",
+                "parameters": [
+                    {
+                        "name": "voucher",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "customer_name": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "customer_phone": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "customer_email": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "customer_id": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Consumed"
+                    },
+                    "422": {
+                        "description": "Voucher not usable"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/payments": {
             "get": {
                 "tags": [
@@ -1304,6 +1478,34 @@
                 ]
             }
         },
+        "/payments/{payment}": {
+            "get": {
+                "tags": [
+                    "Payments"
+                ],
+                "operationId": "showPayment",
+                "parameters": [
+                    {
+                        "name": "payment",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Payment"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/sessions": {
             "get": {
                 "tags": [
@@ -1322,6 +1524,34 @@
                 ]
             }
         },
+        "/sessions/{session}": {
+            "get": {
+                "tags": [
+                    "Sessions"
+                ],
+                "operationId": "showSession",
+                "parameters": [
+                    {
+                        "name": "session",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Session"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/customers": {
             "get": {
                 "tags": [
@@ -1331,6 +1561,34 @@
                 "responses": {
                     "200": {
                         "description": "Customers"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/customers/{customer}": {
+            "get": {
+                "tags": [
+                    "Customers"
+                ],
+                "operationId": "showCustomer",
+                "parameters": [
+                    {
+                        "name": "customer",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Customer"
                     }
                 },
                 "security": [
@@ -1387,6 +1645,86 @@
                 "responses": {
                     "201": {
                         "description": "Created"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/branches/{branch}": {
+            "get": {
+                "tags": [
+                    "Branches"
+                ],
+                "operationId": "showBranch",
+                "parameters": [
+                    {
+                        "name": "branch",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Branch"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Branches"
+                ],
+                "operationId": "deleteBranch",
+                "parameters": [
+                    {
+                        "name": "branch",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Deleted"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Branches"
+                ],
+                "operationId": "updateBranch",
+                "parameters": [
+                    {
+                        "name": "branch",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Updated"
                     }
                 },
                 "security": [
@@ -1453,6 +1791,53 @@
                 "responses": {
                     "201": {
                         "description": "Requested"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/withdrawals/stats": {
+            "get": {
+                "tags": [
+                    "Withdrawals"
+                ],
+                "summary": "Wallet and withdrawal totals by status",
+                "operationId": "withdrawalStats",
+                "responses": {
+                    "200": {
+                        "description": "Stats"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/withdrawals/{withdrawal}": {
+            "get": {
+                "tags": [
+                    "Withdrawals"
+                ],
+                "operationId": "showWithdrawal",
+                "parameters": [
+                    {
+                        "name": "withdrawal",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Withdrawal"
                     }
                 },
                 "security": [
@@ -1533,6 +1918,309 @@
                 "responses": {
                     "200": {
                         "description": "Updated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/routers": {
+            "get": {
+                "tags": [
+                    "Platform Admin"
+                ],
+                "summary": "List routers for all clients",
+                "operationId": "adminListRouters",
+                "parameters": [
+                    {
+                        "name": "company_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "gateway_type",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "mikrotik",
+                                "ruijie",
+                                "wavlink"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "active",
+                                "inactive",
+                                "offline"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Routers"
+                    },
+                    "403": {
+                        "description": "Not a platform admin",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Platform Admin"
+                ],
+                "summary": "Add a router for a client company",
+                "operationId": "adminCreateRouter",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "company_id",
+                                    "gateway_type",
+                                    "name"
+                                ],
+                                "properties": {
+                                    "company_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "gateway_type": {
+                                        "type": "string",
+                                        "example": "mikrotik",
+                                        "enum": [
+                                            "mikrotik",
+                                            "ruijie",
+                                            "wavlink"
+                                        ]
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "example": "MikroTik-Hotspot"
+                                    },
+                                    "lan_ip": {
+                                        "type": "string",
+                                        "example": "192.168.88.1",
+                                        "nullable": true
+                                    },
+                                    "api_host": {
+                                        "type": "string",
+                                        "example": "41.59.12.34",
+                                        "nullable": true
+                                    },
+                                    "api_port": {
+                                        "type": "integer",
+                                        "example": 443,
+                                        "nullable": true
+                                    },
+                                    "api_username": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "api_password": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "gateway_id": {
+                                        "type": "string",
+                                        "example": "G1UQCC8000976",
+                                        "nullable": true
+                                    },
+                                    "serial_number": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "wifidog_port": {
+                                        "type": "integer",
+                                        "example": 2060,
+                                        "nullable": true
+                                    },
+                                    "branch_id": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    },
+                    "403": {
+                        "description": "Not a platform admin",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/routers/{router}": {
+            "get": {
+                "tags": [
+                    "Platform Admin"
+                ],
+                "summary": "Get router and client company details",
+                "operationId": "adminShowRouter",
+                "parameters": [
+                    {
+                        "name": "router",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Router and company"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Platform Admin"
+                ],
+                "summary": "Delete a client router",
+                "operationId": "adminDeleteRouter",
+                "parameters": [
+                    {
+                        "name": "router",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Deleted"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Platform Admin"
+                ],
+                "summary": "Update a client router",
+                "operationId": "adminUpdateRouter",
+                "parameters": [
+                    {
+                        "name": "router",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Updated"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/routers/{router}/sync": {
+            "post": {
+                "tags": [
+                    "Platform Admin"
+                ],
+                "summary": "Sync a Ruijie router from Ruijie Cloud for a client",
+                "operationId": "adminSyncRouter",
+                "parameters": [
+                    {
+                        "name": "router",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Synced"
+                    },
+                    "422": {
+                        "description": "Not a Ruijie router or credentials missing"
+                    },
+                    "502": {
+                        "description": "Ruijie Cloud sync failed"
                     }
                 },
                 "security": [
@@ -2159,6 +2847,156 @@
                                 }
                             }
                         }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/superadmin/payments": {
+            "get": {
+                "tags": [
+                    "Superadmin"
+                ],
+                "summary": "List payments across all companies",
+                "operationId": "superadminListPayments",
+                "parameters": [
+                    {
+                        "name": "company_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Payments"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/superadmin/payments/{payment}": {
+            "get": {
+                "tags": [
+                    "Superadmin"
+                ],
+                "summary": "View any payment",
+                "operationId": "superadminShowPayment",
+                "parameters": [
+                    {
+                        "name": "payment",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Payment"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/superadmin/withdrawals": {
+            "get": {
+                "tags": [
+                    "Superadmin"
+                ],
+                "summary": "List withdrawals across all companies",
+                "operationId": "superadminListWithdrawals",
+                "parameters": [
+                    {
+                        "name": "company_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Withdrawals"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/superadmin/withdrawals/{withdrawal}": {
+            "get": {
+                "tags": [
+                    "Superadmin"
+                ],
+                "summary": "View any withdrawal",
+                "operationId": "superadminShowWithdrawal",
+                "parameters": [
+                    {
+                        "name": "withdrawal",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Withdrawal"
                     }
                 },
                 "security": [
@@ -2949,6 +3787,10 @@
         {
             "name": "Superadmin",
             "description": "Platform administration"
+        },
+        {
+            "name": "Platform Admin",
+            "description": "Cross-tenant router management for platform admins"
         }
     ]
 }

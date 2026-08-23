@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'ruijie' => [
+        'base_url' => env('RUIJIE_CLOUD_BASE_URL', 'https://cloudapi.ruijienetworks.com'),
+        'timeout' => (int) env('RUIJIE_CLOUD_TIMEOUT', 15),
+    ],
+
 ];

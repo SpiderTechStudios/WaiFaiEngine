@@ -32,4 +32,5 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: 'Withdrawals', description: 'Payouts from company wallet')]
 #[OA\Tag(name: 'Settings', description: 'Company branding and integrations')]
 #[OA\Tag(name: 'Superadmin', description: 'Platform administration')]
+#[OA\Tag(name: 'Platform Admin', description: 'Cross-tenant router management for platform admins')]
 class OpenApiDefinition {}

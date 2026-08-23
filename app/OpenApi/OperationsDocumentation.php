@@ -15,6 +15,36 @@ class OperationsDocumentation
     #[OA\Get(path: '/device-setup', operationId: 'deviceSetup', tags: ['Device Setup'], summary: 'MikroTik and Ruijie Cloud setup instructions', security: [['sanctum' => []]], responses: [new OA\Response(response: 200, description: 'Instructions')])]
     public function deviceSetup(): void {}
 
+    #[OA\Post(
+        path: '/device-setup',
+        operationId: 'storeDeviceSetup',
+        tags: ['Device Setup'],
+        summary: 'Save device setup credentials (Ruijie / portal subdomain)',
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(content: new OA\JsonContent(properties: [
+            new OA\Property(property: 'portal_subdomain', type: 'string', nullable: true),
+            new OA\Property(property: 'ruijie_account_id', type: 'string', nullable: true),
+            new OA\Property(property: 'ruijie_password', type: 'string', nullable: true),
+        ])),
+        responses: [new OA\Response(response: 201, description: 'Saved')]
+    )]
+    public function storeDeviceSetup(): void {}
+
+    #[OA\Patch(
+        path: '/device-setup',
+        operationId: 'updateDeviceSetup',
+        tags: ['Device Setup'],
+        summary: 'Update device setup credentials',
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(content: new OA\JsonContent(properties: [
+            new OA\Property(property: 'portal_subdomain', type: 'string', nullable: true),
+            new OA\Property(property: 'ruijie_account_id', type: 'string', nullable: true),
+            new OA\Property(property: 'ruijie_password', type: 'string', nullable: true),
+        ])),
+        responses: [new OA\Response(response: 200, description: 'Updated')]
+    )]
+    public function updateDeviceSetup(): void {}
+
     #[OA\Get(path: '/routers', operationId: 'listRouters', tags: ['Routers'], security: [['sanctum' => []]], responses: [new OA\Response(response: 200, description: 'Routers')])]
     public function listRouters(): void {}
 
@@ -48,6 +78,21 @@ class OperationsDocumentation
 
     #[OA\Delete(path: '/routers/{router}', operationId: 'deleteRouter', tags: ['Routers'], security: [['sanctum' => []]], parameters: [new OA\Parameter(name: 'router', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))], responses: [new OA\Response(response: 200, description: 'Deleted')])]
     public function deleteRouter(): void {}
+
+    #[OA\Post(
+        path: '/routers/{router}/sync',
+        operationId: 'syncRouter',
+        tags: ['Routers'],
+        summary: 'Sync a Ruijie router from Ruijie Cloud',
+        security: [['sanctum' => []]],
+        parameters: [new OA\Parameter(name: 'router', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        responses: [
+            new OA\Response(response: 200, description: 'Synced'),
+            new OA\Response(response: 422, description: 'Not a Ruijie router or credentials missing'),
+            new OA\Response(response: 502, description: 'Ruijie Cloud sync failed'),
+        ]
+    )]
+    public function syncRouter(): void {}
 
     #[OA\Get(path: '/packages', operationId: 'listPackages', tags: ['Packages'], security: [['sanctum' => []]], responses: [new OA\Response(response: 200, description: 'Packages')])]
     public function listPackages(): void {}
@@ -125,6 +170,26 @@ class OperationsDocumentation
     )]
     public function revokeVoucher(): void {}
 
+    #[OA\Post(
+        path: '/vouchers/{voucher}/consume',
+        operationId: 'consumeVoucher',
+        tags: ['Vouchers'],
+        summary: 'Consume a voucher and create an access grant',
+        security: [['sanctum' => []]],
+        parameters: [new OA\Parameter(name: 'voucher', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        requestBody: new OA\RequestBody(content: new OA\JsonContent(properties: [
+            new OA\Property(property: 'customer_name', type: 'string', nullable: true),
+            new OA\Property(property: 'customer_phone', type: 'string', nullable: true),
+            new OA\Property(property: 'customer_email', type: 'string', nullable: true),
+            new OA\Property(property: 'customer_id', type: 'integer', nullable: true),
+        ])),
+        responses: [
+            new OA\Response(response: 200, description: 'Consumed'),
+            new OA\Response(response: 422, description: 'Voucher not usable'),
+        ]
+    )]
+    public function consumeVoucher(): void {}
+
     #[OA\Get(path: '/payments', operationId: 'listPayments', tags: ['Payments'], security: [['sanctum' => []]], responses: [new OA\Response(response: 200, description: 'Payments')])]
     public function listPayments(): void {}
 
@@ -144,11 +209,41 @@ class OperationsDocumentation
     )]
     public function createPayment(): void {}
 
+    #[OA\Get(
+        path: '/payments/{payment}',
+        operationId: 'showPayment',
+        tags: ['Payments'],
+        security: [['sanctum' => []]],
+        parameters: [new OA\Parameter(name: 'payment', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        responses: [new OA\Response(response: 200, description: 'Payment')]
+    )]
+    public function showPayment(): void {}
+
     #[OA\Get(path: '/sessions', operationId: 'listSessions', tags: ['Sessions'], security: [['sanctum' => []]], responses: [new OA\Response(response: 200, description: 'Sessions')])]
     public function listSessions(): void {}
 
+    #[OA\Get(
+        path: '/sessions/{session}',
+        operationId: 'showSession',
+        tags: ['Sessions'],
+        security: [['sanctum' => []]],
+        parameters: [new OA\Parameter(name: 'session', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        responses: [new OA\Response(response: 200, description: 'Session')]
+    )]
+    public function showSession(): void {}
+
     #[OA\Get(path: '/customers', operationId: 'listCustomers', tags: ['Customers'], security: [['sanctum' => []]], responses: [new OA\Response(response: 200, description: 'Customers')])]
     public function listCustomers(): void {}
+
+    #[OA\Get(
+        path: '/customers/{customer}',
+        operationId: 'showCustomer',
+        tags: ['Customers'],
+        security: [['sanctum' => []]],
+        parameters: [new OA\Parameter(name: 'customer', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        responses: [new OA\Response(response: 200, description: 'Customer')]
+    )]
+    public function showCustomer(): void {}
 
     #[OA\Get(path: '/branches', operationId: 'listBranches', tags: ['Branches'], security: [['sanctum' => []]], responses: [new OA\Response(response: 200, description: 'Branches')])]
     public function listBranches(): void {}
@@ -156,8 +251,48 @@ class OperationsDocumentation
     #[OA\Post(path: '/branches', operationId: 'createBranch', tags: ['Branches'], security: [['sanctum' => []]], requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(required: ['name'], properties: [new OA\Property(property: 'name', type: 'string'), new OA\Property(property: 'address', type: 'string', nullable: true)])), responses: [new OA\Response(response: 201, description: 'Created')])]
     public function createBranch(): void {}
 
+    #[OA\Get(
+        path: '/branches/{branch}',
+        operationId: 'showBranch',
+        tags: ['Branches'],
+        security: [['sanctum' => []]],
+        parameters: [new OA\Parameter(name: 'branch', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        responses: [new OA\Response(response: 200, description: 'Branch')]
+    )]
+    public function showBranch(): void {}
+
+    #[OA\Patch(
+        path: '/branches/{branch}',
+        operationId: 'updateBranch',
+        tags: ['Branches'],
+        security: [['sanctum' => []]],
+        parameters: [new OA\Parameter(name: 'branch', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        responses: [new OA\Response(response: 200, description: 'Updated')]
+    )]
+    public function updateBranch(): void {}
+
+    #[OA\Delete(
+        path: '/branches/{branch}',
+        operationId: 'deleteBranch',
+        tags: ['Branches'],
+        security: [['sanctum' => []]],
+        parameters: [new OA\Parameter(name: 'branch', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        responses: [new OA\Response(response: 200, description: 'Deleted')]
+    )]
+    public function deleteBranch(): void {}
+
     #[OA\Get(path: '/withdrawals', operationId: 'listWithdrawals', tags: ['Withdrawals'], security: [['sanctum' => []]], responses: [new OA\Response(response: 200, description: 'Withdrawals and wallet balance')])]
     public function listWithdrawals(): void {}
+
+    #[OA\Get(
+        path: '/withdrawals/stats',
+        operationId: 'withdrawalStats',
+        tags: ['Withdrawals'],
+        summary: 'Wallet and withdrawal totals by status',
+        security: [['sanctum' => []]],
+        responses: [new OA\Response(response: 200, description: 'Stats')]
+    )]
+    public function withdrawalStats(): void {}
 
     #[OA\Post(
         path: '/withdrawals',
@@ -173,6 +308,16 @@ class OperationsDocumentation
         responses: [new OA\Response(response: 201, description: 'Requested')]
     )]
     public function createWithdrawal(): void {}
+
+    #[OA\Get(
+        path: '/withdrawals/{withdrawal}',
+        operationId: 'showWithdrawal',
+        tags: ['Withdrawals'],
+        security: [['sanctum' => []]],
+        parameters: [new OA\Parameter(name: 'withdrawal', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        responses: [new OA\Response(response: 200, description: 'Withdrawal')]
+    )]
+    public function showWithdrawal(): void {}
 
     #[OA\Get(path: '/settings', operationId: 'showSettings', tags: ['Settings'], summary: 'Current company settings', security: [['sanctum' => []]], responses: [new OA\Response(response: 200, description: 'Settings')])]
     public function showSettings(): void {}

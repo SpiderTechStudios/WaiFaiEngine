@@ -25,6 +25,7 @@ class PaymentResource extends JsonResource
                 'id' => $this->internetPlan?->id,
                 'name' => $this->internetPlan?->name,
             ]),
+            'company' => $this->whenLoaded('company', fn () => (new CompanyResource($this->company))->resolve()),
             'created_at' => $this->created_at,
         ];
     }
