@@ -41,10 +41,6 @@ class OperationsTest extends TestCase
         $headers = $this->authHeaders($owner);
 
         $this->withHeaders($headers)->getJson('/api/v1/dashboard')->assertOk();
-        $this->withHeaders($headers)->getJson('/api/v1/device-setup')
-            ->assertOk()
-            ->assertJsonPath('data.methods.0.key', 'mikrotik')
-            ->assertJsonPath('data.methods.1.key', 'ruijie_cloud');
 
         $router = $this->withHeaders($headers)->postJson('/api/v1/routers', [
             'gateway_type' => 'mikrotik',
@@ -103,17 +99,62 @@ class OperationsTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.meta.total', 1);
 
-        $this->withHeaders($headers)->postJson('/api/v1/payments', [
+        $paymentId = $this->withHeaders($headers)->postJson('/api/v1/payments', [
             'internet_plan_id' => $packageId,
             'customer_name' => 'Walk in',
             'customer_phone' => '0700555666',
             'payment_method' => 'mpesa',
-        ])->assertCreated()->assertJsonPath('data.status', 'paid');
+        ])->assertCreated()->assertJsonPath('data.status', 'paid')
+            ->json('data.id');
+
+        $this->withHeaders($headers)->postJson('/api/v1/sessions', [
+            'payment_transaction_id' => $paymentId,
+            'mac_address' => 'aa-bb-cc-dd-ee-ff',
+            'ip_address' => '192.168.88.50',
+            'router_id' => $router['id'],
+            'session_id' => 'hs-portal-1',
+        ])->assertCreated()
+            ->assertJsonPath('data.status', 'active')
+            ->assertJsonPath('data.mac_address', 'AA:BB:CC:DD:EE:FF')
+            ->assertJsonPath('data.session_id', 'hs-portal-1')
+            ->assertJsonPath('data.router.id', $router['id'])
+            ->assertJsonPath('data.internet_plan_id', $packageId)
+            ->assertJsonPath('data.payment_transaction_id', $paymentId)
+            ->assertJsonPath('data.package.id', $packageId)
+            ->assertJsonPath('data.package.name', '1 Hour')
+            ->assertJsonPath('data.payment.id', $paymentId)
+            ->assertJsonPath('data.payment.status', 'paid');
+
+        $this->assertDatabaseHas('network_sessions', [
+            'session_id' => 'hs-portal-1',
+            'mac_address' => 'AA:BB:CC:DD:EE:FF',
+            'status' => 'active',
+            'internet_plan_id' => $packageId,
+            'payment_transaction_id' => $paymentId,
+        ]);
+        $this->assertDatabaseHas('access_grants', [
+            'payment_transaction_id' => $paymentId,
+            'internet_plan_id' => $packageId,
+            'source' => 'payment',
+            'status' => 'active',
+        ]);
 
         $this->withHeaders($headers)->getJson('/api/v1/payments')->assertOk();
         $this->withHeaders($headers)->getJson('/api/v1/customers')->assertOk()
+            ->assertJsonPath('data.meta.total', 1)
+            ->assertJsonPath('data.items.0.phone', '0700555666')
+            ->assertJsonPath('data.items.0.mac_address', 'AA:BB:CC:DD:EE:FF')
+            ->assertJsonPath('data.items.0.package.id', $packageId)
+            ->assertJsonPath('data.items.0.package.name', '1 Hour')
+            ->assertJsonPath('data.items.0.package.status', 'active')
+            ->assertJsonPath('data.items.0.total_spent', 1000)
+            ->assertJsonPath('data.items.0.currency', 'TZS')
+            ->assertJsonPath('data.items.0.current_session.session_id', 'hs-portal-1');
+
+        $this->assertNotNull($this->withHeaders($headers)->getJson('/api/v1/customers')->json('data.items.0.time_left'));
+        $this->assertNotNull($this->withHeaders($headers)->getJson('/api/v1/customers')->json('data.items.0.time_used'));
+        $this->withHeaders($headers)->getJson('/api/v1/sessions')->assertOk()
             ->assertJsonPath('data.meta.total', 1);
-        $this->withHeaders($headers)->getJson('/api/v1/sessions')->assertOk();
         $this->withHeaders($headers)->getJson('/api/v1/income')->assertOk()
             ->assertJsonPath('data.total', 1000);
 

@@ -8,6 +8,7 @@ Route::middleware(['auth:sanctum', 'active.user', 'company.context', 'company.re
 
 
     Route::get('/sessions', [HotspotSessionController::class, 'index'])->middleware('permission:' . Permissions::SESSIONS_VIEW);
+    Route::post('/sessions', [HotspotSessionController::class, 'store'])->middleware('permission:' . Permissions::SESSIONS_CREATE);
     Route::get('/sessions/{session}', [HotspotSessionController::class, 'show'])->middleware('permission:' . Permissions::SESSIONS_VIEW);
 
 

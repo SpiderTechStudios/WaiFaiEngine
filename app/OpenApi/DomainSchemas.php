@@ -80,10 +80,43 @@ use OpenApi\Attributes as OA;
     schema: 'Customer',
     properties: [
         new OA\Property(property: 'id', type: 'integer', example: 1),
-        new OA\Property(property: 'name', type: 'string', nullable: true, example: 'Walk in'),
-        new OA\Property(property: 'phone', type: 'string', nullable: true, example: '0700555666'),
+        new OA\Property(property: 'name', type: 'string', nullable: true, example: 'WiFi Customer'),
+        new OA\Property(property: 'phone', type: 'string', nullable: true, example: '0686911251'),
         new OA\Property(property: 'email', type: 'string', nullable: true),
         new OA\Property(property: 'status', type: 'string', example: 'active'),
+        new OA\Property(property: 'mac_address', type: 'string', nullable: true, example: '36:CF:B7:F1:B2:14'),
+        new OA\Property(property: 'package', type: 'object', nullable: true, description: 'Current active package from access grant', properties: [
+            new OA\Property(property: 'id', type: 'integer', example: 1),
+            new OA\Property(property: 'name', type: 'string', example: '24hour pass'),
+            new OA\Property(property: 'badge', type: 'string', nullable: true),
+            new OA\Property(property: 'duration', type: 'integer', nullable: true, example: 24),
+            new OA\Property(property: 'duration_unit', type: 'string', example: 'HOURS'),
+            new OA\Property(property: 'price', type: 'number', example: 5000),
+            new OA\Property(property: 'status', type: 'string', example: 'active', description: 'Access grant status (e.g. active)'),
+        ]),
+        new OA\Property(property: 'access_grant', type: 'object', nullable: true, properties: [
+            new OA\Property(property: 'id', type: 'integer', example: 1),
+            new OA\Property(property: 'status', type: 'string', example: 'active'),
+            new OA\Property(property: 'source', type: 'string', example: 'payment'),
+            new OA\Property(property: 'starts_at', type: 'string', format: 'date-time', nullable: true),
+            new OA\Property(property: 'expires_at', type: 'string', format: 'date-time', nullable: true),
+        ]),
+        new OA\Property(property: 'time_left_seconds', type: 'integer', nullable: true, example: 74880),
+        new OA\Property(property: 'time_left', type: 'string', nullable: true, example: '20h 48m'),
+        new OA\Property(property: 'time_used_seconds', type: 'integer', nullable: true, example: 11460),
+        new OA\Property(property: 'time_used', type: 'string', nullable: true, example: '3h 11m'),
+        new OA\Property(property: 'total_spent', type: 'number', example: 14000, description: 'Sum of all paid payments for this customer'),
+        new OA\Property(property: 'currency', type: 'string', example: 'TZS'),
+        new OA\Property(property: 'total_spent_label', type: 'string', example: 'TZS 14,000'),
+        new OA\Property(property: 'current_session', type: 'object', nullable: true, properties: [
+            new OA\Property(property: 'id', type: 'integer', example: 1),
+            new OA\Property(property: 'session_id', type: 'string', nullable: true, example: 'hs-portal-1'),
+            new OA\Property(property: 'status', type: 'string', example: 'active'),
+            new OA\Property(property: 'mac_address', type: 'string', nullable: true),
+            new OA\Property(property: 'ip_address', type: 'string', nullable: true),
+            new OA\Property(property: 'started_at', type: 'string', format: 'date-time', nullable: true),
+            new OA\Property(property: 'last_activity_at', type: 'string', format: 'date-time', nullable: true),
+        ]),
         new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
     ]
 )]
@@ -140,6 +173,10 @@ use OpenApi\Attributes as OA;
     schema: 'HotspotSession',
     properties: [
         new OA\Property(property: 'id', type: 'integer', example: 1),
+        new OA\Property(property: 'session_id', type: 'string', nullable: true, example: 'hs-abc123', description: 'External router/hotspot session id'),
+        new OA\Property(property: 'access_grant_id', type: 'integer', example: 1),
+        new OA\Property(property: 'internet_plan_id', type: 'integer', example: 1),
+        new OA\Property(property: 'payment_transaction_id', type: 'integer', nullable: true, example: 1),
         new OA\Property(property: 'mac_address', type: 'string', nullable: true, example: 'AA:BB:CC:DD:EE:FF'),
         new OA\Property(property: 'ip_address', type: 'string', nullable: true, example: '192.168.88.50'),
         new OA\Property(property: 'status', type: 'string', example: 'active'),
@@ -149,9 +186,34 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'upload_bytes', type: 'integer', nullable: true, example: 1024),
         new OA\Property(property: 'download_bytes', type: 'integer', nullable: true, example: 2048),
         new OA\Property(property: 'customer', ref: '#/components/schemas/Customer', nullable: true),
+        new OA\Property(property: 'package', type: 'object', nullable: true, properties: [
+            new OA\Property(property: 'id', type: 'integer', example: 1),
+            new OA\Property(property: 'name', type: 'string', example: '1 Hour'),
+            new OA\Property(property: 'badge', type: 'string', nullable: true, example: 'Popular'),
+            new OA\Property(property: 'duration', type: 'integer', nullable: true, example: 1),
+            new OA\Property(property: 'duration_unit', type: 'string', example: 'HOURS'),
+            new OA\Property(property: 'price', type: 'number', example: 1000),
+            new OA\Property(property: 'status', type: 'string', example: 'active'),
+        ], description: 'Package this session was unlocked with'),
+        new OA\Property(property: 'payment', type: 'object', nullable: true, properties: [
+            new OA\Property(property: 'id', type: 'integer', example: 1),
+            new OA\Property(property: 'reference', type: 'string', example: 'PAY-ABC123XYZ'),
+            new OA\Property(property: 'amount', type: 'number', example: 1000),
+            new OA\Property(property: 'currency', type: 'string', example: 'TZS'),
+            new OA\Property(property: 'payment_method', type: 'string', nullable: true, example: 'mpesa'),
+            new OA\Property(property: 'status', type: 'string', example: 'paid'),
+            new OA\Property(property: 'paid_at', type: 'string', format: 'date-time', nullable: true),
+        ], description: 'Payment that unlocked this session (null for voucher grants)'),
         new OA\Property(property: 'router', type: 'object', nullable: true, properties: [
             new OA\Property(property: 'id', type: 'integer', example: 1),
             new OA\Property(property: 'name', type: 'string', example: 'MikroTik-Hotspot'),
+        ]),
+        new OA\Property(property: 'access_grant', type: 'object', nullable: true, properties: [
+            new OA\Property(property: 'id', type: 'integer', example: 1),
+            new OA\Property(property: 'status', type: 'string', example: 'active'),
+            new OA\Property(property: 'source', type: 'string', example: 'payment'),
+            new OA\Property(property: 'starts_at', type: 'string', format: 'date-time', nullable: true),
+            new OA\Property(property: 'expires_at', type: 'string', format: 'date-time', nullable: true),
         ]),
         new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
     ]
@@ -195,26 +257,6 @@ use OpenApi\Attributes as OA;
             ], type: 'object')
         ),
         new OA\Property(property: 'total', type: 'number', example: 100000),
-    ]
-)]
-#[OA\Schema(
-    schema: 'DeviceSetupData',
-    properties: [
-        new OA\Property(property: 'portal_url', type: 'string', nullable: true, example: 'https://api.example.com/connect?subdomain=abc-internet'),
-        new OA\Property(property: 'subdomain', type: 'string', nullable: true, example: 'abc-internet'),
-        new OA\Property(
-            property: 'methods',
-            type: 'array',
-            items: new OA\Items(properties: [
-                new OA\Property(property: 'key', type: 'string', example: 'mikrotik'),
-                new OA\Property(property: 'name', type: 'string', example: 'MikroTik hotspot'),
-                new OA\Property(property: 'steps', type: 'array', items: new OA\Items(type: 'string')),
-                new OA\Property(property: 'portal_url', type: 'string', nullable: true),
-                new OA\Property(property: 'ruijie_account_configured', type: 'boolean', nullable: true),
-            ], type: 'object')
-        ),
-        new OA\Property(property: 'ruijie_account_id', type: 'string', nullable: true, example: 'ruijie-user'),
-        new OA\Property(property: 'ruijie_password_set', type: 'boolean', example: true),
     ]
 )]
 #[OA\Schema(

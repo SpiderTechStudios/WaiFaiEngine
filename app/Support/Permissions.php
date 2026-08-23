@@ -26,10 +26,6 @@ final class Permissions
 
     public const INCOME_VIEW = 'income.view';
 
-    public const DEVICE_SETUP_VIEW = 'device_setup.view';
-    public const DEVICE_SETUP_CREATE = 'device_setup.create';
-    public const DEVICE_SETUP_UPDATE = 'device_setup.update';
-
     public const ROUTERS_VIEW = 'routers.view';
 
     public const ROUTERS_CREATE = 'routers.create';
@@ -60,6 +56,8 @@ final class Permissions
     public const PAYMENTS_CREATE = 'payments.create';
 
     public const SESSIONS_VIEW = 'sessions.view';
+
+    public const SESSIONS_CREATE = 'sessions.create';
 
     public const CUSTOMERS_VIEW = 'customers.view';
 

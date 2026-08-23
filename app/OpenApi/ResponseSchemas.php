@@ -23,24 +23,6 @@ use OpenApi\Attributes as OA;
     ]
 )]
 #[OA\Schema(
-    schema: 'DeviceSetupResponse',
-    properties: [
-        new OA\Property(property: 'status', type: 'boolean', example: true),
-        new OA\Property(property: 'code', type: 'integer', example: 200),
-        new OA\Property(property: 'message', type: 'string', example: 'Device setup instructions'),
-        new OA\Property(property: 'data', ref: '#/components/schemas/DeviceSetupData'),
-    ]
-)]
-#[OA\Schema(
-    schema: 'DeviceSetupCreatedResponse',
-    properties: [
-        new OA\Property(property: 'status', type: 'boolean', example: true),
-        new OA\Property(property: 'code', type: 'integer', example: 201),
-        new OA\Property(property: 'message', type: 'string', example: 'Device setup saved'),
-        new OA\Property(property: 'data', ref: '#/components/schemas/DeviceSetupData'),
-    ]
-)]
-#[OA\Schema(
     schema: 'RouterResponse',
     properties: [
         new OA\Property(property: 'status', type: 'boolean', example: true),
@@ -306,6 +288,15 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'status', type: 'boolean', example: true),
         new OA\Property(property: 'code', type: 'integer', example: 200),
         new OA\Property(property: 'message', type: 'string', example: 'Session retrieved'),
+        new OA\Property(property: 'data', ref: '#/components/schemas/HotspotSession'),
+    ]
+)]
+#[OA\Schema(
+    schema: 'SessionCreatedResponse',
+    properties: [
+        new OA\Property(property: 'status', type: 'boolean', example: true),
+        new OA\Property(property: 'code', type: 'integer', example: 201),
+        new OA\Property(property: 'message', type: 'string', example: 'Session created'),
         new OA\Property(property: 'data', ref: '#/components/schemas/HotspotSession'),
     ]
 )]

@@ -14,6 +14,8 @@ return new class extends Migration
             $table->unsignedBigInteger('customer_id');
             $table->unsignedBigInteger('customer_device_id')->nullable();
             $table->unsignedBigInteger('access_grant_id');
+            $table->unsignedBigInteger('internet_plan_id');
+            $table->unsignedBigInteger('payment_transaction_id')->nullable();
             $table->unsignedBigInteger('network_station_id')->nullable();
             $table->unsignedBigInteger('network_device_id')->nullable();
             $table->unsignedBigInteger('network_ssid_id')->nullable();
@@ -33,6 +35,8 @@ return new class extends Migration
             $table->index(['company_id', 'status']);
             $table->index(['company_id', 'session_id']);
             $table->index(['company_id', 'mac_address']);
+            $table->index(['company_id', 'internet_plan_id']);
+            $table->index(['company_id', 'payment_transaction_id']);
             $table->index('access_grant_id');
             $table->foreign(['customer_id', 'company_id'])
                 ->references(['id', 'company_id'])
@@ -45,6 +49,14 @@ return new class extends Migration
             $table->foreign(['access_grant_id', 'company_id'])
                 ->references(['id', 'company_id'])
                 ->on('access_grants')
+                ->restrictOnDelete();
+            $table->foreign(['internet_plan_id', 'company_id'])
+                ->references(['id', 'company_id'])
+                ->on('internet_plans')
+                ->restrictOnDelete();
+            $table->foreign(['payment_transaction_id', 'company_id'])
+                ->references(['id', 'company_id'])
+                ->on('payment_transactions')
                 ->restrictOnDelete();
             $table->foreign(['network_station_id', 'company_id'])
                 ->references(['id', 'company_id'])

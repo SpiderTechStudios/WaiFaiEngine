@@ -12,15 +12,30 @@ class CustomerController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Customer::query()->where('company_id', $this->currentCompany()->id);
+        $query = Customer::query()
+            ->where('company_id', $this->currentCompany()->id)
+            ->with([
+                'currentAccessGrant.internetPlan',
+                'latestDevice',
+                'latestNetworkSession',
+            ])
+            ->withSum([
+                'paymentTransactions as total_spent' => fn ($builder) => $builder->where('status', 'paid'),
+            ], 'amount');
 
         if ($request->filled('search')) {
             $search = $request->string('search')->toString();
             $query->where(function ($builder) use ($search) {
                 $builder->where('name', 'like', "%{$search}%")
                     ->orWhere('phone', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhereHas('devices', fn ($devices) => $devices->where('mac_address', 'like', "%{$search}%"))
+                    ->orWhereHas('networkSessions', fn ($sessions) => $sessions->where('mac_address', 'like', "%{$search}%"));
             });
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->string('status'));
         }
 
         $paginated = $query->latest('id')->paginate($request->integer('per_page', 15));
@@ -36,6 +51,15 @@ class CustomerController extends Controller
         if ($customer->company_id !== $this->currentCompany()->id) {
             abort(404);
         }
+
+        $customer->load([
+            'currentAccessGrant.internetPlan',
+            'latestDevice',
+            'latestNetworkSession',
+            'paymentTransactions' => fn ($query) => $query->where('status', 'paid')->latest('id'),
+        ])->loadSum([
+            'paymentTransactions as total_spent' => fn ($builder) => $builder->where('status', 'paid'),
+        ], 'amount');
 
         return $this->success((new CustomerResource($customer))->resolve(), 'Customer retrieved');
     }

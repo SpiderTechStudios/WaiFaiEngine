@@ -765,206 +765,6 @@
                 ]
             }
         },
-        "/device-setup": {
-            "get": {
-                "tags": [
-                    "Device Setup"
-                ],
-                "summary": "MikroTik and Ruijie Cloud setup instructions",
-                "operationId": "deviceSetup",
-                "responses": {
-                    "200": {
-                        "description": "Instructions",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/DeviceSetupResponse"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthenticated",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
-                                }
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ForbiddenResponse"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            },
-            "post": {
-                "tags": [
-                    "Device Setup"
-                ],
-                "summary": "Save device setup credentials (Ruijie / portal subdomain)",
-                "operationId": "storeDeviceSetup",
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "portal_subdomain": {
-                                        "type": "string",
-                                        "nullable": true
-                                    },
-                                    "ruijie_account_id": {
-                                        "type": "string",
-                                        "nullable": true
-                                    },
-                                    "ruijie_password": {
-                                        "type": "string",
-                                        "nullable": true
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "Saved",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/DeviceSetupCreatedResponse"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthenticated",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
-                                }
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ForbiddenResponse"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ValidationErrorResponse"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            },
-            "patch": {
-                "tags": [
-                    "Device Setup"
-                ],
-                "summary": "Update device setup credentials",
-                "operationId": "updateDeviceSetup",
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "portal_subdomain": {
-                                        "type": "string",
-                                        "nullable": true
-                                    },
-                                    "ruijie_account_id": {
-                                        "type": "string",
-                                        "nullable": true
-                                    },
-                                    "ruijie_password": {
-                                        "type": "string",
-                                        "nullable": true
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Updated",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/DeviceSetupResponse"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthenticated",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
-                                }
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ForbiddenResponse"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ValidationErrorResponse"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
         "/routers": {
             "get": {
                 "tags": [
@@ -2507,6 +2307,131 @@
                         "sanctum": []
                     }
                 ]
+            },
+            "post": {
+                "tags": [
+                    "Sessions"
+                ],
+                "summary": "Write a hotspot session after payment / captive portal success",
+                "description": "Call this when the captive portal has authenticated the device. Pass payment_transaction_id (creates an access grant if needed) or an existing access_grant_id from voucher consume.",
+                "operationId": "createSession",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "mac_address"
+                                ],
+                                "properties": {
+                                    "payment_transaction_id": {
+                                        "description": "Paid payment that unlocks access. Required if access_grant_id is omitted.",
+                                        "type": "integer",
+                                        "example": 1,
+                                        "nullable": true
+                                    },
+                                    "access_grant_id": {
+                                        "description": "Existing grant (e.g. from voucher consume). Required if payment_transaction_id is omitted.",
+                                        "type": "integer",
+                                        "example": 1,
+                                        "nullable": true
+                                    },
+                                    "mac_address": {
+                                        "type": "string",
+                                        "example": "AA:BB:CC:DD:EE:FF"
+                                    },
+                                    "ip_address": {
+                                        "type": "string",
+                                        "example": "192.168.88.50",
+                                        "nullable": true
+                                    },
+                                    "router_id": {
+                                        "description": "Network device (router) id",
+                                        "type": "integer",
+                                        "example": 1,
+                                        "nullable": true
+                                    },
+                                    "session_id": {
+                                        "description": "External hotspot session id from the gateway",
+                                        "type": "string",
+                                        "example": "hs-abc123",
+                                        "nullable": true
+                                    },
+                                    "network_station_id": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "network_ssid_id": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "metadata": {
+                                        "type": "object",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SessionCreatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Payment, grant, or router not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             }
         },
         "/sessions/{session}": {
@@ -2579,7 +2504,36 @@
                 "tags": [
                     "Customers"
                 ],
+                "summary": "List hotspot customers with package, time left/used, and lifetime spend",
                 "operationId": "listCustomers",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Search by name, phone, email, or MAC",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 15
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Customers",
@@ -5912,12 +5866,12 @@
                     },
                     "name": {
                         "type": "string",
-                        "example": "Walk in",
+                        "example": "WiFi Customer",
                         "nullable": true
                     },
                     "phone": {
                         "type": "string",
-                        "example": "0700555666",
+                        "example": "0686911251",
                         "nullable": true
                     },
                     "email": {
@@ -5927,6 +5881,146 @@
                     "status": {
                         "type": "string",
                         "example": "active"
+                    },
+                    "mac_address": {
+                        "type": "string",
+                        "example": "36:CF:B7:F1:B2:14",
+                        "nullable": true
+                    },
+                    "package": {
+                        "description": "Current active package from access grant",
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "24hour pass"
+                            },
+                            "badge": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "duration": {
+                                "type": "integer",
+                                "example": 24,
+                                "nullable": true
+                            },
+                            "duration_unit": {
+                                "type": "string",
+                                "example": "HOURS"
+                            },
+                            "price": {
+                                "type": "number",
+                                "example": 5000
+                            },
+                            "status": {
+                                "description": "Access grant status (e.g. active)",
+                                "type": "string",
+                                "example": "active"
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "access_grant": {
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "status": {
+                                "type": "string",
+                                "example": "active"
+                            },
+                            "source": {
+                                "type": "string",
+                                "example": "payment"
+                            },
+                            "starts_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": true
+                            },
+                            "expires_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "time_left_seconds": {
+                        "type": "integer",
+                        "example": 74880,
+                        "nullable": true
+                    },
+                    "time_left": {
+                        "type": "string",
+                        "example": "20h 48m",
+                        "nullable": true
+                    },
+                    "time_used_seconds": {
+                        "type": "integer",
+                        "example": 11460,
+                        "nullable": true
+                    },
+                    "time_used": {
+                        "type": "string",
+                        "example": "3h 11m",
+                        "nullable": true
+                    },
+                    "total_spent": {
+                        "description": "Sum of all paid payments for this customer",
+                        "type": "number",
+                        "example": 14000
+                    },
+                    "currency": {
+                        "type": "string",
+                        "example": "TZS"
+                    },
+                    "total_spent_label": {
+                        "type": "string",
+                        "example": "TZS 14,000"
+                    },
+                    "current_session": {
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "session_id": {
+                                "type": "string",
+                                "example": "hs-portal-1",
+                                "nullable": true
+                            },
+                            "status": {
+                                "type": "string",
+                                "example": "active"
+                            },
+                            "mac_address": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "ip_address": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "started_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": true
+                            },
+                            "last_activity_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
                     },
                     "created_at": {
                         "type": "string",
@@ -6104,6 +6198,25 @@
                         "type": "integer",
                         "example": 1
                     },
+                    "session_id": {
+                        "description": "External router/hotspot session id",
+                        "type": "string",
+                        "example": "hs-abc123",
+                        "nullable": true
+                    },
+                    "access_grant_id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "internet_plan_id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "payment_transaction_id": {
+                        "type": "integer",
+                        "example": 1,
+                        "nullable": true
+                    },
                     "mac_address": {
                         "type": "string",
                         "example": "AA:BB:CC:DD:EE:FF",
@@ -6151,6 +6264,80 @@
                         ],
                         "nullable": true
                     },
+                    "package": {
+                        "description": "Package this session was unlocked with",
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "1 Hour"
+                            },
+                            "badge": {
+                                "type": "string",
+                                "example": "Popular",
+                                "nullable": true
+                            },
+                            "duration": {
+                                "type": "integer",
+                                "example": 1,
+                                "nullable": true
+                            },
+                            "duration_unit": {
+                                "type": "string",
+                                "example": "HOURS"
+                            },
+                            "price": {
+                                "type": "number",
+                                "example": 1000
+                            },
+                            "status": {
+                                "type": "string",
+                                "example": "active"
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "payment": {
+                        "description": "Payment that unlocked this session (null for voucher grants)",
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "reference": {
+                                "type": "string",
+                                "example": "PAY-ABC123XYZ"
+                            },
+                            "amount": {
+                                "type": "number",
+                                "example": 1000
+                            },
+                            "currency": {
+                                "type": "string",
+                                "example": "TZS"
+                            },
+                            "payment_method": {
+                                "type": "string",
+                                "example": "mpesa",
+                                "nullable": true
+                            },
+                            "status": {
+                                "type": "string",
+                                "example": "paid"
+                            },
+                            "paid_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
                     "router": {
                         "properties": {
                             "id": {
@@ -6160,6 +6347,34 @@
                             "name": {
                                 "type": "string",
                                 "example": "MikroTik-Hotspot"
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "access_grant": {
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "status": {
+                                "type": "string",
+                                "example": "active"
+                            },
+                            "source": {
+                                "type": "string",
+                                "example": "payment"
+                            },
+                            "starts_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": true
+                            },
+                            "expires_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": true
                             }
                         },
                         "type": "object",
@@ -6267,60 +6482,6 @@
                     "total": {
                         "type": "number",
                         "example": 100000
-                    }
-                },
-                "type": "object"
-            },
-            "DeviceSetupData": {
-                "properties": {
-                    "portal_url": {
-                        "type": "string",
-                        "example": "https://api.example.com/connect?subdomain=abc-internet",
-                        "nullable": true
-                    },
-                    "subdomain": {
-                        "type": "string",
-                        "example": "abc-internet",
-                        "nullable": true
-                    },
-                    "methods": {
-                        "type": "array",
-                        "items": {
-                            "properties": {
-                                "key": {
-                                    "type": "string",
-                                    "example": "mikrotik"
-                                },
-                                "name": {
-                                    "type": "string",
-                                    "example": "MikroTik hotspot"
-                                },
-                                "steps": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "string"
-                                    }
-                                },
-                                "portal_url": {
-                                    "type": "string",
-                                    "nullable": true
-                                },
-                                "ruijie_account_configured": {
-                                    "type": "boolean",
-                                    "nullable": true
-                                }
-                            },
-                            "type": "object"
-                        }
-                    },
-                    "ruijie_account_id": {
-                        "type": "string",
-                        "example": "ruijie-user",
-                        "nullable": true
-                    },
-                    "ruijie_password_set": {
-                        "type": "boolean",
-                        "example": true
                     }
                 },
                 "type": "object"
@@ -6542,46 +6703,6 @@
                     },
                     "data": {
                         "$ref": "#/components/schemas/IncomeData"
-                    }
-                },
-                "type": "object"
-            },
-            "DeviceSetupResponse": {
-                "properties": {
-                    "status": {
-                        "type": "boolean",
-                        "example": true
-                    },
-                    "code": {
-                        "type": "integer",
-                        "example": 200
-                    },
-                    "message": {
-                        "type": "string",
-                        "example": "Device setup instructions"
-                    },
-                    "data": {
-                        "$ref": "#/components/schemas/DeviceSetupData"
-                    }
-                },
-                "type": "object"
-            },
-            "DeviceSetupCreatedResponse": {
-                "properties": {
-                    "status": {
-                        "type": "boolean",
-                        "example": true
-                    },
-                    "code": {
-                        "type": "integer",
-                        "example": 201
-                    },
-                    "message": {
-                        "type": "string",
-                        "example": "Device setup saved"
-                    },
-                    "data": {
-                        "$ref": "#/components/schemas/DeviceSetupData"
                     }
                 },
                 "type": "object"
@@ -7215,6 +7336,26 @@
                     "message": {
                         "type": "string",
                         "example": "Session retrieved"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/HotspotSession"
+                    }
+                },
+                "type": "object"
+            },
+            "SessionCreatedResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 201
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Session created"
                     },
                     "data": {
                         "$ref": "#/components/schemas/HotspotSession"
@@ -7932,10 +8073,6 @@
             "description": "Revenue by source"
         },
         {
-            "name": "Device Setup",
-            "description": "MikroTik and Ruijie Cloud instructions"
-        },
-        {
             "name": "Routers",
             "description": "Hotspot routers"
         },
@@ -7953,7 +8090,7 @@
         },
         {
             "name": "Sessions",
-            "description": "Active and recent hotspot sessions"
+            "description": "Hotspot sessions — list, inspect, and write after captive portal success"
         },
         {
             "name": "Customers",

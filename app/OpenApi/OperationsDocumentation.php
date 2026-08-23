@@ -35,60 +35,6 @@ class OperationsDocumentation
     public function income(): void {}
 
     #[OA\Get(
-        path: '/device-setup',
-        operationId: 'deviceSetup',
-        tags: ['Device Setup'],
-        summary: 'MikroTik and Ruijie Cloud setup instructions',
-        security: [['sanctum' => []]],
-        responses: [
-            new OA\Response(response: 200, description: 'Instructions', content: new OA\JsonContent(ref: '#/components/schemas/DeviceSetupResponse')),
-            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
-            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
-        ]
-    )]
-    public function deviceSetup(): void {}
-
-    #[OA\Post(
-        path: '/device-setup',
-        operationId: 'storeDeviceSetup',
-        tags: ['Device Setup'],
-        summary: 'Save device setup credentials (Ruijie / portal subdomain)',
-        security: [['sanctum' => []]],
-        requestBody: new OA\RequestBody(content: new OA\JsonContent(properties: [
-            new OA\Property(property: 'portal_subdomain', type: 'string', nullable: true),
-            new OA\Property(property: 'ruijie_account_id', type: 'string', nullable: true),
-            new OA\Property(property: 'ruijie_password', type: 'string', nullable: true),
-        ])),
-        responses: [
-            new OA\Response(response: 201, description: 'Saved', content: new OA\JsonContent(ref: '#/components/schemas/DeviceSetupCreatedResponse')),
-            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
-            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
-            new OA\Response(response: 422, description: 'Validation error', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
-        ]
-    )]
-    public function storeDeviceSetup(): void {}
-
-    #[OA\Patch(
-        path: '/device-setup',
-        operationId: 'updateDeviceSetup',
-        tags: ['Device Setup'],
-        summary: 'Update device setup credentials',
-        security: [['sanctum' => []]],
-        requestBody: new OA\RequestBody(content: new OA\JsonContent(properties: [
-            new OA\Property(property: 'portal_subdomain', type: 'string', nullable: true),
-            new OA\Property(property: 'ruijie_account_id', type: 'string', nullable: true),
-            new OA\Property(property: 'ruijie_password', type: 'string', nullable: true),
-        ])),
-        responses: [
-            new OA\Response(response: 200, description: 'Updated', content: new OA\JsonContent(ref: '#/components/schemas/DeviceSetupResponse')),
-            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
-            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
-            new OA\Response(response: 422, description: 'Validation error', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
-        ]
-    )]
-    public function updateDeviceSetup(): void {}
-
-    #[OA\Get(
         path: '/routers',
         operationId: 'listRouters',
         tags: ['Routers'],
@@ -439,6 +385,34 @@ class OperationsDocumentation
     )]
     public function listSessions(): void {}
 
+    #[OA\Post(
+        path: '/sessions',
+        operationId: 'createSession',
+        tags: ['Sessions'],
+        summary: 'Write a hotspot session after payment / captive portal success',
+        description: 'Call this when the captive portal has authenticated the device. Pass payment_transaction_id (creates an access grant if needed) or an existing access_grant_id from voucher consume.',
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(required: ['mac_address'], properties: [
+            new OA\Property(property: 'payment_transaction_id', type: 'integer', nullable: true, example: 1, description: 'Paid payment that unlocks access. Required if access_grant_id is omitted.'),
+            new OA\Property(property: 'access_grant_id', type: 'integer', nullable: true, example: 1, description: 'Existing grant (e.g. from voucher consume). Required if payment_transaction_id is omitted.'),
+            new OA\Property(property: 'mac_address', type: 'string', example: 'AA:BB:CC:DD:EE:FF'),
+            new OA\Property(property: 'ip_address', type: 'string', nullable: true, example: '192.168.88.50'),
+            new OA\Property(property: 'router_id', type: 'integer', nullable: true, example: 1, description: 'Network device (router) id'),
+            new OA\Property(property: 'session_id', type: 'string', nullable: true, example: 'hs-abc123', description: 'External hotspot session id from the gateway'),
+            new OA\Property(property: 'network_station_id', type: 'integer', nullable: true),
+            new OA\Property(property: 'network_ssid_id', type: 'integer', nullable: true),
+            new OA\Property(property: 'metadata', type: 'object', nullable: true),
+        ])),
+        responses: [
+            new OA\Response(response: 201, description: 'Created', content: new OA\JsonContent(ref: '#/components/schemas/SessionCreatedResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 404, description: 'Payment, grant, or router not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
+            new OA\Response(response: 422, description: 'Validation error', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
+        ]
+    )]
+    public function createSession(): void {}
+
     #[OA\Get(
         path: '/sessions/{session}',
         operationId: 'showSession',
@@ -458,7 +432,13 @@ class OperationsDocumentation
         path: '/customers',
         operationId: 'listCustomers',
         tags: ['Customers'],
+        summary: 'List hotspot customers with package, time left/used, and lifetime spend',
         security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'search', in: 'query', required: false, schema: new OA\Schema(type: 'string'), description: 'Search by name, phone, email, or MAC'),
+            new OA\Parameter(name: 'status', in: 'query', required: false, schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'per_page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', example: 15)),
+        ],
         responses: [
             new OA\Response(response: 200, description: 'Customers', content: new OA\JsonContent(ref: '#/components/schemas/CustomerListResponse')),
             new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),

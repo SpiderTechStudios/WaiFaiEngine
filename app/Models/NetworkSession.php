@@ -13,6 +13,8 @@ class NetworkSession extends Model
         'customer_id',
         'customer_device_id',
         'access_grant_id',
+        'internet_plan_id',
+        'payment_transaction_id',
         'network_station_id',
         'network_device_id',
         'network_ssid_id',
@@ -59,6 +61,16 @@ class NetworkSession extends Model
     public function accessGrant(): BelongsTo
     {
         return $this->belongsTo(AccessGrant::class);
+    }
+
+    public function internetPlan(): BelongsTo
+    {
+        return $this->belongsTo(InternetPlan::class);
+    }
+
+    public function paymentTransaction(): BelongsTo
+    {
+        return $this->belongsTo(PaymentTransaction::class);
     }
 
     public function networkStation(): BelongsTo
