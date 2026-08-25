@@ -264,10 +264,11 @@ class OperationsDocumentation
         operationId: 'createVouchers',
         tags: ['Vouchers'],
         summary: 'Generate voucher codes for a router and package',
+        description: 'Router and package must belong to the current company and not be soft-deleted. Missing or deleted refs return 422 (not 404).',
         security: [['sanctum' => []]],
         requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(required: ['router_id', 'package_id', 'quantity'], properties: [
-            new OA\Property(property: 'router_id', type: 'integer', example: 1),
-            new OA\Property(property: 'package_id', type: 'integer', example: 1),
+            new OA\Property(property: 'router_id', type: 'integer', example: 1, description: 'Active company router id. Soft-deleted routers are rejected.'),
+            new OA\Property(property: 'package_id', type: 'integer', example: 1, description: 'Active company package id. Soft-deleted packages are rejected.'),
             new OA\Property(property: 'quantity', type: 'integer', example: 10, description: 'Number of codes to generate'),
             new OA\Property(property: 'custom_code', type: 'string', nullable: true, example: '123456', description: 'Numbers only. Allowed only when quantity is 1. Leave empty to auto-generate.'),
             new OA\Property(property: 'max_uses', type: 'integer', nullable: true, example: 1, description: 'Max uses per code. Defaults to 1.'),
@@ -278,7 +279,11 @@ class OperationsDocumentation
             new OA\Response(response: 201, description: 'Created', content: new OA\JsonContent(ref: '#/components/schemas/VouchersCreatedResponse')),
             new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
             new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
-            new OA\Response(response: 422, description: 'Validation error', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
+            new OA\Response(
+                response: 422,
+                description: 'Validation error — including missing/deleted router_id or package_id, custom_code rules, or duplicate custom_code',
+                content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse'),
+            ),
         ]
     )]
     public function createVouchers(): void {}
@@ -390,14 +395,14 @@ class OperationsDocumentation
         operationId: 'createSession',
         tags: ['Sessions'],
         summary: 'Write a hotspot session after payment / captive portal success',
-        description: 'Call this when the captive portal has authenticated the device. Pass payment_transaction_id (creates an access grant if needed) or an existing access_grant_id from voucher consume.',
+        description: 'Call this when the captive portal has authenticated the device. Pass payment_transaction_id (creates an access grant if needed) or an existing access_grant_id from voucher consume. Soft-deleted or foreign routers return 422.',
         security: [['sanctum' => []]],
         requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(required: ['mac_address'], properties: [
             new OA\Property(property: 'payment_transaction_id', type: 'integer', nullable: true, example: 1, description: 'Paid payment that unlocks access. Required if access_grant_id is omitted.'),
             new OA\Property(property: 'access_grant_id', type: 'integer', nullable: true, example: 1, description: 'Existing grant (e.g. from voucher consume). Required if payment_transaction_id is omitted.'),
             new OA\Property(property: 'mac_address', type: 'string', example: 'AA:BB:CC:DD:EE:FF'),
             new OA\Property(property: 'ip_address', type: 'string', nullable: true, example: '192.168.88.50'),
-            new OA\Property(property: 'router_id', type: 'integer', nullable: true, example: 1, description: 'Network device (router) id'),
+            new OA\Property(property: 'router_id', type: 'integer', nullable: true, example: 1, description: 'Active company router id. Soft-deleted routers are rejected with 422.'),
             new OA\Property(property: 'session_id', type: 'string', nullable: true, example: 'hs-abc123', description: 'External hotspot session id from the gateway'),
             new OA\Property(property: 'network_station_id', type: 'integer', nullable: true),
             new OA\Property(property: 'network_ssid_id', type: 'integer', nullable: true),
@@ -407,8 +412,12 @@ class OperationsDocumentation
             new OA\Response(response: 201, description: 'Created', content: new OA\JsonContent(ref: '#/components/schemas/SessionCreatedResponse')),
             new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
             new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
-            new OA\Response(response: 404, description: 'Payment, grant, or router not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
-            new OA\Response(response: 422, description: 'Validation error', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
+            new OA\Response(response: 404, description: 'Payment or access grant not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
+            new OA\Response(
+                response: 422,
+                description: 'Validation error — including missing payment/grant, unpaid payment, expired grant, invalid MAC, or missing/deleted router_id',
+                content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse'),
+            ),
         ]
     )]
     public function createSession(): void {}

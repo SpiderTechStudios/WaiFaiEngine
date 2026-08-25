@@ -1789,6 +1789,7 @@
                     "Vouchers"
                 ],
                 "summary": "Generate voucher codes for a router and package",
+                "description": "Router and package must belong to the current company and not be soft-deleted. Missing or deleted refs return 422 (not 404).",
                 "operationId": "createVouchers",
                 "requestBody": {
                     "required": true,
@@ -1802,10 +1803,12 @@
                                 ],
                                 "properties": {
                                     "router_id": {
+                                        "description": "Active company router id. Soft-deleted routers are rejected.",
                                         "type": "integer",
                                         "example": 1
                                     },
                                     "package_id": {
+                                        "description": "Active company package id. Soft-deleted packages are rejected.",
                                         "type": "integer",
                                         "example": 1
                                     },
@@ -1873,7 +1876,7 @@
                         }
                     },
                     "422": {
-                        "description": "Validation error",
+                        "description": "Validation error — including missing/deleted router_id or package_id, custom_code rules, or duplicate custom_code",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -2313,7 +2316,7 @@
                     "Sessions"
                 ],
                 "summary": "Write a hotspot session after payment / captive portal success",
-                "description": "Call this when the captive portal has authenticated the device. Pass payment_transaction_id (creates an access grant if needed) or an existing access_grant_id from voucher consume.",
+                "description": "Call this when the captive portal has authenticated the device. Pass payment_transaction_id (creates an access grant if needed) or an existing access_grant_id from voucher consume. Soft-deleted or foreign routers return 422.",
                 "operationId": "createSession",
                 "requestBody": {
                     "required": true,
@@ -2346,7 +2349,7 @@
                                         "nullable": true
                                     },
                                     "router_id": {
-                                        "description": "Network device (router) id",
+                                        "description": "Active company router id. Soft-deleted routers are rejected with 422.",
                                         "type": "integer",
                                         "example": 1,
                                         "nullable": true
@@ -2407,7 +2410,7 @@
                         }
                     },
                     "404": {
-                        "description": "Payment, grant, or router not found",
+                        "description": "Payment or access grant not found",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -2417,7 +2420,7 @@
                         }
                     },
                     "422": {
-                        "description": "Validation error",
+                        "description": "Validation error — including missing payment/grant, unpaid payment, expired grant, invalid MAC, or missing/deleted router_id",
                         "content": {
                             "application/json": {
                                 "schema": {

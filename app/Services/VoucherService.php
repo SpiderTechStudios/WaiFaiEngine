@@ -23,14 +23,8 @@ class VoucherService
      */
     public function create(Company $company, array $data, User $actor): Collection
     {
-        $router = NetworkDevice::query()
-            ->where('company_id', $company->id)
-            ->where('type', 'router')
-            ->findOrFail($data['router_id']);
-
-        $plan = InternetPlan::query()
-            ->where('company_id', $company->id)
-            ->findOrFail($data['package_id']);
+        $router = $this->resolveRouter($company, (int) $data['router_id']);
+        $plan = $this->resolvePackage($company, (int) $data['package_id']);
 
         $quantity = (int) $data['quantity'];
         $maxUses = (int) ($data['max_uses'] ?? 1);
@@ -225,5 +219,57 @@ class VoucherService
         } while (Voucher::query()->where('company_id', $companyId)->where('code', $code)->exists());
 
         return $code;
+    }
+
+    private function resolveRouter(Company $company, int $routerId): NetworkDevice
+    {
+        $router = NetworkDevice::query()
+            ->where('company_id', $company->id)
+            ->where('type', 'router')
+            ->whereKey($routerId)
+            ->first();
+
+        if ($router) {
+            return $router;
+        }
+
+        $deleted = NetworkDevice::onlyTrashed()
+            ->where('company_id', $company->id)
+            ->where('type', 'router')
+            ->whereKey($routerId)
+            ->exists();
+
+        throw ValidationException::withMessages([
+            'router_id' => [
+                $deleted
+                    ? 'This router has been deleted. Create a new router or restore it before generating vouchers.'
+                    : 'Router not found for this company.',
+            ],
+        ]);
+    }
+
+    private function resolvePackage(Company $company, int $packageId): InternetPlan
+    {
+        $plan = InternetPlan::query()
+            ->where('company_id', $company->id)
+            ->whereKey($packageId)
+            ->first();
+
+        if ($plan) {
+            return $plan;
+        }
+
+        $deleted = InternetPlan::onlyTrashed()
+            ->where('company_id', $company->id)
+            ->whereKey($packageId)
+            ->exists();
+
+        throw ValidationException::withMessages([
+            'package_id' => [
+                $deleted
+                    ? 'This package has been deleted. Choose an active package.'
+                    : 'Package not found for this company.',
+            ],
+        ]);
     }
 }

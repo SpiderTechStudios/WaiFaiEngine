@@ -47,10 +47,27 @@ class NetworkSessionService
 
             $routerId = $data['router_id'] ?? $data['network_device_id'] ?? null;
             if ($routerId) {
-                NetworkDevice::query()
+                $routerExists = NetworkDevice::query()
                     ->where('company_id', $company->id)
                     ->where('type', 'router')
-                    ->findOrFail($routerId);
+                    ->whereKey($routerId)
+                    ->exists();
+
+                if (! $routerExists) {
+                    $deleted = NetworkDevice::onlyTrashed()
+                        ->where('company_id', $company->id)
+                        ->where('type', 'router')
+                        ->whereKey($routerId)
+                        ->exists();
+
+                    throw ValidationException::withMessages([
+                        'router_id' => [
+                            $deleted
+                                ? 'This router has been deleted. Create a new router or restore it before starting a session.'
+                                : 'Router not found for this company.',
+                        ],
+                    ]);
+                }
             }
 
             $externalSessionId = $data['session_id'] ?? null;

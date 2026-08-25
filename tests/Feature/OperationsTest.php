@@ -266,4 +266,42 @@ class OperationsTest extends TestCase
             ->assertJsonPath('data.items.0.code', '998877')
             ->assertJsonPath('data.items.0.max_uses', 3);
     }
+
+    public function test_voucher_create_rejects_missing_or_deleted_router(): void
+    {
+        $owner = $this->createUser();
+        $this->createCompanyFor($owner);
+        $headers = $this->authHeaders($owner);
+
+        $routerId = $this->withHeaders($headers)->postJson('/api/v1/routers', [
+            'gateway_type' => 'wavlink',
+            'name' => 'Temp Router',
+        ])->json('data.id');
+
+        $packageId = $this->withHeaders($headers)->postJson('/api/v1/packages', [
+            'name' => 'Hour Pass',
+            'duration' => 1,
+            'duration_unit' => 'HOURS',
+            'price' => 1000,
+        ])->json('data.id');
+
+        $this->withHeaders($headers)->postJson('/api/v1/vouchers', [
+            'router_id' => 999999,
+            'package_id' => $packageId,
+            'quantity' => 1,
+        ])->assertStatus(422)
+            ->assertJsonPath('data.router_id.0', 'Router not found for this company.');
+
+        $this->withHeaders($headers)->deleteJson('/api/v1/routers/'.$routerId)->assertOk();
+
+        $this->withHeaders($headers)->postJson('/api/v1/vouchers', [
+            'router_id' => $routerId,
+            'package_id' => $packageId,
+            'quantity' => 1,
+        ])->assertStatus(422)
+            ->assertJsonPath(
+                'data.router_id.0',
+                'This router has been deleted. Create a new router or restore it before generating vouchers.',
+            );
+    }
 }
