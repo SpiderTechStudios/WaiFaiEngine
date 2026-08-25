@@ -28,6 +28,5 @@ Route::middleware(['auth:sanctum', 'active.user', 'company.context'])->group(fun
     Route::post('/auth/logout-all', [SessionController::class, 'logoutAll']);
     Route::post('/auth/company/switch', [SessionController::class, 'switchCompany']);
     Route::put('/auth/password', [PasswordController::class, 'update']);
-    Route::post('/auth/password', [PasswordController::class, 'update']);
     Route::post('/auth/email/resend', [EmailVerificationController::class, 'resend'])->middleware('throttle:6,1');
 });
