@@ -12,6 +12,7 @@ use App\Models\Wallet;
 use App\Models\WalletTransaction;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class PaymentService
 {
@@ -54,6 +55,61 @@ class PaymentService
 
             return $payment->load(['customer', 'internetPlan']);
         });
+    }
+
+    public function createForPortal(Company $company, array $data): PaymentTransaction
+    {
+        $plan = $this->resolveActivePlan($company, (int) $data['internet_plan_id']);
+
+        return DB::transaction(function () use ($company, $plan, $data) {
+            $customer = $this->findOrCreateCustomer($company, $data);
+
+            $payment = PaymentTransaction::query()->create([
+                'company_id' => $company->id,
+                'customer_id' => $customer->id,
+                'internet_plan_id' => $plan->id,
+                'reference' => 'PAY-'.strtoupper(Str::random(10)),
+                'amount' => $plan->price,
+                'currency' => 'TZS',
+                'payment_method' => $data['payment_method'] ?? 'mobile_money',
+                'status' => 'pending',
+                'initiated_at' => now(),
+                'paid_at' => null,
+                'metadata' => [
+                    'source' => 'portal',
+                ],
+            ]);
+
+            $this->auditLogger->log('payment_created', null, $company->id, PaymentTransaction::class, $payment->id);
+
+            return $payment->load(['internetPlan']);
+        });
+    }
+
+    private function resolveActivePlan(Company $company, int $planId): InternetPlan
+    {
+        $plan = InternetPlan::query()
+            ->where('company_id', $company->id)
+            ->where('status', 'active')
+            ->whereKey($planId)
+            ->first();
+
+        if ($plan) {
+            return $plan;
+        }
+
+        $deleted = InternetPlan::onlyTrashed()
+            ->where('company_id', $company->id)
+            ->whereKey($planId)
+            ->exists();
+
+        throw ValidationException::withMessages([
+            'internet_plan_id' => [
+                $deleted
+                    ? 'This package has been deleted. Choose an active package.'
+                    : 'Package not found or is not available.',
+            ],
+        ]);
     }
 
     private function findOrCreateCustomer(Company $company, array $data): Customer

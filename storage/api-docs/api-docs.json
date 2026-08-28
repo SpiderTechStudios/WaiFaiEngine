@@ -3953,6 +3953,438 @@
                 ]
             }
         },
+        "/portal/{subdomain}": {
+            "get": {
+                "tags": [
+                    "Portal"
+                ],
+                "summary": "Captive portal bootstrap (branding and packages)",
+                "operationId": "portalBootstrap",
+                "parameters": [
+                    {
+                        "name": "subdomain",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "demo-cafe"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Bootstrap",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PortalBootstrapResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Portal not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/portal/{subdomain}/payments": {
+            "post": {
+                "tags": [
+                    "Portal"
+                ],
+                "summary": "Initiate a pending payment from the captive portal",
+                "operationId": "portalCreatePayment",
+                "parameters": [
+                    {
+                        "name": "subdomain",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "internet_plan_id",
+                                    "customer_name",
+                                    "customer_phone"
+                                ],
+                                "properties": {
+                                    "internet_plan_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "customer_name": {
+                                        "type": "string",
+                                        "example": "Jane Guest"
+                                    },
+                                    "customer_phone": {
+                                        "type": "string",
+                                        "example": "0712345678"
+                                    },
+                                    "customer_email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "nullable": true
+                                    },
+                                    "payment_method": {
+                                        "type": "string",
+                                        "example": "mobile_money",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Payment initiated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PortalPaymentCreatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Portal not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/portal/{subdomain}/payments/{payment}": {
+            "get": {
+                "tags": [
+                    "Portal"
+                ],
+                "summary": "Poll payment status after mobile-money checkout",
+                "operationId": "portalShowPayment",
+                "parameters": [
+                    {
+                        "name": "subdomain",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "payment",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Payment",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PortalPaymentResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/portal/{subdomain}/vouchers/redeem": {
+            "post": {
+                "tags": [
+                    "Portal"
+                ],
+                "summary": "Redeem a voucher code from the captive portal",
+                "operationId": "portalRedeemVoucher",
+                "parameters": [
+                    {
+                        "name": "subdomain",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "code",
+                                    "customer_name",
+                                    "customer_phone"
+                                ],
+                                "properties": {
+                                    "code": {
+                                        "type": "string",
+                                        "example": "123456"
+                                    },
+                                    "customer_name": {
+                                        "type": "string",
+                                        "example": "Jane Guest"
+                                    },
+                                    "customer_phone": {
+                                        "type": "string",
+                                        "example": "0712345678"
+                                    },
+                                    "customer_email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Redeemed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PortalVoucherRedeemResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Portal not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/portal/{subdomain}/sessions": {
+            "post": {
+                "tags": [
+                    "Portal"
+                ],
+                "summary": "Start a hotspot session after payment or voucher grant",
+                "operationId": "portalCreateSession",
+                "parameters": [
+                    {
+                        "name": "subdomain",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "mac_address"
+                                ],
+                                "properties": {
+                                    "payment_transaction_id": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "access_grant_id": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "mac_address": {
+                                        "type": "string",
+                                        "example": "AA:BB:CC:DD:EE:FF"
+                                    },
+                                    "ip_address": {
+                                        "type": "string",
+                                        "format": "ipv4",
+                                        "nullable": true
+                                    },
+                                    "router_id": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "session_id": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Session started",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SessionCreatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Portal not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/portal/{subdomain}/restore": {
+            "post": {
+                "tags": [
+                    "Portal"
+                ],
+                "summary": "Restore active access by customer phone",
+                "operationId": "portalRestoreAccess",
+                "parameters": [
+                    {
+                        "name": "subdomain",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "customer_phone"
+                                ],
+                                "properties": {
+                                    "customer_phone": {
+                                        "type": "string",
+                                        "example": "0712345678"
+                                    },
+                                    "mac_address": {
+                                        "type": "string",
+                                        "example": "AA:BB:CC:DD:EE:FF",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Access restored",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PortalRestoreResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Portal not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/staff": {
             "get": {
                 "tags": [
@@ -7548,6 +7980,161 @@
                 },
                 "type": "object"
             },
+            "PortalBootstrapResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Portal bootstrap"
+                    },
+                    "data": {
+                        "properties": {
+                            "company": {
+                                "type": "object"
+                            },
+                            "packages": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/Package"
+                                }
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "PortalPayment": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "reference": {
+                        "type": "string",
+                        "example": "PAY-ABC123"
+                    },
+                    "amount": {
+                        "type": "number",
+                        "example": 1000
+                    },
+                    "currency": {
+                        "type": "string",
+                        "example": "TZS"
+                    },
+                    "payment_method": {
+                        "type": "string",
+                        "example": "mobile_money"
+                    },
+                    "status": {
+                        "type": "string",
+                        "example": "pending",
+                        "enum": [
+                            "pending",
+                            "paid",
+                            "failed",
+                            "cancelled"
+                        ]
+                    },
+                    "paid_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "package": {
+                        "type": "object",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "PortalPaymentResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Payment retrieved"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/PortalPayment"
+                    }
+                },
+                "type": "object"
+            },
+            "PortalPaymentCreatedResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 201
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Payment initiated"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/PortalPayment"
+                    }
+                },
+                "type": "object"
+            },
+            "PortalVoucherRedeemResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 201
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Voucher redeemed"
+                    },
+                    "data": {
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "PortalRestoreResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Access restored"
+                    },
+                    "data": {
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
             "ErrorResponse": {
                 "properties": {
                     "status": {
@@ -8114,6 +8701,10 @@
         {
             "name": "Settings",
             "description": "Company branding and integrations"
+        },
+        {
+            "name": "Portal",
+            "description": "Public captive portal (no authentication)"
         },
         {
             "name": "Superadmin",

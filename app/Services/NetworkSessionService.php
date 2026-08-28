@@ -30,7 +30,7 @@ class NetworkSessionService
     /**
      * @param  array<string, mixed>  $data
      */
-    public function create(Company $company, array $data, User $actor): NetworkSession
+    public function create(Company $company, array $data, ?User $actor = null): NetworkSession
     {
         return DB::transaction(function () use ($company, $data, $actor) {
             $grant = $this->resolveAccessGrant($company, $data);

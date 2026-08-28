@@ -380,4 +380,65 @@ use OpenApi\Attributes as OA;
         ),
     ]
 )]
+#[OA\Schema(
+    schema: 'PortalBootstrapResponse',
+    properties: [
+        new OA\Property(property: 'status', type: 'boolean', example: true),
+        new OA\Property(property: 'code', type: 'integer', example: 200),
+        new OA\Property(property: 'message', type: 'string', example: 'Portal bootstrap'),
+        new OA\Property(property: 'data', properties: [
+            new OA\Property(property: 'company', type: 'object'),
+            new OA\Property(property: 'packages', type: 'array', items: new OA\Items(ref: '#/components/schemas/Package')),
+        ], type: 'object'),
+    ]
+)]
+#[OA\Schema(
+    schema: 'PortalPayment',
+    properties: [
+        new OA\Property(property: 'id', type: 'integer', example: 1),
+        new OA\Property(property: 'reference', type: 'string', example: 'PAY-ABC123'),
+        new OA\Property(property: 'amount', type: 'number', example: 1000),
+        new OA\Property(property: 'currency', type: 'string', example: 'TZS'),
+        new OA\Property(property: 'payment_method', type: 'string', example: 'mobile_money'),
+        new OA\Property(property: 'status', type: 'string', enum: ['pending', 'paid', 'failed', 'cancelled'], example: 'pending'),
+        new OA\Property(property: 'paid_at', type: 'string', format: 'date-time', nullable: true),
+        new OA\Property(property: 'package', type: 'object', nullable: true),
+    ]
+)]
+#[OA\Schema(
+    schema: 'PortalPaymentResponse',
+    properties: [
+        new OA\Property(property: 'status', type: 'boolean', example: true),
+        new OA\Property(property: 'code', type: 'integer', example: 200),
+        new OA\Property(property: 'message', type: 'string', example: 'Payment retrieved'),
+        new OA\Property(property: 'data', ref: '#/components/schemas/PortalPayment'),
+    ]
+)]
+#[OA\Schema(
+    schema: 'PortalPaymentCreatedResponse',
+    properties: [
+        new OA\Property(property: 'status', type: 'boolean', example: true),
+        new OA\Property(property: 'code', type: 'integer', example: 201),
+        new OA\Property(property: 'message', type: 'string', example: 'Payment initiated'),
+        new OA\Property(property: 'data', ref: '#/components/schemas/PortalPayment'),
+    ]
+)]
+#[OA\Schema(
+    schema: 'PortalVoucherRedeemResponse',
+    properties: [
+        new OA\Property(property: 'status', type: 'boolean', example: true),
+        new OA\Property(property: 'code', type: 'integer', example: 201),
+        new OA\Property(property: 'message', type: 'string', example: 'Voucher redeemed'),
+        new OA\Property(property: 'data', type: 'object'),
+    ]
+)]
+#[OA\Schema(
+    schema: 'PortalRestoreResponse',
+    properties: [
+        new OA\Property(property: 'status', type: 'boolean', example: true),
+        new OA\Property(property: 'code', type: 'integer', example: 200),
+        new OA\Property(property: 'message', type: 'string', example: 'Access restored'),
+        new OA\Property(property: 'data', type: 'object'),
+    ]
+)]
 class ResponseSchemas {}

@@ -30,6 +30,7 @@ class DocumentationTest extends TestCase
         $this->assertContains('/routers', $paths);
         $this->assertContains('/packages', $paths);
         $this->assertContains('/settings', $paths);
+        $this->assertContains('/portal/{subdomain}', $paths);
         $this->assertNotContains('/companies', $paths);
     }
 }

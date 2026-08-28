@@ -108,7 +108,43 @@ class VoucherService
      * @param  array<string, mixed>  $data
      * @return array{voucher: Voucher, access_grant: AccessGrant, customer: Customer}
      */
-    public function consume(Voucher $voucher, array $data, User $actor): array
+    public function consume(Voucher $voucher, array $data, ?User $actor = null): array
+    {
+        return DB::transaction(function () use ($voucher, $data, $actor) {
+            $voucher = Voucher::query()->whereKey($voucher->id)->lockForUpdate()->firstOrFail();
+
+            return $this->performConsume($voucher, $data, $actor);
+        });
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array{voucher: Voucher, access_grant: AccessGrant, customer: Customer}
+     */
+    public function redeemByCode(Company $company, array $data): array
+    {
+        return DB::transaction(function () use ($company, $data) {
+            $voucher = Voucher::query()
+                ->where('company_id', $company->id)
+                ->where('code', $data['code'])
+                ->lockForUpdate()
+                ->first();
+
+            if (! $voucher) {
+                throw ValidationException::withMessages([
+                    'code' => ['Invalid voucher code.'],
+                ]);
+            }
+
+            return $this->performConsume($voucher, $data, null);
+        });
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array{voucher: Voucher, access_grant: AccessGrant, customer: Customer}
+     */
+    private function performConsume(Voucher $voucher, array $data, ?User $actor): array
     {
         $voucher->syncExpiryStatus();
         $voucher->loadMissing('internetPlan');
@@ -132,37 +168,35 @@ class VoucherService
             ]);
         }
 
-        return DB::transaction(function () use ($voucher, $plan, $data, $actor) {
-            $customer = $this->resolveCustomer($voucher->company_id, $data);
+        $customer = $this->resolveCustomer($voucher->company_id, $data);
 
-            $startsAt = now();
-            $expiresAt = $this->expiresAtForPlan($plan, $startsAt);
+        $startsAt = now();
+        $expiresAt = $this->expiresAtForPlan($plan, $startsAt);
 
-            $grant = AccessGrant::query()->create([
-                'company_id' => $voucher->company_id,
-                'customer_id' => $customer->id,
-                'internet_plan_id' => $plan->id,
-                'voucher_id' => $voucher->id,
-                'source' => 'voucher',
-                'starts_at' => $startsAt,
-                'expires_at' => $expiresAt,
-                'status' => 'active',
-            ]);
+        $grant = AccessGrant::query()->create([
+            'company_id' => $voucher->company_id,
+            'customer_id' => $customer->id,
+            'internet_plan_id' => $plan->id,
+            'voucher_id' => $voucher->id,
+            'source' => 'voucher',
+            'starts_at' => $startsAt,
+            'expires_at' => $expiresAt,
+            'status' => 'active',
+        ]);
 
-            $voucher->forceFill([
-                'uses_count' => $voucher->uses_count + 1,
-                'customer_id' => $customer->id,
-                'access_grant_id' => $grant->id,
-            ])->save();
+        $voucher->forceFill([
+            'uses_count' => $voucher->uses_count + 1,
+            'customer_id' => $customer->id,
+            'access_grant_id' => $grant->id,
+        ])->save();
 
-            $this->auditLogger->log('voucher_consumed', $actor, $voucher->company_id, Voucher::class, $voucher->id);
+        $this->auditLogger->log('voucher_consumed', $actor, $voucher->company_id, Voucher::class, $voucher->id);
 
-            return [
-                'voucher' => $voucher->fresh()->load(['router', 'internetPlan']),
-                'access_grant' => $grant,
-                'customer' => $customer,
-            ];
-        });
+        return [
+            'voucher' => $voucher->fresh()->load(['router', 'internetPlan']),
+            'access_grant' => $grant,
+            'customer' => $customer,
+        ];
     }
 
     /**

@@ -6,8 +6,10 @@ use App\Http\Middleware\EnsurePermission;
 use App\Http\Middleware\EnsurePlatformAdmin;
 use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\EnsureUserIsActive;
+use App\Http\Middleware\ResolvePortalCompany;
 use App\Http\Middleware\SetCompanyContext;
 use App\Support\CompanyContext;
+use App\Support\PortalContext;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
@@ -33,6 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'superadmin' => EnsureSuperAdmin::class,
             'platform.admin' => EnsurePlatformAdmin::class,
             'permission' => EnsurePermission::class,
+            'portal.company' => ResolvePortalCompany::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
@@ -79,5 +82,6 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withBindings([
         CompanyContext::class => fn () => new CompanyContext,
+        PortalContext::class => fn () => new PortalContext,
     ])
     ->create();
