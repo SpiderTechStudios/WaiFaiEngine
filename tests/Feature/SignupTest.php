@@ -17,8 +17,9 @@ class SignupTest extends TestCase
         $this->postJson('/api/v1/signup/intents', $this->signupIntentPayload())
             ->assertCreated()
             ->assertJsonPath('data.status', 'pending_payment')
-            ->assertJsonPath('data.setup_type', 'assisted')
-            ->assertJsonPath('data.pricing.total_amount', '160000.00')
+            ->assertJsonPath('data.pricing.total_amount', '10000.00')
+            ->assertJsonPath('data.pricing.subscription_fee', '10000.00')
+            ->assertJsonPath('data.payment_phone', '0711987654')
             ->assertJsonPath('data.portal_subdomain', 'abc-internet');
 
         $this->assertDatabaseCount('companies', 0);
@@ -26,16 +27,18 @@ class SignupTest extends TestCase
         $this->assertDatabaseHas('signup_intents', [
             'email' => 'jane@example.com',
             'status' => 'pending_payment',
+            'payment_phone' => '0711987654',
         ]);
     }
 
-    public function test_rejects_manipulated_pricing(): void
+    public function test_rejects_missing_payment_phone(): void
     {
-        $this->postJson('/api/v1/signup/intents', $this->signupIntentPayload([
-            'installation_fee' => 1,
-            'total_amount' => 10001,
-        ]))->assertStatus(422)
-            ->assertJsonValidationErrors(['installation_fee'], 'data');
+        $payload = $this->signupIntentPayload();
+        unset($payload['payment_phone']);
+
+        $this->postJson('/api/v1/signup/intents', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['payment_phone'], 'data');
     }
 
     public function test_rejects_duplicate_email_and_subdomain_reservations(): void
@@ -53,7 +56,7 @@ class SignupTest extends TestCase
         ]))->assertStatus(422);
     }
 
-    public function test_payment_must_match_intent_total(): void
+    public function test_payment_must_match_subscription_fee(): void
     {
         $intentId = $this->postJson('/api/v1/signup/intents', $this->signupIntentPayload())
             ->assertCreated()
@@ -61,10 +64,6 @@ class SignupTest extends TestCase
 
         $this->postJson('/api/v1/signup/intents/'.$intentId.'/payments', [
             'amount' => 100,
-            'line_items' => [
-                ['code' => 'installation', 'amount' => 150000],
-                ['code' => 'subscription', 'amount' => 10000],
-            ],
         ])->assertStatus(422);
     }
 
@@ -75,11 +74,7 @@ class SignupTest extends TestCase
             ->json('data.intent_id');
 
         $this->postJson('/api/v1/signup/intents/'.$intentId.'/payments', [
-            'amount' => 160000,
-            'line_items' => [
-                ['code' => 'installation', 'amount' => 150000],
-                ['code' => 'subscription', 'amount' => 10000],
-            ],
+            'amount' => 10000,
         ])->assertCreated();
 
         $this->postJson('/api/v1/signup/intents/'.$intentId.'/complete')
@@ -91,7 +86,6 @@ class SignupTest extends TestCase
         Notification::fake();
 
         $result = $this->completePaidSignup([
-            'setup_type' => 'self',
             'portal_subdomain' => 'self-cafe',
         ]);
 
@@ -99,7 +93,6 @@ class SignupTest extends TestCase
             ->assertJsonPath('data.user.email', 'jane@example.com')
             ->assertJsonPath('data.current_company.name', 'ABC Internet')
             ->assertJsonPath('data.current_company.subdomain', 'self-cafe')
-            ->assertJsonPath('data.current_company.setup_type', 'self')
             ->assertJsonPath('data.current_company.subscription_status', 'active')
             ->assertJsonPath('data.membership.role.slug', 'owner')
             ->assertJsonStructure(['data' => ['token', 'user', 'companies', 'current_company']]);
@@ -110,13 +103,14 @@ class SignupTest extends TestCase
         ]);
         $this->assertDatabaseHas('companies', [
             'subdomain' => 'self-cafe',
-            'setup_type' => 'self',
             'subscription_status' => 'active',
         ]);
         $this->assertDatabaseHas('platform_payments', [
             'id' => $result['payment_id'],
             'status' => 'paid',
             'type' => 'signup',
+            'phone' => '0711987654',
+            'amount' => '10000.00',
         ]);
 
         Notification::assertSentTo(
@@ -145,11 +139,7 @@ class SignupTest extends TestCase
             ->json('data.intent_id');
 
         $paymentId = $this->postJson('/api/v1/signup/intents/'.$intentId.'/payments', [
-            'amount' => 160000,
-            'line_items' => [
-                ['code' => 'installation', 'amount' => 150000],
-                ['code' => 'subscription', 'amount' => 10000],
-            ],
+            'amount' => 10000,
         ])->assertCreated()->json('data.payment_id');
 
         app(PlatformPaymentService::class)->markPaid(
@@ -170,10 +160,10 @@ class SignupTest extends TestCase
             ->assertCreated()
             ->json('data.intent_id');
 
-        $paymentId = $this->postJson('/api/v1/signup/intents/'.$intentId.'/payments', [
-            'amount' => 160000,
-        ])->assertCreated()
+        $paymentId = $this->postJson('/api/v1/signup/intents/'.$intentId.'/payments')
+            ->assertCreated()
             ->assertJsonPath('data.status', 'pending')
+            ->assertJsonPath('data.amount', '10000.00')
             ->json('data.payment_id');
 
         $this->getJson('/api/v1/signup/intents/'.$intentId.'/payments/'.$paymentId)

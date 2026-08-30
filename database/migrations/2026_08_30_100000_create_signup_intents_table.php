@@ -11,8 +11,6 @@ return new class extends Migration
         Schema::create('signup_intents', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->string('status')->default('pending_payment')->index();
-            $table->string('setup_type');
-            $table->decimal('installation_fee', 12, 2);
             $table->decimal('subscription_fee', 12, 2);
             $table->decimal('total_amount', 12, 2);
             $table->string('currency', 3)->default('TZS');
@@ -21,6 +19,7 @@ return new class extends Migration
             $table->string('last_name');
             $table->string('email')->index();
             $table->string('phone', 50);
+            $table->string('payment_phone', 50);
             $table->text('address');
             $table->string('portal_subdomain')->nullable()->index();
             $table->string('password_hash');

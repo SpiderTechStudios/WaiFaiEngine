@@ -91,8 +91,6 @@ class SignupCompletionService
                 'phone' => $intent->phone,
                 'address' => $intent->address,
                 'subdomain' => $intent->portal_subdomain,
-                'setup_type' => $intent->setup_type,
-                'installation_paid_at' => $payment->paid_at ?? now(),
                 'subscription_status' => 'active',
                 'activated_at' => now(),
                 'subscription_period_ends_at' => now()->addMonth(),

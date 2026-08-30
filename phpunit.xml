@@ -35,7 +35,5 @@
         <env name="PLATFORM_ALLOW_FREE_REGISTER" value="false"/>
         <env name="PLATFORM_PAYMENT_AUTO_PAID" value="false"/>
         <env name="PLATFORM_SUBSCRIPTION_MONTHLY" value="10000"/>
-        <env name="PLATFORM_INSTALLATION_ASSISTED" value="150000"/>
-        <env name="PLATFORM_INSTALLATION_SELF" value="100000"/>
     </php>
 </phpunit>

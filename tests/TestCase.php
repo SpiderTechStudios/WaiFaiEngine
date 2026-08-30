@@ -87,27 +87,17 @@ abstract class TestCase extends \Illuminate\Foundation\Testing\TestCase
      */
     protected function signupIntentPayload(array $overrides = []): array
     {
-        $setupType = $overrides['setup_type'] ?? 'assisted';
-        $installation = $setupType === 'self'
-            ? (int) config('platform.installation.self')
-            : (int) config('platform.installation.assisted');
-        $subscription = (int) config('platform.subscription_monthly');
-
         return array_merge([
             'business_name' => 'ABC Internet',
             'first_name' => 'Jane',
             'last_name' => 'Doe',
             'email' => 'jane@example.com',
             'phone' => '0700123456',
+            'payment_phone' => '0711987654',
             'password' => 'password123',
             'password_confirmation' => 'password123',
             'address' => 'Dar es Salaam, Tanzania',
             'portal_subdomain' => 'abc-internet',
-            'setup_type' => $setupType,
-            'installation_fee' => $installation,
-            'subscription_fee' => $subscription,
-            'total_amount' => $installation + $subscription,
-            'currency' => 'TZS',
         ], $overrides);
     }
 
@@ -118,6 +108,7 @@ abstract class TestCase extends \Illuminate\Foundation\Testing\TestCase
     protected function completePaidSignup(array $overrides = []): array
     {
         $payload = $this->signupIntentPayload($overrides);
+        $subscription = (int) config('platform.subscription_monthly');
 
         $intentId = $this->postJson('/api/v1/signup/intents', $payload)
             ->assertCreated()
@@ -125,12 +116,7 @@ abstract class TestCase extends \Illuminate\Foundation\Testing\TestCase
 
         $paymentId = $this->postJson('/api/v1/signup/intents/'.$intentId.'/payments', [
             'payment_method' => 'mpesa',
-            'phone' => $payload['phone'],
-            'amount' => $payload['total_amount'],
-            'line_items' => [
-                ['code' => 'installation', 'amount' => $payload['installation_fee']],
-                ['code' => 'subscription', 'amount' => $payload['subscription_fee']],
-            ],
+            'amount' => $subscription,
         ])->assertCreated()->json('data.payment_id');
 
         app(\App\Services\PlatformPaymentService::class)->markPaid(

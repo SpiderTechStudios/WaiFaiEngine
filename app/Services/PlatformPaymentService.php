@@ -44,16 +44,22 @@ class PlatformPaymentService
             ]);
         }
 
-        $amount = (float) $data['amount'];
+        $amount = array_key_exists('amount', $data)
+            ? (float) $data['amount']
+            : (float) $intent->total_amount;
+
         if ((int) round($amount) !== (int) round((float) $intent->total_amount)) {
             throw ValidationException::withMessages([
-                'amount' => ['Payment amount must match the signup total.'],
+                'amount' => ['Payment amount must match the first month subscription fee.'],
             ]);
         }
 
         $lineItems = $data['line_items'] ?? [
-            ['code' => 'installation', 'amount' => (float) $intent->installation_fee],
-            ['code' => 'subscription', 'amount' => (float) $intent->subscription_fee],
+            [
+                'code' => 'subscription',
+                'label' => 'First month subscription',
+                'amount' => (float) $intent->subscription_fee,
+            ],
         ];
 
         $this->assertLineItems($intent, $lineItems);
@@ -76,7 +82,7 @@ class PlatformPaymentService
                 'amount' => $amount,
                 'currency' => $intent->currency,
                 'payment_method' => $data['payment_method'] ?? 'mpesa',
-                'phone' => $data['phone'] ?? $intent->phone,
+                'phone' => $data['phone'] ?? $intent->payment_phone,
                 'status' => PlatformPayment::STATUS_PENDING,
                 'line_items' => $lineItems,
                 'metadata' => ['source' => 'signup'],
@@ -167,12 +173,12 @@ class PlatformPaymentService
         }
 
         if (
-            ! isset($byCode['installation'], $byCode['subscription'])
-            || (int) round($byCode['installation']) !== (int) round((float) $intent->installation_fee)
+            ! isset($byCode['subscription'])
             || (int) round($byCode['subscription']) !== (int) round((float) $intent->subscription_fee)
+            || isset($byCode['installation'])
         ) {
             throw ValidationException::withMessages([
-                'line_items' => ['Line items must match the signup installation and subscription fees.'],
+                'line_items' => ['Line items must contain only the first month subscription fee.'],
             ]);
         }
     }

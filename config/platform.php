@@ -5,11 +5,6 @@ return [
 
     'subscription_monthly' => (int) env('PLATFORM_SUBSCRIPTION_MONTHLY', 10000),
 
-    'installation' => [
-        'assisted' => (int) env('PLATFORM_INSTALLATION_ASSISTED', 150000),
-        'self' => (int) env('PLATFORM_INSTALLATION_SELF', 100000),
-    ],
-
     'signup_intent_ttl_hours' => (int) env('PLATFORM_SIGNUP_INTENT_TTL_HOURS', 48),
 
     /*

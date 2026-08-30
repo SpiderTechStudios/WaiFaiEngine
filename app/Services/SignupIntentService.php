@@ -18,13 +18,7 @@ class SignupIntentService
      */
     public function create(array $data): SignupIntent
     {
-        $pricing = $this->assertPricing(
-            (string) $data['setup_type'],
-            (float) $data['installation_fee'],
-            (float) $data['subscription_fee'],
-            (float) $data['total_amount'],
-            (string) ($data['currency'] ?? config('platform.currency')),
-        );
+        $pricing = $this->resolvePricing();
 
         $email = Str::lower(trim((string) $data['email']));
         $this->assertEmailAvailable($email);
@@ -39,8 +33,6 @@ class SignupIntentService
 
         $intent = SignupIntent::query()->create([
             'status' => SignupIntent::STATUS_PENDING_PAYMENT,
-            'setup_type' => $pricing['setup_type'],
-            'installation_fee' => $pricing['installation_fee'],
             'subscription_fee' => $pricing['subscription_fee'],
             'total_amount' => $pricing['total_amount'],
             'currency' => $pricing['currency'],
@@ -49,6 +41,7 @@ class SignupIntentService
             'last_name' => $data['last_name'],
             'email' => $email,
             'phone' => $data['phone'],
+            'payment_phone' => $data['payment_phone'],
             'address' => $data['address'],
             'portal_subdomain' => $subdomain,
             'password_hash' => Hash::make((string) $data['password']),
@@ -64,7 +57,6 @@ class SignupIntentService
             newValues: [
                 'intent_id' => $intent->id,
                 'email' => $intent->email,
-                'setup_type' => $intent->setup_type,
                 'total_amount' => $intent->total_amount,
             ],
         );
@@ -91,66 +83,17 @@ class SignupIntentService
     }
 
     /**
-     * @return array{
-     *     setup_type: string,
-     *     installation_fee: float,
-     *     subscription_fee: float,
-     *     total_amount: float,
-     *     currency: string
-     * }
+     * @return array{subscription_fee: float, total_amount: float, currency: string}
      */
-    public function assertPricing(
-        string $setupType,
-        float $installationFee,
-        float $subscriptionFee,
-        float $totalAmount,
-        string $currency,
-    ): array {
-        $allowedCurrency = (string) config('platform.currency', 'TZS');
-        $expectedSubscription = (float) config('platform.subscription_monthly');
-        $expectedInstallation = match ($setupType) {
-            SignupIntent::SETUP_ASSISTED => (float) config('platform.installation.assisted'),
-            SignupIntent::SETUP_SELF => (float) config('platform.installation.self'),
-            default => null,
-        };
-
-        if ($expectedInstallation === null) {
-            throw ValidationException::withMessages([
-                'setup_type' => ['Setup type must be assisted or self.'],
-            ]);
-        }
-
-        if (strtoupper($currency) !== strtoupper($allowedCurrency)) {
-            throw ValidationException::withMessages([
-                'currency' => ["Currency must be {$allowedCurrency}."],
-            ]);
-        }
-
-        if ((int) round($installationFee) !== (int) round($expectedInstallation)) {
-            throw ValidationException::withMessages([
-                'installation_fee' => ["Installation fee must be {$expectedInstallation} for setup type {$setupType}."],
-            ]);
-        }
-
-        if ((int) round($subscriptionFee) !== (int) round($expectedSubscription)) {
-            throw ValidationException::withMessages([
-                'subscription_fee' => ["Subscription fee must be {$expectedSubscription}."],
-            ]);
-        }
-
-        $expectedTotal = $expectedInstallation + $expectedSubscription;
-        if ((int) round($totalAmount) !== (int) round($expectedTotal)) {
-            throw ValidationException::withMessages([
-                'total_amount' => ["Total amount must be {$expectedTotal}."],
-            ]);
-        }
+    public function resolvePricing(): array
+    {
+        $currency = (string) config('platform.currency', 'TZS');
+        $subscription = (float) config('platform.subscription_monthly');
 
         return [
-            'setup_type' => $setupType,
-            'installation_fee' => $expectedInstallation,
-            'subscription_fee' => $expectedSubscription,
-            'total_amount' => $expectedTotal,
-            'currency' => $allowedCurrency,
+            'subscription_fee' => $subscription,
+            'total_amount' => $subscription,
+            'currency' => $currency,
         ];
     }
 

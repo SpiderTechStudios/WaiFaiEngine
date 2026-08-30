@@ -21,10 +21,6 @@ class SignupIntent extends Model
 
     public const STATUS_CANCELLED = 'cancelled';
 
-    public const SETUP_ASSISTED = 'assisted';
-
-    public const SETUP_SELF = 'self';
-
     /** @var list<string> */
     public const ACTIVE_RESERVATION_STATUSES = [
         self::STATUS_PENDING_PAYMENT,
@@ -37,8 +33,6 @@ class SignupIntent extends Model
 
     protected $fillable = [
         'status',
-        'setup_type',
-        'installation_fee',
         'subscription_fee',
         'total_amount',
         'currency',
@@ -47,6 +41,7 @@ class SignupIntent extends Model
         'last_name',
         'email',
         'phone',
+        'payment_phone',
         'address',
         'portal_subdomain',
         'password_hash',
@@ -65,7 +60,6 @@ class SignupIntent extends Model
     protected function casts(): array
     {
         return [
-            'installation_fee' => 'decimal:2',
             'subscription_fee' => 'decimal:2',
             'total_amount' => 'decimal:2',
             'expires_at' => 'datetime',
