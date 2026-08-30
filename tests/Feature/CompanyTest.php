@@ -10,25 +10,19 @@ class CompanyTest extends TestCase
     {
         \Illuminate\Support\Facades\Notification::fake();
 
-        $response = $this->postJson('/api/v1/auth/register', [
+        $result = $this->completePaidSignup([
             'business_name' => 'ABC Internet',
-            'first_name' => 'Jane',
-            'last_name' => 'Doe',
             'email' => 'jane@example.com',
-            'phone' => '0700123456',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
-            'address' => 'Dar es Salaam, Tanzania',
             'portal_subdomain' => 'abc',
         ]);
 
-        $response->assertCreated()
+        $result['response']
             ->assertJsonPath('data.current_company.name', 'ABC Internet')
             ->assertJsonPath('data.current_company.subdomain', 'abc')
             ->assertJsonPath('data.membership.role.slug', 'owner');
 
         $this->assertDatabaseHas('user_companies', [
-            'user_id' => $response->json('data.user.id'),
+            'user_id' => $result['response']->json('data.user.id'),
             'role_id' => $this->roleId('owner'),
             'status' => 'active',
         ]);

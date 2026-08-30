@@ -22,12 +22,12 @@ class AuthDocumentation
         path: '/auth/register',
         operationId: 'register',
         tags: ['Auth'],
-        summary: 'Register business and owner account',
-        description: 'Creates a user and their first company in one transaction. The registrant becomes the company owner. Optional portal_subdomain is used for the captive portal URL. Returns a session payload including a Sanctum token.',
+        summary: 'Deprecated free registration (disabled unless PLATFORM_ALLOW_FREE_REGISTER=true)',
+        description: 'Public self-service registration is pay-first. Use POST /signup/intents, pay, then POST /signup/intents/{intent}/complete. This endpoint only works when PLATFORM_ALLOW_FREE_REGISTER is enabled.',
         requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(ref: '#/components/schemas/RegisterRequest')),
         responses: [
-            new OA\Response(response: 201, description: 'Registered with company', content: new OA\JsonContent(ref: '#/components/schemas/AuthSessionCreatedResponse')),
-            new OA\Response(response: 422, description: 'Validation error', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 201, description: 'Registered with company (only when free register enabled)', content: new OA\JsonContent(ref: '#/components/schemas/AuthSessionCreatedResponse')),
+            new OA\Response(response: 422, description: 'Disabled or validation error', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
         ]
     )]
     public function register(): void {}

@@ -39,8 +39,8 @@
                 "tags": [
                     "Auth"
                 ],
-                "summary": "Register business and owner account",
-                "description": "Creates a user and their first company in one transaction. The registrant becomes the company owner. Optional portal_subdomain is used for the captive portal URL. Returns a session payload including a Sanctum token.",
+                "summary": "Deprecated free registration (disabled unless PLATFORM_ALLOW_FREE_REGISTER=true)",
+                "description": "Public self-service registration is pay-first. Use POST /signup/intents, pay, then POST /signup/intents/{intent}/complete. This endpoint only works when PLATFORM_ALLOW_FREE_REGISTER is enabled.",
                 "operationId": "register",
                 "requestBody": {
                     "required": true,
@@ -54,7 +54,7 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Registered with company",
+                        "description": "Registered with company (only when free register enabled)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -64,11 +64,11 @@
                         }
                     },
                     "422": {
-                        "description": "Validation error",
+                        "description": "Disabled or validation error",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/ErrorResponse"
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
                                 }
                             }
                         }
@@ -4385,6 +4385,321 @@
                 }
             }
         },
+        "/signup/intents": {
+            "post": {
+                "tags": [
+                    "Signup"
+                ],
+                "summary": "Create pay-first signup intent (no user/company yet)",
+                "operationId": "createSignupIntent",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "first_name",
+                                    "last_name",
+                                    "business_name",
+                                    "email",
+                                    "phone",
+                                    "password",
+                                    "password_confirmation",
+                                    "address",
+                                    "setup_type",
+                                    "installation_fee",
+                                    "subscription_fee",
+                                    "total_amount",
+                                    "currency"
+                                ],
+                                "properties": {
+                                    "first_name": {
+                                        "type": "string",
+                                        "example": "Jane"
+                                    },
+                                    "last_name": {
+                                        "type": "string",
+                                        "example": "Doe"
+                                    },
+                                    "business_name": {
+                                        "type": "string",
+                                        "example": "ABC Internet Services"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "jane@example.com"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "0700123456"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password"
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "format": "password"
+                                    },
+                                    "address": {
+                                        "type": "string"
+                                    },
+                                    "portal_subdomain": {
+                                        "type": "string",
+                                        "example": "abc-internet",
+                                        "nullable": true
+                                    },
+                                    "setup_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "assisted",
+                                            "self"
+                                        ]
+                                    },
+                                    "installation_fee": {
+                                        "type": "number",
+                                        "example": 150000
+                                    },
+                                    "subscription_fee": {
+                                        "type": "number",
+                                        "example": 10000
+                                    },
+                                    "total_amount": {
+                                        "type": "number",
+                                        "example": 160000
+                                    },
+                                    "currency": {
+                                        "type": "string",
+                                        "example": "TZS"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Intent created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SignupIntentCreatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/signup/intents/{intent}/payments": {
+            "post": {
+                "tags": [
+                    "Signup"
+                ],
+                "summary": "Start signup mobile-money payment for full total",
+                "operationId": "startSignupPayment",
+                "parameters": [
+                    {
+                        "name": "intent",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "amount"
+                                ],
+                                "properties": {
+                                    "payment_method": {
+                                        "type": "string",
+                                        "example": "mpesa"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "0700123456"
+                                    },
+                                    "amount": {
+                                        "type": "number",
+                                        "example": 160000
+                                    },
+                                    "line_items": {
+                                        "type": "array",
+                                        "items": {
+                                            "properties": {
+                                                "code": {
+                                                    "type": "string",
+                                                    "example": "installation"
+                                                },
+                                                "amount": {
+                                                    "type": "number",
+                                                    "example": 150000
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Payment initiated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PlatformPaymentCreatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Intent not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/signup/intents/{intent}/payments/{payment}": {
+            "get": {
+                "tags": [
+                    "Signup"
+                ],
+                "summary": "Poll signup payment status",
+                "operationId": "showSignupPayment",
+                "parameters": [
+                    {
+                        "name": "intent",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "payment",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Payment",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PlatformPaymentResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/signup/intents/{intent}/complete": {
+            "post": {
+                "tags": [
+                    "Signup"
+                ],
+                "summary": "Complete signup after payment is paid (creates user, company, token)",
+                "operationId": "completeSignup",
+                "parameters": [
+                    {
+                        "name": "intent",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Signup completed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AuthSessionCreatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Intent not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Payment not paid or intent invalid",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/staff": {
             "get": {
                 "tags": [
@@ -8135,6 +8450,66 @@
                 },
                 "type": "object"
             },
+            "SignupIntentCreatedResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 201
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Signup intent created"
+                    },
+                    "data": {
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "PlatformPaymentResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Signup payment retrieved"
+                    },
+                    "data": {
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "PlatformPaymentCreatedResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 201
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Signup payment initiated"
+                    },
+                    "data": {
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
             "ErrorResponse": {
                 "properties": {
                     "status": {
@@ -8653,6 +9028,10 @@
         {
             "name": "Auth",
             "description": "Registration, login, session, and password"
+        },
+        {
+            "name": "Signup",
+            "description": "Pay-first public signup (intent → payment → complete)"
         },
         {
             "name": "Dashboard",

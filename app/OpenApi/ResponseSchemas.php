@@ -441,4 +441,31 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'data', type: 'object'),
     ]
 )]
+#[OA\Schema(
+    schema: 'SignupIntentCreatedResponse',
+    properties: [
+        new OA\Property(property: 'status', type: 'boolean', example: true),
+        new OA\Property(property: 'code', type: 'integer', example: 201),
+        new OA\Property(property: 'message', type: 'string', example: 'Signup intent created'),
+        new OA\Property(property: 'data', type: 'object'),
+    ]
+)]
+#[OA\Schema(
+    schema: 'PlatformPaymentResponse',
+    properties: [
+        new OA\Property(property: 'status', type: 'boolean', example: true),
+        new OA\Property(property: 'code', type: 'integer', example: 200),
+        new OA\Property(property: 'message', type: 'string', example: 'Signup payment retrieved'),
+        new OA\Property(property: 'data', type: 'object'),
+    ]
+)]
+#[OA\Schema(
+    schema: 'PlatformPaymentCreatedResponse',
+    properties: [
+        new OA\Property(property: 'status', type: 'boolean', example: true),
+        new OA\Property(property: 'code', type: 'integer', example: 201),
+        new OA\Property(property: 'message', type: 'string', example: 'Signup payment initiated'),
+        new OA\Property(property: 'data', type: 'object'),
+    ]
+)]
 class ResponseSchemas {}

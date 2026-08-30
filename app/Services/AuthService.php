@@ -20,6 +20,14 @@ class AuthService
 
     public function register(array $data): array
     {
+        if (! config('platform.allow_free_register')) {
+            throw ValidationException::withMessages([
+                'register' => [
+                    'Direct registration is disabled. Create a signup intent, complete payment, then call POST /api/v1/signup/intents/{intent}/complete.',
+                ],
+            ]);
+        }
+
         return DB::transaction(function () use ($data) {
             $user = User::query()->create([
                 'first_name' => $data['first_name'],

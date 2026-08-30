@@ -21,6 +21,11 @@ class Company extends Model
         'address',
         'timezone',
         'status',
+        'setup_type',
+        'installation_paid_at',
+        'subscription_status',
+        'activated_at',
+        'subscription_period_ends_at',
         'subdomain',
         'primary_color',
         'logo_url',
@@ -39,6 +44,9 @@ class Company extends Model
         return [
             'payment_method' => 'string',
             'voucher_code_digits' => 'integer',
+            'installation_paid_at' => 'datetime',
+            'activated_at' => 'datetime',
+            'subscription_period_ends_at' => 'datetime',
         ];
     }
 

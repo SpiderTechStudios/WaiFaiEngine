@@ -80,4 +80,71 @@ abstract class TestCase extends \Illuminate\Foundation\Testing\TestCase
 
         return $membership;
     }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    protected function signupIntentPayload(array $overrides = []): array
+    {
+        $setupType = $overrides['setup_type'] ?? 'assisted';
+        $installation = $setupType === 'self'
+            ? (int) config('platform.installation.self')
+            : (int) config('platform.installation.assisted');
+        $subscription = (int) config('platform.subscription_monthly');
+
+        return array_merge([
+            'business_name' => 'ABC Internet',
+            'first_name' => 'Jane',
+            'last_name' => 'Doe',
+            'email' => 'jane@example.com',
+            'phone' => '0700123456',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'address' => 'Dar es Salaam, Tanzania',
+            'portal_subdomain' => 'abc-internet',
+            'setup_type' => $setupType,
+            'installation_fee' => $installation,
+            'subscription_fee' => $subscription,
+            'total_amount' => $installation + $subscription,
+            'currency' => 'TZS',
+        ], $overrides);
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array{intent_id: string, payment_id: int, token: string, response: \Illuminate\Testing\TestResponse}
+     */
+    protected function completePaidSignup(array $overrides = []): array
+    {
+        $payload = $this->signupIntentPayload($overrides);
+
+        $intentId = $this->postJson('/api/v1/signup/intents', $payload)
+            ->assertCreated()
+            ->json('data.intent_id');
+
+        $paymentId = $this->postJson('/api/v1/signup/intents/'.$intentId.'/payments', [
+            'payment_method' => 'mpesa',
+            'phone' => $payload['phone'],
+            'amount' => $payload['total_amount'],
+            'line_items' => [
+                ['code' => 'installation', 'amount' => $payload['installation_fee']],
+                ['code' => 'subscription', 'amount' => $payload['subscription_fee']],
+            ],
+        ])->assertCreated()->json('data.payment_id');
+
+        app(\App\Services\PlatformPaymentService::class)->markPaid(
+            \App\Models\PlatformPayment::query()->findOrFail($paymentId)
+        );
+
+        $response = $this->postJson('/api/v1/signup/intents/'.$intentId.'/complete')
+            ->assertCreated();
+
+        return [
+            'intent_id' => $intentId,
+            'payment_id' => $paymentId,
+            'token' => $response->json('data.token'),
+            'response' => $response,
+        ];
+    }
 }

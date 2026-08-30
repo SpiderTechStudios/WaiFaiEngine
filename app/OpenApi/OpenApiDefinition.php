@@ -18,6 +18,7 @@ use OpenApi\Attributes as OA;
     description: 'Laravel Sanctum personal access token. Prefix with Bearer.'
 )]
 #[OA\Tag(name: 'Auth', description: 'Registration, login, session, and password')]
+#[OA\Tag(name: 'Signup', description: 'Pay-first public signup (intent → payment → complete)')]
 #[OA\Tag(name: 'Dashboard', description: 'Home KPIs')]
 #[OA\Tag(name: 'Income', description: 'Revenue by source')]
 #[OA\Tag(name: 'Routers', description: 'Hotspot routers')]

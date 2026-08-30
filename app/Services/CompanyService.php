@@ -26,8 +26,12 @@ class CompanyService
                 'address' => $data['address'] ?? null,
                 'timezone' => $data['timezone'] ?? 'UTC',
                 'status' => 'active',
+                'setup_type' => $data['setup_type'] ?? null,
+                'installation_paid_at' => $data['installation_paid_at'] ?? null,
+                'subscription_status' => $data['subscription_status'] ?? 'active',
+                'activated_at' => $data['activated_at'] ?? now(),
+                'subscription_period_ends_at' => $data['subscription_period_ends_at'] ?? null,
                 'captive_portal_welcome_message' => 'Welcome to WiFi. Choose a package or enter a voucher code.',
-                
             ]);
 
             $ownerRole = Role::query()->whereNull('company_id')->where('slug', 'owner')->firstOrFail();
