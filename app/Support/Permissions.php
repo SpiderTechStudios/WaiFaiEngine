@@ -77,6 +77,10 @@ final class Permissions
 
     public const SETTINGS_UPDATE = 'settings.update';
 
+    public const INSTALLATION_REQUESTS_VIEW = 'installation_requests.view';
+
+    public const INSTALLATION_REQUESTS_CREATE = 'installation_requests.create';
+
     /**
      * @return list<string>
      */

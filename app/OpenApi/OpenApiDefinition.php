@@ -19,6 +19,8 @@ use OpenApi\Attributes as OA;
 )]
 #[OA\Tag(name: 'Auth', description: 'Registration, login, session, and password')]
 #[OA\Tag(name: 'Signup', description: 'Pay-first public signup (intent → payment → complete)')]
+#[OA\Tag(name: 'Billing', description: 'Company subscription status and renewal')]
+#[OA\Tag(name: 'Installation Requests', description: 'Post-subscription router installation / supply orders')]
 #[OA\Tag(name: 'Dashboard', description: 'Home KPIs')]
 #[OA\Tag(name: 'Income', description: 'Revenue by source')]
 #[OA\Tag(name: 'Routers', description: 'Hotspot routers')]

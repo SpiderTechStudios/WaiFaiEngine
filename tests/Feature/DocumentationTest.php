@@ -24,6 +24,8 @@ class DocumentationTest extends TestCase
         $this->assertContains('/auth/login', $paths);
         $this->assertContains('/auth/register', $paths);
         $this->assertContains('/signup/intents', $paths);
+        $this->assertContains('/billing/subscription', $paths);
+        $this->assertContains('/installation-requests', $paths);
         $this->assertContains('/auth/admin/register', $paths);
         $this->assertContains('/auth/me', $paths);
         $this->assertContains('/auth/forgot-password', $paths);

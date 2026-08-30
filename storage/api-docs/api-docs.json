@@ -673,6 +673,169 @@
                 ]
             }
         },
+        "/billing/subscription": {
+            "get": {
+                "tags": [
+                    "Billing"
+                ],
+                "summary": "Current company subscription status",
+                "operationId": "getSubscription",
+                "responses": {
+                    "200": {
+                        "description": "Subscription"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/billing/subscription/payments": {
+            "post": {
+                "tags": [
+                    "Billing"
+                ],
+                "summary": "Start monthly subscription renewal payment",
+                "operationId": "startSubscriptionRenewal",
+                "responses": {
+                    "201": {
+                        "description": "Payment initiated"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/installation-requests": {
+            "get": {
+                "tags": [
+                    "Installation Requests"
+                ],
+                "operationId": "listInstallationRequests",
+                "responses": {
+                    "200": {
+                        "description": "List"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Installation Requests"
+                ],
+                "summary": "Create installation / router supply request (server-priced)",
+                "operationId": "createInstallationRequest",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "service_type",
+                                    "quantity"
+                                ],
+                                "properties": {
+                                    "service_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "installation_only",
+                                            "router_and_installation"
+                                        ]
+                                    },
+                                    "quantity": {
+                                        "type": "integer",
+                                        "example": 2
+                                    },
+                                    "customer_notes": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    },
+                    "403": {
+                        "description": "Forbidden or inactive subscription"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/installation-requests/{installationRequest}": {
+            "get": {
+                "tags": [
+                    "Installation Requests"
+                ],
+                "operationId": "showInstallationRequest",
+                "parameters": [
+                    {
+                        "name": "installationRequest",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Details with progress"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/installation-requests": {
+            "get": {
+                "tags": [
+                    "Installation Requests"
+                ],
+                "summary": "Platform admin list",
+                "operationId": "adminListInstallationRequests",
+                "responses": {
+                    "200": {
+                        "description": "List"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/dashboard": {
             "get": {
                 "tags": [
@@ -8996,6 +9159,14 @@
         {
             "name": "Signup",
             "description": "Pay-first public signup (intent → payment → complete)"
+        },
+        {
+            "name": "Billing",
+            "description": "Company subscription status and renewal"
+        },
+        {
+            "name": "Installation Requests",
+            "description": "Post-subscription router installation / supply orders"
         },
         {
             "name": "Dashboard",

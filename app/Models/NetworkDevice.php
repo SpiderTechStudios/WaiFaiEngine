@@ -37,6 +37,8 @@ class NetworkDevice extends Model
         'gateway_id',
         'serial_number',
         'wifidog_port',
+        'source',
+        'installation_request_id',
         'status',
         'last_seen_at',
     ];

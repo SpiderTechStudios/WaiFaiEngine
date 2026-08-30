@@ -5,7 +5,7 @@ use App\Support\Permissions;
 
 
 
-Route::middleware(['auth:sanctum', 'active.user', 'company.context', 'company.required'])->group(function () {
+Route::middleware(['auth:sanctum', 'active.user', 'company.context', 'company.required', 'subscription.active'])->group(function () {
 
     Route::get('/withdrawals/stats', [WithdrawalController::class, 'stats'])->middleware('permission:' . Permissions::WITHDRAWALS_VIEW);
     Route::get('/withdrawals', [WithdrawalController::class, 'index'])->middleware('permission:' . Permissions::WITHDRAWALS_VIEW);

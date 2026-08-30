@@ -4,7 +4,7 @@ use App\Http\Controllers\Api\V1\Operations\BranchController;
 use App\Support\Permissions;
 
 
-Route::middleware(['auth:sanctum', 'active.user', 'company.context', 'company.required'])->group(function () {
+Route::middleware(['auth:sanctum', 'active.user', 'company.context', 'company.required', 'subscription.active'])->group(function () {
 
     Route::get('/branches', [BranchController::class, 'index'])->middleware('permission:' . Permissions::BRANCHES_VIEW);
     Route::post('/branches', [BranchController::class, 'store'])->middleware('permission:' . Permissions::BRANCHES_CREATE);

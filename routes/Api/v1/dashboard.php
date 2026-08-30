@@ -5,7 +5,7 @@ use App\Http\Controllers\Api\V1\Operations\IncomeController;
 use App\Support\Permissions;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth:sanctum', 'active.user', 'company.context', 'company.required'])->group(function () {
+Route::middleware(['auth:sanctum', 'active.user', 'company.context', 'company.required', 'subscription.active'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'show'])
         ->middleware('permission:'.Permissions::DASHBOARD_VIEW);
 

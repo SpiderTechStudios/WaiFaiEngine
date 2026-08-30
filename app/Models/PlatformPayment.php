@@ -11,6 +11,8 @@ class PlatformPayment extends Model
 
     public const TYPE_SUBSCRIPTION_RENEWAL = 'subscription_renewal';
 
+    public const TYPE_INSTALLATION = 'installation';
+
     public const STATUS_PENDING = 'pending';
 
     public const STATUS_PAID = 'paid';
@@ -22,6 +24,7 @@ class PlatformPayment extends Model
     protected $fillable = [
         'type',
         'signup_intent_id',
+        'installation_request_id',
         'company_id',
         'reference',
         'external_reference',
@@ -57,6 +60,11 @@ class PlatformPayment extends Model
     public function signupIntent(): BelongsTo
     {
         return $this->belongsTo(SignupIntent::class, 'signup_intent_id');
+    }
+
+    public function installationRequest(): BelongsTo
+    {
+        return $this->belongsTo(InstallationRequest::class, 'installation_request_id');
     }
 
     public function company(): BelongsTo

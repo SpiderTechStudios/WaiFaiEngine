@@ -87,13 +87,12 @@ class SignupIntentService
      */
     public function resolvePricing(): array
     {
-        $currency = (string) config('platform.currency', 'TZS');
-        $subscription = (float) config('platform.subscription_monthly');
+        $subscription = \App\Support\PlatformPricing::subscriptionMonthly();
 
         return [
             'subscription_fee' => $subscription,
             'total_amount' => $subscription,
-            'currency' => $currency,
+            'currency' => \App\Support\PlatformPricing::currency(),
         ];
     }
 

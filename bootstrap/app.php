@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureActiveSubscription;
 use App\Http\Middleware\EnsureCompanyAccess;
 use App\Http\Middleware\EnsureCurrentCompany;
 use App\Http\Middleware\EnsurePermission;
@@ -36,6 +37,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'platform.admin' => EnsurePlatformAdmin::class,
             'permission' => EnsurePermission::class,
             'portal.company' => ResolvePortalCompany::class,
+            'subscription.active' => EnsureActiveSubscription::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

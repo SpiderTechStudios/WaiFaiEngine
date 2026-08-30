@@ -6,7 +6,7 @@ use App\Support\Permissions;
 
 
 
-Route::middleware(['auth:sanctum', 'active.user', 'company.context', 'company.required'])->group(function () {
+Route::middleware(['auth:sanctum', 'active.user', 'company.context', 'company.required', 'subscription.active'])->group(function () {
 
 
 

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\AdminInstallationRequestController;
 use App\Http\Controllers\Api\V1\Admin\AdminRouterController;
 use App\Http\Controllers\Api\V1\Operations\PaymentController;
 use App\Http\Controllers\Api\V1\Operations\WithdrawalController;
@@ -14,6 +15,11 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'active.user', 'platform.adm
     Route::patch('/routers/{router}', [AdminRouterController::class, 'update']);
     Route::delete('/routers/{router}', [AdminRouterController::class, 'destroy']);
     Route::post('/routers/{router}/sync', [AdminRouterController::class, 'sync']);
+
+    Route::get('/installation-requests', [AdminInstallationRequestController::class, 'index']);
+    Route::get('/installation-requests/{installationRequest}', [AdminInstallationRequestController::class, 'show']);
+    Route::patch('/installation-requests/{installationRequest}/fulfillment', [AdminInstallationRequestController::class, 'updateFulfillment']);
+    Route::post('/installation-requests/{installationRequest}/updates', [AdminInstallationRequestController::class, 'addUpdate']);
 });
 
 Route::prefix('superadmin')->middleware(['auth:sanctum', 'active.user', 'superadmin'])->group(function () {

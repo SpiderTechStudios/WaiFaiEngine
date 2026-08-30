@@ -24,6 +24,9 @@ class CompanyFactory extends Factory
             'email' => fake()->companyEmail(),
             'phone' => fake()->phoneNumber(),
             'status' => 'active',
+            'subscription_status' => 'active',
+            'activated_at' => now(),
+            'subscription_period_ends_at' => now()->addMonth(),
             'timezone' => 'UTC',
         ];
     }
