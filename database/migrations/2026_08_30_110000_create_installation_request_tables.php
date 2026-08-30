@@ -25,25 +25,29 @@ return new class extends Migration
             $table->text('customer_notes')->nullable();
             $table->timestamps();
 
-            $table->index(['company_id', 'fulfillment_status']);
-            $table->index(['company_id', 'payment_status']);
+            $table->index(['company_id', 'fulfillment_status'], 'inst_req_company_fulfillment_idx');
+            $table->index(['company_id', 'payment_status'], 'inst_req_company_payment_idx');
         });
 
         Schema::create('installation_request_items', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('installation_request_id')->constrained()->cascadeOnDelete();
+            $table->unsignedBigInteger('installation_request_id');
             $table->unsignedInteger('position')->default(1);
             $table->string('label')->nullable();
             $table->foreignId('network_device_id')->nullable()->constrained('network_devices')->nullOnDelete();
             $table->string('status')->default('pending');
             $table->timestamps();
 
+            $table->foreign('installation_request_id', 'inst_req_items_req_fk')
+                ->references('id')
+                ->on('installation_requests')
+                ->cascadeOnDelete();
             $table->unique(['installation_request_id', 'position'], 'inst_req_item_position_unique');
         });
 
         Schema::create('installation_request_status_histories', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('installation_request_id')->constrained()->cascadeOnDelete();
+            $table->unsignedBigInteger('installation_request_id');
             $table->string('from_status')->nullable();
             $table->string('to_status');
             $table->string('field')->default('fulfillment_status');
@@ -51,17 +55,25 @@ return new class extends Migration
             $table->text('note')->nullable();
             $table->timestamps();
 
+            $table->foreign('installation_request_id', 'inst_req_hist_req_fk')
+                ->references('id')
+                ->on('installation_requests')
+                ->cascadeOnDelete();
             $table->index(['installation_request_id', 'created_at'], 'inst_req_history_created_idx');
         });
 
         Schema::create('installation_request_updates', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('installation_request_id')->constrained()->cascadeOnDelete();
+            $table->unsignedBigInteger('installation_request_id');
             $table->string('visibility'); // customer | internal
             $table->text('body');
             $table->foreignId('actor_id')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
 
+            $table->foreign('installation_request_id', 'inst_req_updates_req_fk')
+                ->references('id')
+                ->on('installation_requests')
+                ->cascadeOnDelete();
             $table->index(['installation_request_id', 'visibility'], 'inst_req_updates_vis_idx');
         });
     }
