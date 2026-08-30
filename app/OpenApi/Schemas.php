@@ -51,7 +51,12 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'phone', type: 'string', nullable: true),
         new OA\Property(property: 'address', type: 'string', nullable: true),
         new OA\Property(property: 'timezone', type: 'string', example: 'UTC'),
-        new OA\Property(property: 'status', type: 'string', example: 'active'),
+        new OA\Property(property: 'status', type: 'string', example: 'active', description: 'Operational company status'),
+        new OA\Property(property: 'setup_type', type: 'string', nullable: true, description: 'Legacy field; unused by current signup'),
+        new OA\Property(property: 'subscription_status', type: 'string', nullable: true, enum: ['active', 'past_due', 'expired', 'cancelled', 'suspended'], example: 'active'),
+        new OA\Property(property: 'installation_paid_at', type: 'string', format: 'date-time', nullable: true),
+        new OA\Property(property: 'activated_at', type: 'string', format: 'date-time', nullable: true),
+        new OA\Property(property: 'subscription_period_ends_at', type: 'string', format: 'date-time', nullable: true),
         new OA\Property(property: 'created_at', type: 'string', format: 'date-time', nullable: true),
     ]
 )]

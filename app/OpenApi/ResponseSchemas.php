@@ -447,7 +447,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'status', type: 'boolean', example: true),
         new OA\Property(property: 'code', type: 'integer', example: 201),
         new OA\Property(property: 'message', type: 'string', example: 'Signup intent created'),
-        new OA\Property(property: 'data', type: 'object'),
+        new OA\Property(property: 'data', ref: '#/components/schemas/SignupIntent'),
     ]
 )]
 #[OA\Schema(
@@ -456,7 +456,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'status', type: 'boolean', example: true),
         new OA\Property(property: 'code', type: 'integer', example: 200),
         new OA\Property(property: 'message', type: 'string', example: 'Signup payment retrieved'),
-        new OA\Property(property: 'data', type: 'object'),
+        new OA\Property(property: 'data', ref: '#/components/schemas/PlatformPayment'),
     ]
 )]
 #[OA\Schema(
@@ -465,7 +465,60 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'status', type: 'boolean', example: true),
         new OA\Property(property: 'code', type: 'integer', example: 201),
         new OA\Property(property: 'message', type: 'string', example: 'Signup payment initiated'),
-        new OA\Property(property: 'data', type: 'object'),
+        new OA\Property(property: 'data', ref: '#/components/schemas/PlatformPayment'),
+    ]
+)]
+#[OA\Schema(
+    schema: 'SubscriptionResponse',
+    properties: [
+        new OA\Property(property: 'status', type: 'boolean', example: true),
+        new OA\Property(property: 'code', type: 'integer', example: 200),
+        new OA\Property(property: 'message', type: 'string', example: 'Subscription retrieved'),
+        new OA\Property(property: 'data', ref: '#/components/schemas/SubscriptionSummary'),
+    ]
+)]
+#[OA\Schema(
+    schema: 'InstallationRequestResponse',
+    properties: [
+        new OA\Property(property: 'status', type: 'boolean', example: true),
+        new OA\Property(property: 'code', type: 'integer', example: 200),
+        new OA\Property(property: 'message', type: 'string', example: 'Installation request retrieved'),
+        new OA\Property(property: 'data', ref: '#/components/schemas/InstallationRequest'),
+    ]
+)]
+#[OA\Schema(
+    schema: 'InstallationRequestCreatedResponse',
+    properties: [
+        new OA\Property(property: 'status', type: 'boolean', example: true),
+        new OA\Property(property: 'code', type: 'integer', example: 201),
+        new OA\Property(property: 'message', type: 'string', example: 'Installation request created'),
+        new OA\Property(property: 'data', ref: '#/components/schemas/InstallationRequest'),
+    ]
+)]
+#[OA\Schema(
+    schema: 'InstallationRequestListResponse',
+    properties: [
+        new OA\Property(property: 'status', type: 'boolean', example: true),
+        new OA\Property(property: 'code', type: 'integer', example: 200),
+        new OA\Property(property: 'message', type: 'string', example: 'Installation requests retrieved'),
+        new OA\Property(property: 'data', properties: [
+            new OA\Property(property: 'items', type: 'array', items: new OA\Items(ref: '#/components/schemas/InstallationRequest')),
+            new OA\Property(property: 'meta', ref: '#/components/schemas/PaginationMeta'),
+        ], type: 'object'),
+    ]
+)]
+#[OA\Schema(
+    schema: 'InstallationUpdateCreatedResponse',
+    properties: [
+        new OA\Property(property: 'status', type: 'boolean', example: true),
+        new OA\Property(property: 'code', type: 'integer', example: 201),
+        new OA\Property(property: 'message', type: 'string', example: 'Update added'),
+        new OA\Property(property: 'data', properties: [
+            new OA\Property(property: 'id', type: 'integer'),
+            new OA\Property(property: 'visibility', type: 'string', enum: ['customer', 'internal']),
+            new OA\Property(property: 'body', type: 'string'),
+            new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
+        ], type: 'object'),
     ]
 )]
 class ResponseSchemas {}

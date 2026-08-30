@@ -2,7 +2,7 @@
     "openapi": "3.0.0",
     "info": {
         "title": "WaiFai Engine API",
-        "description": "Hotspot management API: authentication, current-company operations, staff, and platform administration.",
+        "description": "WaiFai Engine API v1: pay-first signup (monthly subscription), company billing/renewal, optional installation/router orders, captive portal, hotspot operations, staff, and platform administration. Envelope: { status, code, message, data }. Platform ops require an active subscription (except /billing/*).",
         "version": "1.0.0"
     },
     "servers": [
@@ -679,13 +679,38 @@
                     "Billing"
                 ],
                 "summary": "Current company subscription status",
+                "description": "Available even when subscription is expired so the tenant can renew. Does not require subscription.active middleware.",
                 "operationId": "getSubscription",
                 "responses": {
                     "200": {
-                        "description": "Subscription"
+                        "description": "Subscription",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SubscriptionResponse"
+                                }
+                            }
+                        }
                     },
                     "401": {
-                        "description": "Unauthenticated"
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "No company selected",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -701,13 +726,122 @@
                     "Billing"
                 ],
                 "summary": "Start monthly subscription renewal payment",
+                "description": "Creates a platform payment of type subscription_renewal for PLATFORM_SUBSCRIPTION_MONTHLY. Amount is server-side; client amount is optional and must match if sent. When payment is marked paid, subscription period is extended by one month.",
                 "operationId": "startSubscriptionRenewal",
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "payment_method": {
+                                        "type": "string",
+                                        "example": "mpesa",
+                                        "nullable": true
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "0711987654",
+                                        "nullable": true
+                                    },
+                                    "amount": {
+                                        "description": "Optional; must equal configured monthly fee",
+                                        "type": "number",
+                                        "example": 10000,
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "201": {
-                        "description": "Payment initiated"
+                        "description": "Payment initiated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PlatformPaymentCreatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
                     },
                     "422": {
-                        "description": "Validation error"
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/billing/subscription/payments/{payment}": {
+            "get": {
+                "tags": [
+                    "Billing"
+                ],
+                "summary": "Poll subscription renewal payment status",
+                "operationId": "showSubscriptionPayment",
+                "parameters": [
+                    {
+                        "name": "payment",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Payment",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PlatformPaymentResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -722,10 +856,50 @@
                 "tags": [
                     "Installation Requests"
                 ],
+                "summary": "List installation requests for the current company",
+                "description": "Requires active subscription and installation_requests.view permission.",
                 "operationId": "listInstallationRequests",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 15
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "List"
+                        "description": "List",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InstallationRequestListResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden or inactive subscription",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -738,7 +912,8 @@
                 "tags": [
                     "Installation Requests"
                 ],
-                "summary": "Create installation / router supply request (server-priced)",
+                "summary": "Create installation / router supply request",
+                "description": "Backend calculates unit_price and total_amount from config. Client must not send prices. Creates one item row per quantity. Payment and fulfillment start as pending/requested.",
                 "operationId": "createInstallationRequest",
                 "requestBody": {
                     "required": true,
@@ -751,6 +926,7 @@
                                 ],
                                 "properties": {
                                     "service_type": {
+                                        "description": "installation_only = TZS 100000/router; router_and_installation = TZS 150000/router",
                                         "type": "string",
                                         "enum": [
                                             "installation_only",
@@ -759,11 +935,14 @@
                                     },
                                     "quantity": {
                                         "type": "integer",
-                                        "example": 2
+                                        "example": 2,
+                                        "maximum": 100,
+                                        "minimum": 1
                                     },
                                     "customer_notes": {
                                         "type": "string",
-                                        "nullable": true
+                                        "nullable": true,
+                                        "maxLength": 2000
                                     }
                                 },
                                 "type": "object"
@@ -773,13 +952,44 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Created"
+                        "description": "Created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InstallationRequestCreatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
                     },
                     "403": {
-                        "description": "Forbidden or inactive subscription"
+                        "description": "Forbidden or inactive subscription",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
                     },
                     "422": {
-                        "description": "Validation error"
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -794,6 +1004,8 @@
                 "tags": [
                     "Installation Requests"
                 ],
+                "summary": "Installation request details with progress tracker",
+                "description": "Customer-visible updates only (internal notes omitted). Includes progress steps for UI tracker.",
                 "operationId": "showInstallationRequest",
                 "parameters": [
                     {
@@ -807,7 +1019,171 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Details with progress"
+                        "description": "Details",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InstallationRequestResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden or inactive subscription",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/installation-requests/{installationRequest}/payments": {
+            "post": {
+                "tags": [
+                    "Installation Requests"
+                ],
+                "summary": "Start payment for an installation request",
+                "description": "Amount must match the request total_amount snapshot. Creates a platform payment of type installation.",
+                "operationId": "startInstallationPayment",
+                "parameters": [
+                    {
+                        "name": "installationRequest",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "payment_method": {
+                                        "type": "string",
+                                        "example": "mpesa",
+                                        "nullable": true
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "amount": {
+                                        "description": "Optional; must match request total if sent",
+                                        "type": "number",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Payment initiated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PlatformPaymentCreatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/installation-requests/{installationRequest}/payments/{payment}": {
+            "get": {
+                "tags": [
+                    "Installation Requests"
+                ],
+                "summary": "Poll installation payment status",
+                "operationId": "showInstallationPayment",
+                "parameters": [
+                    {
+                        "name": "installationRequest",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "payment",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Payment",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PlatformPaymentResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -822,11 +1198,265 @@
                 "tags": [
                     "Installation Requests"
                 ],
-                "summary": "Platform admin list",
+                "summary": "Platform admin: list installation requests across tenants",
                 "operationId": "adminListInstallationRequests",
+                "parameters": [
+                    {
+                        "name": "company_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "fulfillment_status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "payment_status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 15
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
-                        "description": "List"
+                        "description": "List",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InstallationRequestListResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Platform admin required",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/installation-requests/{installationRequest}": {
+            "get": {
+                "tags": [
+                    "Installation Requests"
+                ],
+                "summary": "Platform admin: request details including internal updates",
+                "operationId": "adminShowInstallationRequest",
+                "parameters": [
+                    {
+                        "name": "installationRequest",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Details",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InstallationRequestResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/installation-requests/{installationRequest}/fulfillment": {
+            "patch": {
+                "tags": [
+                    "Installation Requests"
+                ],
+                "summary": "Platform admin: update fulfillment status",
+                "description": "Payment must be paid before advancing (except cancelled). Records status history.",
+                "operationId": "adminUpdateInstallationFulfillment",
+                "parameters": [
+                    {
+                        "name": "installationRequest",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "fulfillment_status"
+                                ],
+                                "properties": {
+                                    "fulfillment_status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "requested",
+                                            "processing",
+                                            "on_site",
+                                            "delivered",
+                                            "active",
+                                            "cancelled"
+                                        ]
+                                    },
+                                    "note": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 2000
+                                    },
+                                    "scheduled_at": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InstallationRequestResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error / unpaid",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/installation-requests/{installationRequest}/updates": {
+            "post": {
+                "tags": [
+                    "Installation Requests"
+                ],
+                "summary": "Platform admin: add customer-visible or internal update",
+                "operationId": "adminAddInstallationUpdate",
+                "parameters": [
+                    {
+                        "name": "installationRequest",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "visibility",
+                                    "body"
+                                ],
+                                "properties": {
+                                    "visibility": {
+                                        "type": "string",
+                                        "enum": [
+                                            "customer",
+                                            "internal"
+                                        ]
+                                    },
+                                    "body": {
+                                        "type": "string",
+                                        "maxLength": 5000
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Update added",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InstallationUpdateCreatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -7544,6 +8174,385 @@
                 },
                 "type": "object"
             },
+            "SignupIntent": {
+                "properties": {
+                    "intent_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "pending_payment",
+                            "paid",
+                            "completed",
+                            "expired",
+                            "cancelled"
+                        ]
+                    },
+                    "expires_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "pricing": {
+                        "properties": {
+                            "subscription_fee": {
+                                "type": "number",
+                                "example": 10000
+                            },
+                            "total_amount": {
+                                "type": "number",
+                                "example": 10000
+                            },
+                            "currency": {
+                                "type": "string",
+                                "example": "TZS"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "business_name": {
+                        "type": "string"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email"
+                    },
+                    "phone": {
+                        "type": "string"
+                    },
+                    "payment_phone": {
+                        "type": "string"
+                    },
+                    "portal_subdomain": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "PlatformPayment": {
+                "properties": {
+                    "payment_id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "reference": {
+                        "type": "string",
+                        "example": "SUB-SIGNUP-ABC123XYZ"
+                    },
+                    "amount": {
+                        "type": "number",
+                        "example": 10000
+                    },
+                    "currency": {
+                        "type": "string",
+                        "example": "TZS"
+                    },
+                    "payment_method": {
+                        "type": "string",
+                        "example": "mpesa"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "pending",
+                            "paid",
+                            "failed",
+                            "cancelled"
+                        ]
+                    },
+                    "line_items": {
+                        "type": "array",
+                        "items": {
+                            "type": "object"
+                        },
+                        "nullable": true
+                    },
+                    "paid_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "initiated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "SubscriptionSummary": {
+                "properties": {
+                    "plan": {
+                        "type": "string",
+                        "example": "monthly"
+                    },
+                    "currency": {
+                        "type": "string",
+                        "example": "TZS"
+                    },
+                    "amount": {
+                        "type": "number",
+                        "example": 10000
+                    },
+                    "status": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                            "active",
+                            "past_due",
+                            "expired",
+                            "cancelled",
+                            "suspended",
+                            "pending"
+                        ]
+                    },
+                    "is_access_allowed": {
+                        "type": "boolean"
+                    },
+                    "activated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "period_ends_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "next_billing_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "grace_days": {
+                        "type": "integer",
+                        "example": 7
+                    }
+                },
+                "type": "object"
+            },
+            "InstallationProgressStep": {
+                "properties": {
+                    "key": {
+                        "type": "string",
+                        "enum": [
+                            "requested",
+                            "processing",
+                            "on_site",
+                            "delivered",
+                            "active"
+                        ]
+                    },
+                    "label": {
+                        "type": "string",
+                        "example": "Requested"
+                    },
+                    "completed": {
+                        "type": "boolean"
+                    },
+                    "current": {
+                        "type": "boolean"
+                    }
+                },
+                "type": "object"
+            },
+            "InstallationRequestItem": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "position": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "label": {
+                        "type": "string",
+                        "example": "Router 1",
+                        "nullable": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "example": "pending"
+                    },
+                    "network_device_id": {
+                        "type": "integer",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "InstallationStatusHistory": {
+                "properties": {
+                    "field": {
+                        "type": "string",
+                        "example": "fulfillment_status"
+                    },
+                    "from_status": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "to_status": {
+                        "type": "string"
+                    },
+                    "note": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "actor": {
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "InstallationUpdate": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "visibility": {
+                        "type": "string",
+                        "enum": [
+                            "customer",
+                            "internal"
+                        ]
+                    },
+                    "body": {
+                        "type": "string"
+                    },
+                    "actor": {
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "InstallationRequest": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "reference": {
+                        "type": "string",
+                        "example": "INS-ABC12345"
+                    },
+                    "service_type": {
+                        "type": "string",
+                        "enum": [
+                            "installation_only",
+                            "router_and_installation"
+                        ]
+                    },
+                    "quantity": {
+                        "type": "integer",
+                        "example": 2
+                    },
+                    "unit_price": {
+                        "type": "number",
+                        "example": 100000
+                    },
+                    "total_amount": {
+                        "type": "number",
+                        "example": 200000
+                    },
+                    "currency": {
+                        "type": "string",
+                        "example": "TZS"
+                    },
+                    "payment_status": {
+                        "type": "string",
+                        "enum": [
+                            "pending",
+                            "paid",
+                            "failed",
+                            "cancelled"
+                        ]
+                    },
+                    "fulfillment_status": {
+                        "type": "string",
+                        "enum": [
+                            "requested",
+                            "processing",
+                            "on_site",
+                            "delivered",
+                            "active",
+                            "cancelled"
+                        ]
+                    },
+                    "paid_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "scheduled_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "customer_notes": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "progress": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/InstallationProgressStep"
+                        }
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/InstallationRequestItem"
+                        }
+                    },
+                    "status_history": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/InstallationStatusHistory"
+                        }
+                    },
+                    "updates": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/InstallationUpdate"
+                        }
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
             "DashboardResponse": {
                 "properties": {
                     "status": {
@@ -8592,7 +9601,7 @@
                         "example": "Signup intent created"
                     },
                     "data": {
-                        "type": "object"
+                        "$ref": "#/components/schemas/SignupIntent"
                     }
                 },
                 "type": "object"
@@ -8612,7 +9621,7 @@
                         "example": "Signup payment retrieved"
                     },
                     "data": {
-                        "type": "object"
+                        "$ref": "#/components/schemas/PlatformPayment"
                     }
                 },
                 "type": "object"
@@ -8632,6 +9641,136 @@
                         "example": "Signup payment initiated"
                     },
                     "data": {
+                        "$ref": "#/components/schemas/PlatformPayment"
+                    }
+                },
+                "type": "object"
+            },
+            "SubscriptionResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Subscription retrieved"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/SubscriptionSummary"
+                    }
+                },
+                "type": "object"
+            },
+            "InstallationRequestResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Installation request retrieved"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/InstallationRequest"
+                    }
+                },
+                "type": "object"
+            },
+            "InstallationRequestCreatedResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 201
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Installation request created"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/InstallationRequest"
+                    }
+                },
+                "type": "object"
+            },
+            "InstallationRequestListResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Installation requests retrieved"
+                    },
+                    "data": {
+                        "properties": {
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/InstallationRequest"
+                                }
+                            },
+                            "meta": {
+                                "$ref": "#/components/schemas/PaginationMeta"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "InstallationUpdateCreatedResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 201
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Update added"
+                    },
+                    "data": {
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "visibility": {
+                                "type": "string",
+                                "enum": [
+                                    "customer",
+                                    "internal"
+                                ]
+                            },
+                            "body": {
+                                "type": "string"
+                            },
+                            "created_at": {
+                                "type": "string",
+                                "format": "date-time"
+                            }
+                        },
                         "type": "object"
                     }
                 },
@@ -8785,8 +9924,41 @@
                         "example": "UTC"
                     },
                     "status": {
+                        "description": "Operational company status",
                         "type": "string",
                         "example": "active"
+                    },
+                    "setup_type": {
+                        "description": "Legacy field; unused by current signup",
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "subscription_status": {
+                        "type": "string",
+                        "example": "active",
+                        "nullable": true,
+                        "enum": [
+                            "active",
+                            "past_due",
+                            "expired",
+                            "cancelled",
+                            "suspended"
+                        ]
+                    },
+                    "installation_paid_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "activated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "subscription_period_ends_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
                     },
                     "created_at": {
                         "type": "string",

@@ -323,4 +323,119 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'company', ref: '#/components/schemas/Company'),
     ]
 )]
+#[OA\Schema(
+    schema: 'SignupIntent',
+    properties: [
+        new OA\Property(property: 'intent_id', type: 'string', format: 'uuid'),
+        new OA\Property(property: 'status', type: 'string', enum: ['pending_payment', 'paid', 'completed', 'expired', 'cancelled']),
+        new OA\Property(property: 'expires_at', type: 'string', format: 'date-time'),
+        new OA\Property(property: 'pricing', properties: [
+            new OA\Property(property: 'subscription_fee', type: 'number', example: 10000),
+            new OA\Property(property: 'total_amount', type: 'number', example: 10000),
+            new OA\Property(property: 'currency', type: 'string', example: 'TZS'),
+        ], type: 'object'),
+        new OA\Property(property: 'business_name', type: 'string'),
+        new OA\Property(property: 'email', type: 'string', format: 'email'),
+        new OA\Property(property: 'phone', type: 'string'),
+        new OA\Property(property: 'payment_phone', type: 'string'),
+        new OA\Property(property: 'portal_subdomain', type: 'string'),
+    ]
+)]
+#[OA\Schema(
+    schema: 'PlatformPayment',
+    properties: [
+        new OA\Property(property: 'payment_id', type: 'integer', example: 1),
+        new OA\Property(property: 'reference', type: 'string', example: 'SUB-SIGNUP-ABC123XYZ'),
+        new OA\Property(property: 'amount', type: 'number', example: 10000),
+        new OA\Property(property: 'currency', type: 'string', example: 'TZS'),
+        new OA\Property(property: 'payment_method', type: 'string', example: 'mpesa'),
+        new OA\Property(property: 'status', type: 'string', enum: ['pending', 'paid', 'failed', 'cancelled']),
+        new OA\Property(property: 'line_items', type: 'array', items: new OA\Items(type: 'object'), nullable: true),
+        new OA\Property(property: 'paid_at', type: 'string', format: 'date-time', nullable: true),
+        new OA\Property(property: 'initiated_at', type: 'string', format: 'date-time', nullable: true),
+    ]
+)]
+#[OA\Schema(
+    schema: 'SubscriptionSummary',
+    properties: [
+        new OA\Property(property: 'plan', type: 'string', example: 'monthly'),
+        new OA\Property(property: 'currency', type: 'string', example: 'TZS'),
+        new OA\Property(property: 'amount', type: 'number', example: 10000),
+        new OA\Property(property: 'status', type: 'string', enum: ['active', 'past_due', 'expired', 'cancelled', 'suspended', 'pending'], nullable: true),
+        new OA\Property(property: 'is_access_allowed', type: 'boolean'),
+        new OA\Property(property: 'activated_at', type: 'string', format: 'date-time', nullable: true),
+        new OA\Property(property: 'period_ends_at', type: 'string', format: 'date-time', nullable: true),
+        new OA\Property(property: 'next_billing_at', type: 'string', format: 'date-time', nullable: true),
+        new OA\Property(property: 'grace_days', type: 'integer', example: 7),
+    ]
+)]
+#[OA\Schema(
+    schema: 'InstallationProgressStep',
+    properties: [
+        new OA\Property(property: 'key', type: 'string', enum: ['requested', 'processing', 'on_site', 'delivered', 'active']),
+        new OA\Property(property: 'label', type: 'string', example: 'Requested'),
+        new OA\Property(property: 'completed', type: 'boolean'),
+        new OA\Property(property: 'current', type: 'boolean'),
+    ]
+)]
+#[OA\Schema(
+    schema: 'InstallationRequestItem',
+    properties: [
+        new OA\Property(property: 'id', type: 'integer'),
+        new OA\Property(property: 'position', type: 'integer', example: 1),
+        new OA\Property(property: 'label', type: 'string', nullable: true, example: 'Router 1'),
+        new OA\Property(property: 'status', type: 'string', example: 'pending'),
+        new OA\Property(property: 'network_device_id', type: 'integer', nullable: true),
+    ]
+)]
+#[OA\Schema(
+    schema: 'InstallationStatusHistory',
+    properties: [
+        new OA\Property(property: 'field', type: 'string', example: 'fulfillment_status'),
+        new OA\Property(property: 'from_status', type: 'string', nullable: true),
+        new OA\Property(property: 'to_status', type: 'string'),
+        new OA\Property(property: 'note', type: 'string', nullable: true),
+        new OA\Property(property: 'actor', type: 'object', nullable: true, properties: [
+            new OA\Property(property: 'id', type: 'integer'),
+            new OA\Property(property: 'name', type: 'string'),
+        ]),
+        new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
+    ]
+)]
+#[OA\Schema(
+    schema: 'InstallationUpdate',
+    properties: [
+        new OA\Property(property: 'id', type: 'integer'),
+        new OA\Property(property: 'visibility', type: 'string', enum: ['customer', 'internal']),
+        new OA\Property(property: 'body', type: 'string'),
+        new OA\Property(property: 'actor', type: 'object', nullable: true, properties: [
+            new OA\Property(property: 'id', type: 'integer'),
+            new OA\Property(property: 'name', type: 'string'),
+        ]),
+        new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
+    ]
+)]
+#[OA\Schema(
+    schema: 'InstallationRequest',
+    properties: [
+        new OA\Property(property: 'id', type: 'integer'),
+        new OA\Property(property: 'reference', type: 'string', example: 'INS-ABC12345'),
+        new OA\Property(property: 'service_type', type: 'string', enum: ['installation_only', 'router_and_installation']),
+        new OA\Property(property: 'quantity', type: 'integer', example: 2),
+        new OA\Property(property: 'unit_price', type: 'number', example: 100000),
+        new OA\Property(property: 'total_amount', type: 'number', example: 200000),
+        new OA\Property(property: 'currency', type: 'string', example: 'TZS'),
+        new OA\Property(property: 'payment_status', type: 'string', enum: ['pending', 'paid', 'failed', 'cancelled']),
+        new OA\Property(property: 'fulfillment_status', type: 'string', enum: ['requested', 'processing', 'on_site', 'delivered', 'active', 'cancelled']),
+        new OA\Property(property: 'paid_at', type: 'string', format: 'date-time', nullable: true),
+        new OA\Property(property: 'scheduled_at', type: 'string', format: 'date-time', nullable: true),
+        new OA\Property(property: 'customer_notes', type: 'string', nullable: true),
+        new OA\Property(property: 'progress', type: 'array', items: new OA\Items(ref: '#/components/schemas/InstallationProgressStep')),
+        new OA\Property(property: 'items', type: 'array', items: new OA\Items(ref: '#/components/schemas/InstallationRequestItem')),
+        new OA\Property(property: 'status_history', type: 'array', items: new OA\Items(ref: '#/components/schemas/InstallationStatusHistory')),
+        new OA\Property(property: 'updates', type: 'array', items: new OA\Items(ref: '#/components/schemas/InstallationUpdate')),
+        new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
+        new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
+    ]
+)]
 class DomainSchemas {}

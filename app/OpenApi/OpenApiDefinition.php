@@ -7,7 +7,7 @@ use OpenApi\Attributes as OA;
 #[OA\Info(
     title: 'WaiFai Engine API',
     version: '1.0.0',
-    description: 'Hotspot management API: authentication, current-company operations, staff, and platform administration.'
+    description: 'WaiFai Engine API v1: pay-first signup (monthly subscription), company billing/renewal, optional installation/router orders, captive portal, hotspot operations, staff, and platform administration. Envelope: { status, code, message, data }. Platform ops require an active subscription (except /billing/*).'
 )]
 #[OA\Server(url: '/api/v1', description: 'API v1')]
 #[OA\SecurityScheme(
