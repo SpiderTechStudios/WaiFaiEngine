@@ -19,24 +19,11 @@ class AuthDocumentation
     public function defaultPage(): void {}
 
     #[OA\Post(
-        path: '/auth/register',
-        operationId: 'register',
-        tags: ['Auth'],
-        summary: 'Deprecated free registration (disabled unless PLATFORM_ALLOW_FREE_REGISTER=true)',
-        description: 'Public self-service registration is pay-first. Use POST /signup/intents, pay, then POST /signup/intents/{intent}/complete. This endpoint only works when PLATFORM_ALLOW_FREE_REGISTER is enabled.',
-        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(ref: '#/components/schemas/RegisterRequest')),
-        responses: [
-            new OA\Response(response: 201, description: 'Registered with company (only when free register enabled)', content: new OA\JsonContent(ref: '#/components/schemas/AuthSessionCreatedResponse')),
-            new OA\Response(response: 422, description: 'Disabled or validation error', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
-        ]
-    )]
-    public function register(): void {}
-
-    #[OA\Post(
         path: '/auth/login',
         operationId: 'login',
         tags: ['Auth'],
         summary: 'Login',
+        description: 'Available only after successful enrollment payment and account creation.',
         requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(ref: '#/components/schemas/LoginRequest')),
         responses: [
             new OA\Response(response: 200, description: 'Logged in', content: new OA\JsonContent(ref: '#/components/schemas/AuthSessionTokenResponse')),
@@ -210,18 +197,26 @@ class AuthDocumentation
 }
 
 #[OA\Schema(
-    schema: 'RegisterRequest',
-    required: ['first_name', 'last_name', 'business_name', 'email', 'phone', 'password', 'password_confirmation', 'address'],
+    schema: 'RegisterEnrollmentRequest',
+    required: ['first_name', 'last_name', 'business_name', 'email', 'phone', 'payment_phone', 'password', 'password_confirmation', 'address'],
     properties: [
-        new OA\Property(property: 'first_name', type: 'string', maxLength: 255, example: 'Jane'),
+        new OA\Property(property: 'first_name', type: 'string', maxLength: 255, example: 'John'),
         new OA\Property(property: 'last_name', type: 'string', maxLength: 255, example: 'Doe'),
-        new OA\Property(property: 'business_name', type: 'string', maxLength: 255, example: 'ABC Internet Services'),
-        new OA\Property(property: 'email', type: 'string', format: 'email', maxLength: 255, example: 'jane@example.com'),
-        new OA\Property(property: 'phone', type: 'string', maxLength: 50, example: '0700123456'),
-        new OA\Property(property: 'password', type: 'string', minLength: 8, format: 'password', example: 'password123'),
-        new OA\Property(property: 'password_confirmation', type: 'string', format: 'password', example: 'password123'),
-        new OA\Property(property: 'address', type: 'string', example: 'Dar es Salaam, Tanzania'),
-        new OA\Property(property: 'portal_subdomain', type: 'string', nullable: true, maxLength: 63, example: 'abc-internet', description: 'Lowercase slug. Auto-assigned from business name when omitted.'),
+        new OA\Property(property: 'business_name', type: 'string', maxLength: 255, example: 'John Internet Services'),
+        new OA\Property(property: 'email', type: 'string', format: 'email', maxLength: 255, example: 'john@example.com'),
+        new OA\Property(property: 'phone', type: 'string', maxLength: 50, example: '0686911251'),
+        new OA\Property(property: 'payment_phone', type: 'string', maxLength: 50, example: '0686911251'),
+        new OA\Property(property: 'password', type: 'string', minLength: 8, format: 'password', example: 'SecurePassword123'),
+        new OA\Property(property: 'password_confirmation', type: 'string', format: 'password', example: 'SecurePassword123'),
+        new OA\Property(property: 'address', type: 'string', example: 'Dar es Salaam'),
+        new OA\Property(property: 'domain_name', type: 'string', nullable: true, maxLength: 63, example: 'johnwifi', description: 'Optional portal subdomain. Temporarily reserved during enrollment.'),
+    ]
+)]
+#[OA\Schema(
+    schema: 'RetryEnrollmentPaymentRequest',
+    properties: [
+        new OA\Property(property: 'payment_phone', type: 'string', nullable: true, example: '0686911251'),
+        new OA\Property(property: 'payment_method', type: 'string', nullable: true, example: 'mpesa'),
     ]
 )]
 #[OA\Schema(

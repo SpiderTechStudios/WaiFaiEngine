@@ -7,11 +7,20 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PlatformPayment extends Model
 {
+    /** @deprecated Use TYPE_PLATFORM_SUBSCRIPTION */
     public const TYPE_SIGNUP = 'signup';
+
+    public const TYPE_PLATFORM_SUBSCRIPTION = 'platform_subscription';
 
     public const TYPE_SUBSCRIPTION_RENEWAL = 'subscription_renewal';
 
     public const TYPE_INSTALLATION = 'installation';
+
+    public const PURPOSE_PLATFORM_SUBSCRIPTION = 'platform_subscription';
+
+    public const PURPOSE_SUBSCRIPTION_RENEWAL = 'subscription_renewal';
+
+    public const PURPOSE_INSTALLATION_REQUEST = 'installation_request';
 
     public const STATUS_PENDING = 'pending';
 
@@ -57,14 +66,34 @@ class PlatformPayment extends Model
         ];
     }
 
+    public function purpose(): string
+    {
+        return (string) (($this->metadata['payment_purpose'] ?? null) ?: $this->type);
+    }
+
+    public function isEnrollmentSubscription(): bool
+    {
+        return in_array($this->type, [
+            self::TYPE_PLATFORM_SUBSCRIPTION,
+            self::TYPE_SIGNUP,
+        ], true)
+            || $this->purpose() === self::PURPOSE_PLATFORM_SUBSCRIPTION;
+    }
+
+    public function enrollment(): BelongsTo
+    {
+        return $this->belongsTo(Enrollment::class, 'signup_intent_id');
+    }
+
+    /** @deprecated Use enrollment() */
     public function signupIntent(): BelongsTo
     {
-        return $this->belongsTo(SignupIntent::class, 'signup_intent_id');
+        return $this->enrollment();
     }
 
     public function installationRequest(): BelongsTo
     {
-        return $this->belongsTo(InstallationRequest::class, 'installation_request_id');
+        return $this->belongsTo(InstallationRequest::class);
     }
 
     public function company(): BelongsTo

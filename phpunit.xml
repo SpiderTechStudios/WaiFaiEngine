@@ -32,11 +32,12 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
-        <env name="PLATFORM_ALLOW_FREE_REGISTER" value="false"/>
         <env name="PLATFORM_PAYMENT_AUTO_PAID" value="false"/>
         <env name="PLATFORM_SUBSCRIPTION_MONTHLY" value="10000"/>
         <env name="PLATFORM_SUBSCRIPTION_GRACE_DAYS" value="7"/>
         <env name="PLATFORM_INSTALLATION_ONLY" value="100000"/>
         <env name="PLATFORM_ROUTER_AND_INSTALLATION" value="150000"/>
+        <env name="PLATFORM_ENROLLMENT_TTL_MINUTES" value="4"/>
+        <env name="PLATFORM_ENROLLMENT_MAX_FAILED_ATTEMPTS" value="3"/>
     </php>
 </phpunit>

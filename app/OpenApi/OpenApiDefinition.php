@@ -7,7 +7,7 @@ use OpenApi\Attributes as OA;
 #[OA\Info(
     title: 'WaiFai Engine API',
     version: '1.0.0',
-    description: 'WaiFai Engine API v1: pay-first signup (monthly subscription), company billing/renewal, optional installation/router orders, captive portal, hotspot operations, staff, and platform administration. Envelope: { status, code, message, data }. Platform ops require an active subscription (except /billing/*).'
+    description: 'WaiFai Engine API v1: payment-gated enrollment (4-minute session, max 3 failed attempts), company billing/renewal, optional installation/router orders, captive portal, hotspot operations, staff, and platform administration. Envelope: { status, code, message, data }. Platform ops require an active subscription (except /billing/*).'
 )]
 #[OA\Server(url: '/api/v1', description: 'API v1')]
 #[OA\SecurityScheme(
@@ -17,8 +17,8 @@ use OpenApi\Attributes as OA;
     bearerFormat: 'Sanctum',
     description: 'Laravel Sanctum personal access token. Prefix with Bearer.'
 )]
-#[OA\Tag(name: 'Auth', description: 'Registration, login, session, and password')]
-#[OA\Tag(name: 'Signup', description: 'Pay-first public signup (intent → payment → complete)')]
+#[OA\Tag(name: 'Auth', description: 'Login, session, password, and email verification')]
+#[OA\Tag(name: 'Enrollment', description: 'Pay-first registration: enroll → USSD payment → poll/retry → account on webhook')]
 #[OA\Tag(name: 'Billing', description: 'Company subscription status and renewal')]
 #[OA\Tag(name: 'Installation Requests', description: 'Post-subscription router installation / supply orders')]
 #[OA\Tag(name: 'Dashboard', description: 'Home KPIs')]

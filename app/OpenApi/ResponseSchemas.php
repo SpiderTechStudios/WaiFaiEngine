@@ -442,12 +442,24 @@ use OpenApi\Attributes as OA;
     ]
 )]
 #[OA\Schema(
-    schema: 'SignupIntentCreatedResponse',
+    schema: 'EnrollmentStatusResponse',
     properties: [
         new OA\Property(property: 'status', type: 'boolean', example: true),
-        new OA\Property(property: 'code', type: 'integer', example: 201),
-        new OA\Property(property: 'message', type: 'string', example: 'Signup intent created'),
-        new OA\Property(property: 'data', ref: '#/components/schemas/SignupIntent'),
+        new OA\Property(property: 'code', type: 'integer', example: 200),
+        new OA\Property(property: 'message', type: 'string', example: 'Waiting for payment confirmation.'),
+        new OA\Property(property: 'data', ref: '#/components/schemas/EnrollmentStatus'),
+    ]
+)]
+#[OA\Schema(
+    schema: 'EnrollmentExpiredResponse',
+    properties: [
+        new OA\Property(property: 'status', type: 'boolean', example: false),
+        new OA\Property(property: 'code', type: 'integer', example: 410),
+        new OA\Property(property: 'message', type: 'string', example: 'The registration payment session has expired.'),
+        new OA\Property(property: 'data', properties: [
+            new OA\Property(property: 'enrollment_reference', type: 'string', example: 'ENR-ABC123XYZ'),
+            new OA\Property(property: 'enrollment_status', type: 'string', example: 'expired'),
+        ], type: 'object'),
     ]
 )]
 #[OA\Schema(
@@ -455,7 +467,7 @@ use OpenApi\Attributes as OA;
     properties: [
         new OA\Property(property: 'status', type: 'boolean', example: true),
         new OA\Property(property: 'code', type: 'integer', example: 200),
-        new OA\Property(property: 'message', type: 'string', example: 'Signup payment retrieved'),
+        new OA\Property(property: 'message', type: 'string', example: 'Payment webhook processed'),
         new OA\Property(property: 'data', ref: '#/components/schemas/PlatformPayment'),
     ]
 )]
@@ -464,7 +476,7 @@ use OpenApi\Attributes as OA;
     properties: [
         new OA\Property(property: 'status', type: 'boolean', example: true),
         new OA\Property(property: 'code', type: 'integer', example: 201),
-        new OA\Property(property: 'message', type: 'string', example: 'Signup payment initiated'),
+        new OA\Property(property: 'message', type: 'string', example: 'Payment initiated'),
         new OA\Property(property: 'data', ref: '#/components/schemas/PlatformPayment'),
     ]
 )]

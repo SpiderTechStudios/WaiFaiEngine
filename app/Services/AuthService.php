@@ -6,8 +6,6 @@ use App\Http\Resources\AuthSessionResource;
 use App\Models\Company;
 use App\Models\User;
 use App\Models\UserCompany;
-use Illuminate\Auth\Events\Registered;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
@@ -15,53 +13,7 @@ class AuthService
 {
     public function __construct(
         private AuditLogger $auditLogger,
-        private CompanyService $companyService,
     ) {}
-
-    public function register(array $data): array
-    {
-        if (! config('platform.allow_free_register')) {
-            throw ValidationException::withMessages([
-                'register' => [
-                    'Direct registration is disabled. Create a signup intent, complete payment, then call POST /api/v1/signup/intents/{intent}/complete.',
-                ],
-            ]);
-        }
-
-        return DB::transaction(function () use ($data) {
-            $user = User::query()->create([
-                'first_name' => $data['first_name'],
-                'last_name' => $data['last_name'],
-                'email' => $data['email'],
-                'phone' => $data['phone'],
-                'password' => $data['password'],
-                'status' => 'pending',
-            ]);
-
-            $company = $this->companyService->create($user, [
-                'name' => $data['business_name'],
-                'email' => $data['email'],
-                'phone' => $data['phone'],
-                'address' => $data['address'],
-                'subdomain' => $data['portal_subdomain'] ?? null,
-            ]);
-
-            event(new Registered($user));
-
-            $token = $user->createToken('auth')->plainTextToken;
-
-            $this->auditLogger->log(
-                'registered',
-                $user,
-                $company->id,
-                User::class,
-                $user->id,
-                newValues: ['company_id' => $company->id],
-            );
-
-            return $this->sessionPayload($user->fresh(), $token);
-        });
-    }
 
     public function login(string $email, string $password, ?string $deviceName = 'auth'): array
     {

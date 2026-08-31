@@ -12,16 +12,26 @@ return [
         'router_and_installation' => (int) env('PLATFORM_ROUTER_AND_INSTALLATION', 150000),
     ],
 
-    'signup_intent_ttl_hours' => (int) env('PLATFORM_SIGNUP_INTENT_TTL_HOURS', 48),
+    /*
+    | Temporary enrollment (pay-first registration) lifetime in minutes.
+    */
+    'enrollment_ttl_minutes' => (int) env('PLATFORM_ENROLLMENT_TTL_MINUTES', 4),
+
+    /*
+    | Maximum failed platform-subscription payment attempts per enrollment.
+    */
+    'enrollment_max_failed_attempts' => (int) env('PLATFORM_ENROLLMENT_MAX_FAILED_ATTEMPTS', 3),
+
+    /*
+    | Shared secret for platform payment provider webhooks.
+    | Send as X-Platform-Payment-Secret header.
+    */
+    'payment_webhook_secret' => env('PLATFORM_PAYMENT_WEBHOOK_SECRET'),
 
     /*
     | When true, newly created platform payments are marked paid immediately.
     | Use for local/tests only until a real mobile-money gateway is wired.
+    | Paid enrollment payments also auto-complete account creation.
     */
     'payment_auto_paid' => (bool) env('PLATFORM_PAYMENT_AUTO_PAID', false),
-
-    /*
-    | When true, POST /auth/register still creates accounts without payment (local/dev).
-    */
-    'allow_free_register' => (bool) env('PLATFORM_ALLOW_FREE_REGISTER', false),
 ];

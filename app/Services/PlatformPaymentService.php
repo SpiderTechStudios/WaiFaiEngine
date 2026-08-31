@@ -3,9 +3,9 @@
 namespace App\Services;
 
 use App\Models\Company;
+use App\Models\Enrollment;
 use App\Models\InstallationRequest;
 use App\Models\PlatformPayment;
-use App\Models\SignupIntent;
 use App\Support\PlatformPricing;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -15,70 +15,99 @@ class PlatformPaymentService
 {
     public function __construct(
         private AuditLogger $auditLogger,
-        private SignupIntentService $signupIntentService,
+        private EnrollmentService $enrollmentService,
+        private EnrollmentCompletionService $enrollmentCompletionService,
         private SubscriptionService $subscriptionService,
         private InstallationRequestService $installationRequestService,
+        private PlatformPaymentGateway $paymentGateway,
     ) {}
 
     /**
      * @param  array<string, mixed>  $data
      */
-    public function startSignupPayment(SignupIntent $intent, array $data): PlatformPayment
+    public function startEnrollmentPayment(Enrollment $enrollment, array $data = []): PlatformPayment
     {
-        $this->signupIntentService->syncExpiry($intent);
-        $intent->refresh();
+        $this->enrollmentService->assertUsableForPayment($enrollment);
+        $enrollment->refresh();
 
-        if ($intent->status === SignupIntent::STATUS_COMPLETED) {
+        if (! $enrollment->canRetryPayment() && $enrollment->payments()->exists()) {
             throw ValidationException::withMessages([
-                'intent' => ['This signup has already been completed.'],
+                'enrollment' => ['This enrollment cannot accept another payment attempt.'],
             ]);
         }
 
-        if ($intent->isExpired() || $intent->status === SignupIntent::STATUS_EXPIRED) {
+        $amount = (float) $enrollment->total_amount;
+
+        if (array_key_exists('amount', $data) && (int) round((float) $data['amount']) !== (int) round($amount)) {
             throw ValidationException::withMessages([
-                'intent' => ['This signup intent has expired.'],
+                'amount' => ['Payment amount must match the monthly platform subscription fee.'],
             ]);
         }
 
-        if (! in_array($intent->status, [
-            SignupIntent::STATUS_PENDING_PAYMENT,
-            SignupIntent::STATUS_PAID,
-        ], true)) {
-            throw ValidationException::withMessages([
-                'intent' => ['This signup intent cannot accept payments.'],
-            ]);
+        if (filled($data['payment_phone'] ?? null) || filled($data['phone'] ?? null)) {
+            $phone = (string) ($data['payment_phone'] ?? $data['phone']);
+            $enrollment->forceFill(['payment_phone' => $phone])->save();
         }
 
-        $amount = array_key_exists('amount', $data)
-            ? (float) $data['amount']
-            : (float) $intent->total_amount;
-
-        if ((int) round($amount) !== (int) round((float) $intent->total_amount)) {
-            throw ValidationException::withMessages([
-                'amount' => ['Payment amount must match the first month subscription fee.'],
+        $enrollment->payments()
+            ->where('status', PlatformPayment::STATUS_PENDING)
+            ->update([
+                'status' => PlatformPayment::STATUS_CANCELLED,
+                'cancelled_at' => now(),
             ]);
-        }
+
+        $enrollment->forceFill(['status' => Enrollment::STATUS_PENDING_PAYMENT])->save();
 
         $lineItems = [
             [
-                'code' => 'subscription',
-                'label' => 'First month subscription',
-                'amount' => (float) $intent->subscription_fee,
+                'code' => 'platform_subscription',
+                'label' => 'WaiFai Monthly Platform Subscription',
+                'amount' => (float) $enrollment->subscription_fee,
             ],
         ];
 
-        return $this->createPendingPayment([
-            'type' => PlatformPayment::TYPE_SIGNUP,
-            'signup_intent_id' => $intent->id,
-            'reference_prefix' => 'SUB-SIGNUP',
+        $payment = $this->createPendingPayment([
+            'type' => PlatformPayment::TYPE_PLATFORM_SUBSCRIPTION,
+            'signup_intent_id' => $enrollment->id,
+            'reference_prefix' => 'SUB-ENR',
             'amount' => $amount,
-            'currency' => $intent->currency,
+            'currency' => $enrollment->currency,
             'payment_method' => $data['payment_method'] ?? 'mpesa',
-            'phone' => $data['phone'] ?? $intent->payment_phone,
+            'phone' => $enrollment->payment_phone,
             'line_items' => $lineItems,
-            'metadata' => ['source' => 'signup'],
-            'existing_paid_query' => fn ($q) => $q->where('signup_intent_id', $intent->id),
+            'metadata' => [
+                'source' => 'enrollment',
+                'payment_purpose' => PlatformPayment::PURPOSE_PLATFORM_SUBSCRIPTION,
+                'enrollment_reference' => $enrollment->reference,
+            ],
+            'existing_paid_query' => fn ($q) => $q->where('signup_intent_id', $enrollment->id),
+            'push_ussd' => true,
         ]);
+
+        return $payment;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    public function retryEnrollmentPayment(Enrollment $enrollment, array $data = []): PlatformPayment
+    {
+        $this->enrollmentService->assertUsableForPayment($enrollment);
+        $enrollment->refresh();
+
+        if (! $enrollment->canRetryPayment()) {
+            throw ValidationException::withMessages([
+                'enrollment' => ['No payment retries remain for this enrollment.'],
+            ]);
+        }
+
+        if ($enrollment->payments()->where('status', PlatformPayment::STATUS_PAID)->exists()) {
+            throw ValidationException::withMessages([
+                'enrollment' => ['Payment has already succeeded for this enrollment.'],
+            ]);
+        }
+
+        return $this->startEnrollmentPayment($enrollment, $data);
     }
 
     /**
@@ -109,8 +138,12 @@ class PlatformPaymentService
                     'amount' => $amount,
                 ],
             ],
-            'metadata' => ['source' => 'renewal'],
+            'metadata' => [
+                'source' => 'renewal',
+                'payment_purpose' => PlatformPayment::PURPOSE_SUBSCRIPTION_RENEWAL,
+            ],
             'existing_paid_query' => null,
+            'push_ussd' => true,
         ]);
     }
 
@@ -159,16 +192,18 @@ class PlatformPaymentService
             ],
             'metadata' => [
                 'source' => 'installation',
+                'payment_purpose' => PlatformPayment::PURPOSE_INSTALLATION_REQUEST,
                 'installation_request_id' => $request->id,
             ],
             'existing_paid_query' => fn ($q) => $q->where('installation_request_id', $request->id),
+            'push_ussd' => true,
         ]);
     }
 
-    public function findForIntentOrFail(SignupIntent $intent, int $paymentId): PlatformPayment
+    public function findForEnrollmentOrFail(Enrollment $enrollment, int $paymentId): PlatformPayment
     {
         return PlatformPayment::query()
-            ->where('signup_intent_id', $intent->id)
+            ->where('signup_intent_id', $enrollment->id)
             ->whereKey($paymentId)
             ->firstOrFail();
     }
@@ -189,13 +224,26 @@ class PlatformPaymentService
             ->firstOrFail();
     }
 
+    public function findByReferenceOrFail(string $reference): PlatformPayment
+    {
+        return PlatformPayment::query()
+            ->where('reference', $reference)
+            ->firstOrFail();
+    }
+
     public function markPaid(PlatformPayment $payment): PlatformPayment
     {
-        return DB::transaction(function () use ($payment) {
+        $payment = DB::transaction(function () use ($payment) {
             $payment = PlatformPayment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
 
             if ($payment->status === PlatformPayment::STATUS_PAID) {
                 return $payment;
+            }
+
+            if ($payment->status === PlatformPayment::STATUS_CANCELLED) {
+                throw ValidationException::withMessages([
+                    'payment' => ['Cancelled payments cannot be marked paid.'],
+                ]);
             }
 
             $payment->forceFill([
@@ -204,17 +252,6 @@ class PlatformPaymentService
                 'failed_at' => null,
                 'cancelled_at' => null,
             ])->save();
-
-            if ($payment->signup_intent_id) {
-                $intent = SignupIntent::query()
-                    ->whereKey($payment->signup_intent_id)
-                    ->lockForUpdate()
-                    ->first();
-
-                if ($intent && $intent->status === SignupIntent::STATUS_PENDING_PAYMENT) {
-                    $intent->forceFill(['status' => SignupIntent::STATUS_PAID])->save();
-                }
-            }
 
             if ($payment->type === PlatformPayment::TYPE_SUBSCRIPTION_RENEWAL && $payment->company_id) {
                 $company = Company::query()->whereKey($payment->company_id)->lockForUpdate()->first();
@@ -244,6 +281,108 @@ class PlatformPaymentService
 
             return $payment->fresh();
         });
+
+        if ($payment->isEnrollmentSubscription() && $payment->signup_intent_id) {
+            $this->enrollmentCompletionService->completeFromPayment($payment);
+            $payment->refresh();
+        }
+
+        return $payment;
+    }
+
+    public function markFailed(PlatformPayment $payment, ?string $reason = null): PlatformPayment
+    {
+        return DB::transaction(function () use ($payment, $reason) {
+            $payment = PlatformPayment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
+
+            if (in_array($payment->status, [PlatformPayment::STATUS_PAID, PlatformPayment::STATUS_FAILED], true)) {
+                return $payment;
+            }
+
+            $metadata = $payment->metadata ?? [];
+            if ($reason) {
+                $metadata['failure_reason'] = $reason;
+            }
+
+            $payment->forceFill([
+                'status' => PlatformPayment::STATUS_FAILED,
+                'failed_at' => now(),
+                'metadata' => $metadata,
+            ])->save();
+
+            if ($payment->signup_intent_id) {
+                $enrollment = Enrollment::query()
+                    ->whereKey($payment->signup_intent_id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($enrollment && ! $enrollment->isCompleted()) {
+                    $attempts = (int) $enrollment->failed_payment_attempts + 1;
+                    $enrollment->forceFill([
+                        'failed_payment_attempts' => $attempts,
+                        'status' => Enrollment::STATUS_PAYMENT_FAILED,
+                    ])->save();
+
+                    if ($attempts >= $enrollment->maxFailedAttempts()) {
+                        $this->enrollmentService->invalidateAfterFailedAttempts($enrollment->fresh());
+                    }
+                }
+            }
+
+            $this->auditLogger->log(
+                'platform_payment_failed',
+                null,
+                $payment->company_id,
+                PlatformPayment::class,
+                $payment->id,
+                newValues: ['reason' => $reason],
+            );
+
+            return $payment->fresh();
+        });
+    }
+
+    /**
+     * Trusted provider callback handler.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    public function handleProviderCallback(array $payload): PlatformPayment
+    {
+        $reference = (string) ($payload['reference'] ?? $payload['transaction_reference'] ?? '');
+        if ($reference === '') {
+            throw ValidationException::withMessages([
+                'reference' => ['Payment reference is required.'],
+            ]);
+        }
+
+        $payment = $this->findByReferenceOrFail($reference);
+
+        $expectedAmount = (int) round((float) $payment->amount);
+        if (isset($payload['amount']) && (int) round((float) $payload['amount']) !== $expectedAmount) {
+            throw ValidationException::withMessages([
+                'amount' => ['Callback amount does not match the payment.'],
+            ]);
+        }
+
+        if (isset($payload['currency']) && strtoupper((string) $payload['currency']) !== strtoupper((string) $payment->currency)) {
+            throw ValidationException::withMessages([
+                'currency' => ['Callback currency does not match the payment.'],
+            ]);
+        }
+
+        $status = strtolower((string) ($payload['status'] ?? ''));
+
+        return match ($status) {
+            'paid', 'success', 'successful', 'completed' => $this->markPaid($payment),
+            'failed', 'failure', 'cancelled', 'canceled' => $this->markFailed(
+                $payment,
+                (string) ($payload['failure_reason'] ?? $payload['message'] ?? 'Provider reported failure'),
+            ),
+            default => throw ValidationException::withMessages([
+                'status' => ['Unsupported payment status.'],
+            ]),
+        };
     }
 
     /**
@@ -277,8 +416,8 @@ class PlatformPaymentService
                 'initiated_at' => now(),
             ]);
 
-            if (config('platform.payment_auto_paid')) {
-                $this->markPaid($payment);
+            if ($payload['push_ussd'] ?? false) {
+                $this->paymentGateway->pushUssd($payment);
                 $payment->refresh();
             }
 
@@ -297,5 +436,11 @@ class PlatformPaymentService
 
             return $payment;
         });
+
+        if (config('platform.payment_auto_paid') && $payment->status === PlatformPayment::STATUS_PENDING) {
+            return $this->markPaid($payment);
+        }
+
+        return $payment;
     }
 }

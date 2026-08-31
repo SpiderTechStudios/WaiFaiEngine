@@ -324,28 +324,32 @@ use OpenApi\Attributes as OA;
     ]
 )]
 #[OA\Schema(
-    schema: 'SignupIntent',
+    schema: 'EnrollmentStatus',
     properties: [
-        new OA\Property(property: 'intent_id', type: 'string', format: 'uuid'),
-        new OA\Property(property: 'status', type: 'string', enum: ['pending_payment', 'paid', 'completed', 'expired', 'cancelled']),
+        new OA\Property(property: 'enrollment_reference', type: 'string', example: 'ENR-ABC123XYZ'),
+        new OA\Property(property: 'enrollment_status', type: 'string', enum: ['pending_payment', 'payment_failed', 'processing_payment', 'completed', 'expired', 'cancelled']),
+        new OA\Property(property: 'payment_status', type: 'string', nullable: true, enum: ['pending', 'paid', 'failed', 'cancelled']),
+        new OA\Property(property: 'amount', type: 'number', example: 10000),
+        new OA\Property(property: 'currency', type: 'string', example: 'TZS'),
         new OA\Property(property: 'expires_at', type: 'string', format: 'date-time'),
-        new OA\Property(property: 'pricing', properties: [
-            new OA\Property(property: 'subscription_fee', type: 'number', example: 10000),
-            new OA\Property(property: 'total_amount', type: 'number', example: 10000),
-            new OA\Property(property: 'currency', type: 'string', example: 'TZS'),
-        ], type: 'object'),
-        new OA\Property(property: 'business_name', type: 'string'),
-        new OA\Property(property: 'email', type: 'string', format: 'email'),
-        new OA\Property(property: 'phone', type: 'string'),
-        new OA\Property(property: 'payment_phone', type: 'string'),
-        new OA\Property(property: 'portal_subdomain', type: 'string'),
+        new OA\Property(property: 'remaining_attempts', type: 'integer', example: 3),
+        new OA\Property(property: 'payment_phone', type: 'string', example: '0686911251'),
+        new OA\Property(property: 'account_created', type: 'boolean', nullable: true),
+        new OA\Property(property: 'next_action', type: 'string', nullable: true, example: 'login'),
+        new OA\Property(property: 'redirect_to', type: 'string', nullable: true, example: '/login'),
+        new OA\Property(property: 'payment', properties: [
+            new OA\Property(property: 'status', type: 'string'),
+            new OA\Property(property: 'amount', type: 'number'),
+            new OA\Property(property: 'currency', type: 'string'),
+            new OA\Property(property: 'reference', type: 'string'),
+        ], type: 'object', nullable: true),
     ]
 )]
 #[OA\Schema(
     schema: 'PlatformPayment',
     properties: [
         new OA\Property(property: 'payment_id', type: 'integer', example: 1),
-        new OA\Property(property: 'reference', type: 'string', example: 'SUB-SIGNUP-ABC123XYZ'),
+        new OA\Property(property: 'reference', type: 'string', example: 'SUB-ENR-ABC123XYZ0'),
         new OA\Property(property: 'amount', type: 'number', example: 10000),
         new OA\Property(property: 'currency', type: 'string', example: 'TZS'),
         new OA\Property(property: 'payment_method', type: 'string', example: 'mpesa'),

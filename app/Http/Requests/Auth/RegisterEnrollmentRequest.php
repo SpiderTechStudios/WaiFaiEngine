@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Requests\Signup;
+namespace App\Http\Requests\Auth;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreSignupIntentRequest extends FormRequest
+class RegisterEnrollmentRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -25,8 +25,15 @@ class StoreSignupIntentRequest extends FormRequest
             'payment_phone' => ['required', 'string', 'max:50'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'address' => ['required', 'string'],
+            'domain_name' => [
+                'nullable',
+                'string',
+                'max:63',
+                'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
+            ],
+            // Accepted as alias during transition; prefer domain_name.
             'portal_subdomain' => [
-                'required',
+                'nullable',
                 'string',
                 'max:63',
                 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',

@@ -2,7 +2,7 @@
     "openapi": "3.0.0",
     "info": {
         "title": "WaiFai Engine API",
-        "description": "WaiFai Engine API v1: pay-first signup (monthly subscription), company billing/renewal, optional installation/router orders, captive portal, hotspot operations, staff, and platform administration. Envelope: { status, code, message, data }. Platform ops require an active subscription (except /billing/*).",
+        "description": "WaiFai Engine API v1: payment-gated enrollment (4-minute session, max 3 failed attempts), company billing/renewal, optional installation/router orders, captive portal, hotspot operations, staff, and platform administration. Envelope: { status, code, message, data }. Platform ops require an active subscription (except /billing/*).",
         "version": "1.0.0"
     },
     "servers": [
@@ -34,54 +34,13 @@
                 }
             }
         },
-        "/auth/register": {
-            "post": {
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Deprecated free registration (disabled unless PLATFORM_ALLOW_FREE_REGISTER=true)",
-                "description": "Public self-service registration is pay-first. Use POST /signup/intents, pay, then POST /signup/intents/{intent}/complete. This endpoint only works when PLATFORM_ALLOW_FREE_REGISTER is enabled.",
-                "operationId": "register",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/RegisterRequest"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "Registered with company (only when free register enabled)",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/AuthSessionCreatedResponse"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Disabled or validation error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ValidationErrorResponse"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/auth/login": {
             "post": {
                 "tags": [
                     "Auth"
                 ],
                 "summary": "Login",
+                "description": "Available only after successful enrollment payment and account creation.",
                 "operationId": "login",
                 "requestBody": {
                     "required": true,
@@ -849,6 +808,256 @@
                         "sanctum": []
                     }
                 ]
+            }
+        },
+        "/auth/register": {
+            "post": {
+                "tags": [
+                    "Enrollment"
+                ],
+                "summary": "Start pay-first registration enrollment",
+                "description": "Creates a temporary enrollment (no user/company yet), initiates the monthly platform subscription payment, and triggers a USSD/STK push to payment_phone. Enrollment expires after PLATFORM_ENROLLMENT_TTL_MINUTES (default 4). Account creation happens only after trusted payment confirmation.",
+                "operationId": "registerEnrollment",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RegisterEnrollmentRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Enrollment created and payment pending",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EnrollmentStatusResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/enrollments/{reference}/payment-status": {
+            "get": {
+                "tags": [
+                    "Enrollment"
+                ],
+                "summary": "Poll enrollment payment status",
+                "description": "Public polling endpoint for the payment waiting screen. Does not expose password hashes or provider secrets. Returns 410 when the enrollment has expired.",
+                "operationId": "enrollmentPaymentStatus",
+                "parameters": [
+                    {
+                        "name": "reference",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "ENR-ABC123XYZ"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Pending, failed (retryable), or completed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EnrollmentStatusResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Unknown reference",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    },
+                    "410": {
+                        "description": "Enrollment expired",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EnrollmentExpiredResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/enrollments/{reference}/retry-payment": {
+            "post": {
+                "tags": [
+                    "Enrollment"
+                ],
+                "summary": "Retry enrollment platform subscription payment",
+                "description": "Allowed while enrollment is not expired and fewer than 3 failed attempts have occurred. Optionally updates payment_phone. Does not create a new enrollment.",
+                "operationId": "retryEnrollmentPayment",
+                "parameters": [
+                    {
+                        "name": "reference",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "ENR-ABC123XYZ"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RetryEnrollmentPaymentRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "New payment request sent",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EnrollmentStatusResponse"
+                                }
+                            }
+                        }
+                    },
+                    "410": {
+                        "description": "Expired or max attempts reached",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EnrollmentExpiredResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/webhooks/platform-payments": {
+            "post": {
+                "tags": [
+                    "Enrollment"
+                ],
+                "summary": "Trusted platform payment provider callback",
+                "description": "Authoritative payment confirmation. Requires X-Platform-Payment-Secret when PLATFORM_PAYMENT_WEBHOOK_SECRET is set. On paid enrollment payments, creates user + company + active subscription. Idempotent under replay.",
+                "operationId": "platformPaymentWebhook",
+                "parameters": [
+                    {
+                        "name": "X-Platform-Payment-Secret",
+                        "in": "header",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "status"
+                                ],
+                                "properties": {
+                                    "reference": {
+                                        "type": "string",
+                                        "example": "SUB-ENR-ABC123XYZ0"
+                                    },
+                                    "transaction_reference": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "status": {
+                                        "description": "paid|failed|success|completed",
+                                        "type": "string",
+                                        "example": "paid"
+                                    },
+                                    "amount": {
+                                        "type": "number",
+                                        "example": 10000
+                                    },
+                                    "currency": {
+                                        "type": "string",
+                                        "example": "TZS"
+                                    },
+                                    "failure_reason": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Webhook processed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PlatformPaymentResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Invalid webhook secret",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
         "/installation-requests": {
@@ -5178,285 +5387,6 @@
                 }
             }
         },
-        "/signup/intents": {
-            "post": {
-                "tags": [
-                    "Signup"
-                ],
-                "summary": "Create pay-first signup intent (no user/company yet)",
-                "description": "Collects registration details and a payment phone. Backend charges only the first month subscription (config PLATFORM_SUBSCRIPTION_MONTHLY). No installation/router fee.",
-                "operationId": "createSignupIntent",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "first_name",
-                                    "last_name",
-                                    "business_name",
-                                    "email",
-                                    "phone",
-                                    "payment_phone",
-                                    "password",
-                                    "password_confirmation",
-                                    "address",
-                                    "portal_subdomain"
-                                ],
-                                "properties": {
-                                    "first_name": {
-                                        "type": "string",
-                                        "example": "Jane"
-                                    },
-                                    "last_name": {
-                                        "type": "string",
-                                        "example": "Doe"
-                                    },
-                                    "business_name": {
-                                        "type": "string",
-                                        "example": "ABC Internet Services"
-                                    },
-                                    "email": {
-                                        "type": "string",
-                                        "format": "email",
-                                        "example": "jane@example.com"
-                                    },
-                                    "phone": {
-                                        "description": "Contact phone",
-                                        "type": "string",
-                                        "example": "0700123456"
-                                    },
-                                    "payment_phone": {
-                                        "description": "Mobile money phone for first month payment",
-                                        "type": "string",
-                                        "example": "0711987654"
-                                    },
-                                    "password": {
-                                        "type": "string",
-                                        "format": "password"
-                                    },
-                                    "password_confirmation": {
-                                        "type": "string",
-                                        "format": "password"
-                                    },
-                                    "address": {
-                                        "type": "string"
-                                    },
-                                    "portal_subdomain": {
-                                        "type": "string",
-                                        "example": "abc-internet"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "Intent created",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SignupIntentCreatedResponse"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ValidationErrorResponse"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/signup/intents/{intent}/payments": {
-            "post": {
-                "tags": [
-                    "Signup"
-                ],
-                "summary": "Start first-month subscription mobile-money payment",
-                "operationId": "startSignupPayment",
-                "parameters": [
-                    {
-                        "name": "intent",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": false,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "payment_method": {
-                                        "type": "string",
-                                        "example": "mpesa"
-                                    },
-                                    "phone": {
-                                        "description": "Optional override; defaults to intent payment_phone",
-                                        "type": "string",
-                                        "nullable": true
-                                    },
-                                    "amount": {
-                                        "description": "Optional; must match first month fee if sent",
-                                        "type": "number",
-                                        "example": 10000,
-                                        "nullable": true
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "Payment initiated",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/PlatformPaymentCreatedResponse"
-                                }
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Intent not found",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/NotFoundResponse"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ValidationErrorResponse"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/signup/intents/{intent}/payments/{payment}": {
-            "get": {
-                "tags": [
-                    "Signup"
-                ],
-                "summary": "Poll signup payment status",
-                "operationId": "showSignupPayment",
-                "parameters": [
-                    {
-                        "name": "intent",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    },
-                    {
-                        "name": "payment",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Payment",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/PlatformPaymentResponse"
-                                }
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Not found",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/NotFoundResponse"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/signup/intents/{intent}/complete": {
-            "post": {
-                "tags": [
-                    "Signup"
-                ],
-                "summary": "Complete signup after payment is paid (creates user, company, token)",
-                "operationId": "completeSignup",
-                "parameters": [
-                    {
-                        "name": "intent",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "uuid"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Signup completed",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/AuthSessionCreatedResponse"
-                                }
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Intent not found",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/NotFoundResponse"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Payment not paid or intent invalid",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ValidationErrorResponse"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/staff": {
             "get": {
                 "tags": [
@@ -6914,13 +6844,14 @@
     },
     "components": {
         "schemas": {
-            "RegisterRequest": {
+            "RegisterEnrollmentRequest": {
                 "required": [
                     "first_name",
                     "last_name",
                     "business_name",
                     "email",
                     "phone",
+                    "payment_phone",
                     "password",
                     "password_confirmation",
                     "address"
@@ -6928,7 +6859,7 @@
                 "properties": {
                     "first_name": {
                         "type": "string",
-                        "example": "Jane",
+                        "example": "John",
                         "maxLength": 255
                     },
                     "last_name": {
@@ -6938,41 +6869,61 @@
                     },
                     "business_name": {
                         "type": "string",
-                        "example": "ABC Internet Services",
+                        "example": "John Internet Services",
                         "maxLength": 255
                     },
                     "email": {
                         "type": "string",
                         "format": "email",
-                        "example": "jane@example.com",
+                        "example": "john@example.com",
                         "maxLength": 255
                     },
                     "phone": {
                         "type": "string",
-                        "example": "0700123456",
+                        "example": "0686911251",
+                        "maxLength": 50
+                    },
+                    "payment_phone": {
+                        "type": "string",
+                        "example": "0686911251",
                         "maxLength": 50
                     },
                     "password": {
                         "type": "string",
                         "format": "password",
-                        "example": "password123",
+                        "example": "SecurePassword123",
                         "minLength": 8
                     },
                     "password_confirmation": {
                         "type": "string",
                         "format": "password",
-                        "example": "password123"
+                        "example": "SecurePassword123"
                     },
                     "address": {
                         "type": "string",
-                        "example": "Dar es Salaam, Tanzania"
+                        "example": "Dar es Salaam"
                     },
-                    "portal_subdomain": {
-                        "description": "Lowercase slug. Auto-assigned from business name when omitted.",
+                    "domain_name": {
+                        "description": "Optional portal subdomain. Temporarily reserved during enrollment.",
                         "type": "string",
-                        "example": "abc-internet",
+                        "example": "johnwifi",
                         "nullable": true,
                         "maxLength": 63
+                    }
+                },
+                "type": "object"
+            },
+            "RetryEnrollmentPaymentRequest": {
+                "properties": {
+                    "payment_phone": {
+                        "type": "string",
+                        "example": "0686911251",
+                        "nullable": true
+                    },
+                    "payment_method": {
+                        "type": "string",
+                        "example": "mpesa",
+                        "nullable": true
                     }
                 },
                 "type": "object"
@@ -8174,58 +8125,84 @@
                 },
                 "type": "object"
             },
-            "SignupIntent": {
+            "EnrollmentStatus": {
                 "properties": {
-                    "intent_id": {
+                    "enrollment_reference": {
                         "type": "string",
-                        "format": "uuid"
+                        "example": "ENR-ABC123XYZ"
                     },
-                    "status": {
+                    "enrollment_status": {
                         "type": "string",
                         "enum": [
                             "pending_payment",
-                            "paid",
+                            "payment_failed",
+                            "processing_payment",
                             "completed",
                             "expired",
                             "cancelled"
                         ]
                     },
+                    "payment_status": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                            "pending",
+                            "paid",
+                            "failed",
+                            "cancelled"
+                        ]
+                    },
+                    "amount": {
+                        "type": "number",
+                        "example": 10000
+                    },
+                    "currency": {
+                        "type": "string",
+                        "example": "TZS"
+                    },
                     "expires_at": {
                         "type": "string",
                         "format": "date-time"
                     },
-                    "pricing": {
-                        "properties": {
-                            "subscription_fee": {
-                                "type": "number",
-                                "example": 10000
-                            },
-                            "total_amount": {
-                                "type": "number",
-                                "example": 10000
-                            },
-                            "currency": {
-                                "type": "string",
-                                "example": "TZS"
-                            }
-                        },
-                        "type": "object"
-                    },
-                    "business_name": {
-                        "type": "string"
-                    },
-                    "email": {
-                        "type": "string",
-                        "format": "email"
-                    },
-                    "phone": {
-                        "type": "string"
+                    "remaining_attempts": {
+                        "type": "integer",
+                        "example": 3
                     },
                     "payment_phone": {
-                        "type": "string"
+                        "type": "string",
+                        "example": "0686911251"
                     },
-                    "portal_subdomain": {
-                        "type": "string"
+                    "account_created": {
+                        "type": "boolean",
+                        "nullable": true
+                    },
+                    "next_action": {
+                        "type": "string",
+                        "example": "login",
+                        "nullable": true
+                    },
+                    "redirect_to": {
+                        "type": "string",
+                        "example": "/login",
+                        "nullable": true
+                    },
+                    "payment": {
+                        "properties": {
+                            "status": {
+                                "type": "string"
+                            },
+                            "amount": {
+                                "type": "number"
+                            },
+                            "currency": {
+                                "type": "string"
+                            },
+                            "reference": {
+                                "type": "string"
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
                     }
                 },
                 "type": "object"
@@ -8238,7 +8215,7 @@
                     },
                     "reference": {
                         "type": "string",
-                        "example": "SUB-SIGNUP-ABC123XYZ"
+                        "example": "SUB-ENR-ABC123XYZ0"
                     },
                     "amount": {
                         "type": "number",
@@ -9586,7 +9563,7 @@
                 },
                 "type": "object"
             },
-            "SignupIntentCreatedResponse": {
+            "EnrollmentStatusResponse": {
                 "properties": {
                     "status": {
                         "type": "boolean",
@@ -9594,14 +9571,44 @@
                     },
                     "code": {
                         "type": "integer",
-                        "example": 201
+                        "example": 200
                     },
                     "message": {
                         "type": "string",
-                        "example": "Signup intent created"
+                        "example": "Waiting for payment confirmation."
                     },
                     "data": {
-                        "$ref": "#/components/schemas/SignupIntent"
+                        "$ref": "#/components/schemas/EnrollmentStatus"
+                    }
+                },
+                "type": "object"
+            },
+            "EnrollmentExpiredResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 410
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "The registration payment session has expired."
+                    },
+                    "data": {
+                        "properties": {
+                            "enrollment_reference": {
+                                "type": "string",
+                                "example": "ENR-ABC123XYZ"
+                            },
+                            "enrollment_status": {
+                                "type": "string",
+                                "example": "expired"
+                            }
+                        },
+                        "type": "object"
                     }
                 },
                 "type": "object"
@@ -9618,7 +9625,7 @@
                     },
                     "message": {
                         "type": "string",
-                        "example": "Signup payment retrieved"
+                        "example": "Payment webhook processed"
                     },
                     "data": {
                         "$ref": "#/components/schemas/PlatformPayment"
@@ -9638,7 +9645,7 @@
                     },
                     "message": {
                         "type": "string",
-                        "example": "Signup payment initiated"
+                        "example": "Payment initiated"
                     },
                     "data": {
                         "$ref": "#/components/schemas/PlatformPayment"
@@ -10326,11 +10333,11 @@
     "tags": [
         {
             "name": "Auth",
-            "description": "Registration, login, session, and password"
+            "description": "Login, session, password, and email verification"
         },
         {
-            "name": "Signup",
-            "description": "Pay-first public signup (intent → payment → complete)"
+            "name": "Enrollment",
+            "description": "Pay-first registration: enroll → USSD payment → poll/retry → account on webhook"
         },
         {
             "name": "Billing",

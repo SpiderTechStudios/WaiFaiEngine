@@ -23,7 +23,9 @@ class DocumentationTest extends TestCase
 
         $this->assertContains('/auth/login', $paths);
         $this->assertContains('/auth/register', $paths);
-        $this->assertContains('/signup/intents', $paths);
+        $this->assertContains('/auth/enrollments/{reference}/payment-status', $paths);
+        $this->assertContains('/auth/enrollments/{reference}/retry-payment', $paths);
+        $this->assertContains('/webhooks/platform-payments', $paths);
         $this->assertContains('/billing/subscription', $paths);
         $this->assertContains('/billing/subscription/payments', $paths);
         $this->assertContains('/billing/subscription/payments/{payment}', $paths);
@@ -33,7 +35,8 @@ class DocumentationTest extends TestCase
         $this->assertContains('/admin/installation-requests', $paths);
         $this->assertContains('/admin/installation-requests/{installationRequest}/fulfillment', $paths);
         $this->assertContains('/admin/installation-requests/{installationRequest}/updates', $paths);
-        $this->assertContains('/signup/intents/{intent}/complete', $paths);
+        $this->assertNotContains('/signup/intents', $paths);
+        $this->assertNotContains('/signup/intents/{intent}/complete', $paths);
         $this->assertContains('/auth/admin/register', $paths);
         $this->assertContains('/auth/me', $paths);
         $this->assertContains('/auth/forgot-password', $paths);

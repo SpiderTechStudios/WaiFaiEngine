@@ -1,14 +1,24 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Auth\EmailVerificationController;
+use App\Http\Controllers\Api\V1\Auth\EnrollmentController;
 use App\Http\Controllers\Api\V1\Auth\PasswordController;
 use App\Http\Controllers\Api\V1\Auth\RegisterAdminController;
 use App\Http\Controllers\Api\V1\Auth\SessionController;
+use App\Http\Controllers\Api\V1\Webhooks\PlatformPaymentWebhookController;
 use Illuminate\Support\Facades\Route;
 
-
 Route::get('/', [SessionController::class, 'defaultPage'])->name('login');
-Route::post('/auth/register', [SessionController::class, 'register'])->middleware('throttle:10,1');
+
+Route::post('/auth/register', [EnrollmentController::class, 'register'])->middleware('throttle:10,1');
+Route::get('/auth/enrollments/{reference}/payment-status', [EnrollmentController::class, 'paymentStatus'])
+    ->middleware('throttle:60,1');
+Route::post('/auth/enrollments/{reference}/retry-payment', [EnrollmentController::class, 'retryPayment'])
+    ->middleware('throttle:20,1');
+
+Route::post('/webhooks/platform-payments', PlatformPaymentWebhookController::class)
+    ->middleware('throttle:120,1');
+
 Route::post('/auth/login', [SessionController::class, 'login'])->middleware('throttle:5,1');
 
 Route::post('/auth/forgot-password', [PasswordController::class, 'forgot'])->middleware('throttle:5,1');

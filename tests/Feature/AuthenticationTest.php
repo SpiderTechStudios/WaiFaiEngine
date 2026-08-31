@@ -20,7 +20,7 @@ class AuthenticationTest extends TestCase
         $result = $this->completePaidSignup([
             'business_name' => 'ABC Internet',
             'email' => 'jane@example.com',
-            'portal_subdomain' => 'abc',
+            'domain_name' => 'abc',
         ]);
 
         $result['response']
@@ -43,33 +43,30 @@ class AuthenticationTest extends TestCase
         Notification::assertSentTo(User::query()->where('email', 'jane@example.com')->first(), VerifyEmailNotification::class);
     }
 
-    public function test_direct_register_is_disabled_by_default(): void
+    public function test_register_creates_pending_enrollment_not_account(): void
     {
-        $this->postJson('/api/v1/auth/register', [
-            'business_name' => 'ABC Internet',
-            'first_name' => 'Jane',
-            'last_name' => 'Doe',
-            'email' => 'jane@example.com',
-            'phone' => '0700123456',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
-            'address' => 'Dar es Salaam, Tanzania',
-        ])->assertStatus(422)
-            ->assertJsonPath('data.register.0', 'Direct registration is disabled. Create a signup intent, complete payment, then call POST /api/v1/signup/intents/{intent}/complete.');
+        $this->postJson('/api/v1/auth/register', $this->enrollmentPayload([
+            'payment_phone' => '0700123456',
+        ]))->assertCreated()
+            ->assertJsonPath('data.enrollment_status', 'pending_payment')
+            ->assertJsonPath('data.payment_status', 'pending');
+
+        $this->assertDatabaseMissing('users', ['email' => 'jane@example.com']);
+        $this->assertDatabaseCount('companies', 0);
     }
 
     public function test_duplicate_email_is_rejected(): void
     {
         $this->createUser(['email' => 'jane@example.com']);
 
-        $this->postJson('/api/v1/signup/intents', $this->signupIntentPayload([
+        $this->postJson('/api/v1/auth/register', $this->enrollmentPayload([
             'email' => 'jane@example.com',
         ]))->assertStatus(422);
     }
 
     public function test_invalid_password_is_rejected(): void
     {
-        $this->postJson('/api/v1/signup/intents', $this->signupIntentPayload([
+        $this->postJson('/api/v1/auth/register', $this->enrollmentPayload([
             'password' => 'short',
             'password_confirmation' => 'short',
         ]))->assertStatus(422);

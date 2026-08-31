@@ -3,9 +3,12 @@
 namespace Tests;
 
 use App\Models\Company;
+use App\Models\Enrollment;
+use App\Models\PlatformPayment;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\UserCompany;
+use App\Services\PlatformPaymentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 abstract class TestCase extends \Illuminate\Foundation\Testing\TestCase
@@ -85,7 +88,7 @@ abstract class TestCase extends \Illuminate\Foundation\Testing\TestCase
      * @param  array<string, mixed>  $overrides
      * @return array<string, mixed>
      */
-    protected function signupIntentPayload(array $overrides = []): array
+    protected function enrollmentPayload(array $overrides = []): array
     {
         return array_merge([
             'business_name' => 'ABC Internet',
@@ -97,40 +100,65 @@ abstract class TestCase extends \Illuminate\Foundation\Testing\TestCase
             'password' => 'password123',
             'password_confirmation' => 'password123',
             'address' => 'Dar es Salaam, Tanzania',
-            'portal_subdomain' => 'abc-internet',
+            'domain_name' => 'abc-internet',
         ], $overrides);
     }
 
+    /** @deprecated Use enrollmentPayload() */
+    protected function signupIntentPayload(array $overrides = []): array
+    {
+        $payload = $this->enrollmentPayload($overrides);
+
+        if (array_key_exists('portal_subdomain', $overrides) && ! array_key_exists('domain_name', $overrides)) {
+            $payload['domain_name'] = $overrides['portal_subdomain'];
+            unset($payload['portal_subdomain']);
+        }
+
+        return $payload;
+    }
+
     /**
+     * Register → mark enrollment payment paid (trusted path) → login.
+     *
      * @param  array<string, mixed>  $overrides
-     * @return array{intent_id: string, payment_id: int, token: string, response: \Illuminate\Testing\TestResponse}
+     * @return array{enrollment_reference: string, enrollment_id: string, payment_id: int, token: string, response: \Illuminate\Testing\TestResponse}
      */
     protected function completePaidSignup(array $overrides = []): array
     {
-        $payload = $this->signupIntentPayload($overrides);
-        $subscription = (int) config('platform.subscription_monthly');
+        $payload = $this->enrollmentPayload($overrides);
 
-        $intentId = $this->postJson('/api/v1/signup/intents', $payload)
-            ->assertCreated()
-            ->json('data.intent_id');
+        if (array_key_exists('portal_subdomain', $overrides) && ! array_key_exists('domain_name', $overrides)) {
+            $payload['domain_name'] = $overrides['portal_subdomain'];
+            unset($payload['portal_subdomain']);
+        }
 
-        $paymentId = $this->postJson('/api/v1/signup/intents/'.$intentId.'/payments', [
-            'payment_method' => 'mpesa',
-            'amount' => $subscription,
-        ])->assertCreated()->json('data.payment_id');
+        $register = $this->postJson('/api/v1/auth/register', $payload)->assertCreated();
+        $reference = $register->json('data.enrollment_reference');
 
-        app(\App\Services\PlatformPaymentService::class)->markPaid(
-            \App\Models\PlatformPayment::query()->findOrFail($paymentId)
+        $enrollment = Enrollment::query()->where('reference', $reference)->firstOrFail();
+        $payment = $enrollment->payments()->latest('id')->firstOrFail();
+
+        app(PlatformPaymentService::class)->markPaid(
+            PlatformPayment::query()->findOrFail($payment->id)
         );
 
-        $response = $this->postJson('/api/v1/signup/intents/'.$intentId.'/complete')
-            ->assertCreated();
+        $this->getJson('/api/v1/auth/enrollments/'.$reference.'/payment-status')
+            ->assertOk()
+            ->assertJsonPath('data.enrollment_status', 'completed')
+            ->assertJsonPath('data.account_created', true);
+
+        $login = $this->postJson('/api/v1/auth/login', [
+            'email' => $payload['email'],
+            'password' => $payload['password'],
+        ])->assertOk();
 
         return [
-            'intent_id' => $intentId,
-            'payment_id' => $paymentId,
-            'token' => $response->json('data.token'),
-            'response' => $response,
+            'enrollment_reference' => $reference,
+            'enrollment_id' => $enrollment->id,
+            'intent_id' => $enrollment->id,
+            'payment_id' => $payment->id,
+            'token' => $login->json('data.token'),
+            'response' => $login,
         ];
     }
 }

@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\V1\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
-use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Requests\Auth\SwitchCompanyRequest;
 use App\Http\Resources\AuthSessionResource;
 use App\Models\Company;
@@ -16,13 +15,6 @@ class SessionController extends Controller
 {
     public function __construct(private AuthService $authService)
     {
-    }
-
-    public function register(RegisterRequest $request): JsonResponse
-    {
-        $payload = $this->authService->register($request->validated());
-
-        return $this->session($payload, 'Registered successfully', 201);
     }
 
     public function login(LoginRequest $request): JsonResponse
