@@ -40,4 +40,12 @@ return [
         'timeout' => (int) env('RUIJIE_CLOUD_TIMEOUT', 15),
     ],
 
+    'flutterwave' => [
+        'public_key' => env('FLUTTERWAVE_PUBLIC_KEY', 'FLWPUBK-274a977b8810f00b9992d4ff70846b7b-X'),
+        'secret_key' => env('FLUTTERWAVE_SECRET_KEY'),
+        'encryption_key' => env('FLUTTERWAVE_ENCRYPTION_KEY'),
+        'webhook_secret' => env('FLUTTERWAVE_WEBHOOK_SECRET'),
+        'base_url' => env('FLUTTERWAVE_BASE_URL', 'https://api.flutterwave.com'),
+    ],
+
 ];

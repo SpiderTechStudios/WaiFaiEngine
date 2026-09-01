@@ -68,6 +68,6 @@ abstract class Controller
 
     public static function defaultErrorPage()
     {
-        return self::error([], 'Insufficient permissions', 401);
+        return self::error([], 'Not Authorized', 401);
     }
 }

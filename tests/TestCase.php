@@ -15,6 +15,13 @@ abstract class TestCase extends \Illuminate\Foundation\Testing\TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->seed(\Database\Seeders\PaymentProviderSeeder::class);
+    }
+
     protected function tearDown(): void
     {
         $this->app['auth']->forgetGuards();

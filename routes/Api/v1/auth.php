@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\Auth\EnrollmentController;
 use App\Http\Controllers\Api\V1\Auth\PasswordController;
 use App\Http\Controllers\Api\V1\Auth\RegisterAdminController;
 use App\Http\Controllers\Api\V1\Auth\SessionController;
+use App\Http\Controllers\Api\V1\Webhooks\PaymentProviderWebhookController;
 use App\Http\Controllers\Api\V1\Webhooks\PlatformPaymentWebhookController;
 use Illuminate\Support\Facades\Route;
 
@@ -16,6 +17,12 @@ Route::get('/auth/enrollments/{reference}/payment-status', [EnrollmentController
 Route::post('/auth/enrollments/{reference}/retry-payment', [EnrollmentController::class, 'retryPayment'])
     ->middleware('throttle:20,1');
 
+Route::post('/webhooks/payments/{provider}', [PaymentProviderWebhookController::class, 'payments'])
+    ->middleware('throttle:120,1');
+Route::post('/webhooks/payouts/{provider}', [PaymentProviderWebhookController::class, 'payouts'])
+    ->middleware('throttle:120,1');
+
+// Legacy bridge (prefer /webhooks/payments/{provider})
 Route::post('/webhooks/platform-payments', PlatformPaymentWebhookController::class)
     ->middleware('throttle:120,1');
 

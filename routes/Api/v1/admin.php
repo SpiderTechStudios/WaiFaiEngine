@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\Admin\AdminRouterController;
 use App\Http\Controllers\Api\V1\Operations\PaymentController;
 use App\Http\Controllers\Api\V1\Operations\WithdrawalController;
 use App\Http\Controllers\Api\V1\SuperAdmin\CompanyController as SuperAdminCompanyController;
+use App\Http\Controllers\Api\V1\SuperAdmin\PaymentProviderController;
 use App\Http\Controllers\Api\V1\SuperAdmin\UserController as SuperAdminUserController;
 use Illuminate\Support\Facades\Route;
 
@@ -38,4 +39,14 @@ Route::prefix('superadmin')->middleware(['auth:sanctum', 'active.user', 'superad
 
     Route::get('/withdrawals', [WithdrawalController::class, 'adminGetWithdrawals']);
     Route::get('/withdrawals/{withdrawal}', [WithdrawalController::class, 'adminGetWithdrawal']);
+
+    Route::get('/payment-providers', [PaymentProviderController::class, 'index']);
+    Route::post('/payment-providers', [PaymentProviderController::class, 'store']);
+    Route::get('/payment-providers/{paymentProvider}', [PaymentProviderController::class, 'show']);
+    Route::patch('/payment-providers/{paymentProvider}', [PaymentProviderController::class, 'update']);
+    Route::delete('/payment-providers/{paymentProvider}', [PaymentProviderController::class, 'destroy']);
+    Route::post('/payment-providers/{paymentProvider}/enable', [PaymentProviderController::class, 'enable']);
+    Route::post('/payment-providers/{paymentProvider}/disable', [PaymentProviderController::class, 'disable']);
+    Route::post('/payment-providers/{paymentProvider}/default-payments', [PaymentProviderController::class, 'setDefaultPayments']);
+    Route::post('/payment-providers/{paymentProvider}/default-payouts', [PaymentProviderController::class, 'setDefaultPayouts']);
 });

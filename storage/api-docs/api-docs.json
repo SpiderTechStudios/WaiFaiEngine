@@ -4367,6 +4367,448 @@
                 ]
             }
         },
+        "/superadmin/payment-providers": {
+            "get": {
+                "tags": [
+                    "Payment Providers"
+                ],
+                "summary": "List payment providers",
+                "operationId": "listPaymentProviders",
+                "responses": {
+                    "200": {
+                        "description": "Providers",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaymentProviderListResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Payment Providers"
+                ],
+                "summary": "Create a payment provider",
+                "operationId": "createPaymentProvider",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StorePaymentProviderRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaymentProviderResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/superadmin/payment-providers/{paymentProvider}": {
+            "get": {
+                "tags": [
+                    "Payment Providers"
+                ],
+                "summary": "Show payment provider (secrets never returned)",
+                "operationId": "showPaymentProvider",
+                "parameters": [
+                    {
+                        "name": "paymentProvider",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "flutterwave"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Provider",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaymentProviderResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Payment Providers"
+                ],
+                "summary": "Delete provider or deactivate when history exists",
+                "operationId": "deletePaymentProvider",
+                "parameters": [
+                    {
+                        "name": "paymentProvider",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Deleted/deactivated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MessageResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Payment Providers"
+                ],
+                "summary": "Update payment provider configuration",
+                "operationId": "updatePaymentProvider",
+                "parameters": [
+                    {
+                        "name": "paymentProvider",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdatePaymentProviderRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaymentProviderResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/superadmin/payment-providers/{paymentProvider}/enable": {
+            "post": {
+                "tags": [
+                    "Payment Providers"
+                ],
+                "operationId": "enablePaymentProvider",
+                "parameters": [
+                    {
+                        "name": "paymentProvider",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Enabled",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaymentProviderResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/superadmin/payment-providers/{paymentProvider}/disable": {
+            "post": {
+                "tags": [
+                    "Payment Providers"
+                ],
+                "operationId": "disablePaymentProvider",
+                "parameters": [
+                    {
+                        "name": "paymentProvider",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Disabled",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaymentProviderResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/superadmin/payment-providers/{paymentProvider}/default-payments": {
+            "post": {
+                "tags": [
+                    "Payment Providers"
+                ],
+                "summary": "Set default collections provider (unsets previous default)",
+                "operationId": "setDefaultPaymentProvider",
+                "parameters": [
+                    {
+                        "name": "paymentProvider",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Default updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaymentProviderResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/superadmin/payment-providers/{paymentProvider}/default-payouts": {
+            "post": {
+                "tags": [
+                    "Payment Providers"
+                ],
+                "summary": "Set default payouts provider (unsets previous default)",
+                "operationId": "setDefaultPayoutProvider",
+                "parameters": [
+                    {
+                        "name": "paymentProvider",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Default updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaymentProviderResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/webhooks/payments/{provider}": {
+            "post": {
+                "tags": [
+                    "Payment Webhooks"
+                ],
+                "summary": "Public provider collection webhook (signature-verified)",
+                "description": "No Sanctum auth. Provider-specific validation (e.g. Flutterwave verif-hash). Resolves payment intent by tx_ref/reference and routes by purpose.",
+                "operationId": "paymentProviderCollectionWebhook",
+                "parameters": [
+                    {
+                        "name": "provider",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "flutterwave"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Processed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PlatformPaymentResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid signature",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/webhooks/payouts/{provider}": {
+            "post": {
+                "tags": [
+                    "Payment Webhooks"
+                ],
+                "summary": "Public provider payout webhook (signature-verified)",
+                "operationId": "paymentProviderPayoutWebhook",
+                "parameters": [
+                    {
+                        "name": "provider",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "flutterwave"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Accepted",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MessageResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid signature",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/admin/routers": {
             "get": {
                 "tags": [
@@ -8215,7 +8657,19 @@
                     },
                     "reference": {
                         "type": "string",
-                        "example": "SUB-ENR-ABC123XYZ0"
+                        "example": "PAY-ABC123XYZ0"
+                    },
+                    "purpose": {
+                        "type": "string",
+                        "example": "platform_subscription"
+                    },
+                    "provider": {
+                        "type": "string",
+                        "example": "flutterwave"
+                    },
+                    "direction": {
+                        "type": "string",
+                        "example": "collection"
                     },
                     "amount": {
                         "type": "number",
@@ -8227,7 +8681,7 @@
                     },
                     "payment_method": {
                         "type": "string",
-                        "example": "mpesa"
+                        "example": "mobile_money"
                     },
                     "status": {
                         "type": "string",
@@ -8235,7 +8689,8 @@
                             "pending",
                             "paid",
                             "failed",
-                            "cancelled"
+                            "cancelled",
+                            "expired"
                         ]
                     },
                     "line_items": {
@@ -8253,6 +8708,151 @@
                     "initiated_at": {
                         "type": "string",
                         "format": "date-time",
+                        "nullable": true
+                    },
+                    "expires_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "PaymentProvider": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Flutterwave"
+                    },
+                    "slug": {
+                        "type": "string",
+                        "example": "flutterwave"
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "supports_payments": {
+                        "type": "boolean"
+                    },
+                    "supports_payouts": {
+                        "type": "boolean"
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    },
+                    "is_default_for_payments": {
+                        "type": "boolean"
+                    },
+                    "is_default_for_payouts": {
+                        "type": "boolean"
+                    },
+                    "credentials": {
+                        "description": "Public-safe credential flags only (no secrets)",
+                        "type": "object"
+                    },
+                    "settings": {
+                        "type": "object",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "StorePaymentProviderRequest": {
+                "required": [
+                    "name"
+                ],
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "example": "Flutterwave"
+                    },
+                    "slug": {
+                        "type": "string",
+                        "example": "flutterwave"
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "supports_payments": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "supports_payouts": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "is_default_for_payments": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "is_default_for_payouts": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "credentials": {
+                        "properties": {
+                            "public_key": {
+                                "type": "string",
+                                "example": "FLWPUBK-***"
+                            },
+                            "secret_key": {
+                                "type": "string",
+                                "example": "FLWSECK-***"
+                            },
+                            "encryption_key": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "webhook_secret": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "api_base_url": {
+                                "type": "string",
+                                "example": "https://api.flutterwave.com"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "settings": {
+                        "type": "object",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "UpdatePaymentProviderRequest": {
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "supports_payments": {
+                        "type": "boolean"
+                    },
+                    "supports_payouts": {
+                        "type": "boolean"
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    },
+                    "credentials": {
+                        "type": "object"
+                    },
+                    "settings": {
+                        "type": "object",
                         "nullable": true
                     }
                 },
@@ -9783,6 +10383,49 @@
                 },
                 "type": "object"
             },
+            "PaymentProviderResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Payment provider retrieved"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/PaymentProvider"
+                    }
+                },
+                "type": "object"
+            },
+            "PaymentProviderListResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Payment providers retrieved"
+                    },
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PaymentProvider"
+                        }
+                    }
+                },
+                "type": "object"
+            },
             "ErrorResponse": {
                 "properties": {
                     "status": {
@@ -10337,7 +10980,15 @@
         },
         {
             "name": "Enrollment",
-            "description": "Pay-first registration: enroll → USSD payment → poll/retry → account on webhook"
+            "description": "Pay-first registration: enroll → provider payment → poll/retry → account on verified webhook"
+        },
+        {
+            "name": "Payment Providers",
+            "description": "Superadmin-managed collection/payout providers"
+        },
+        {
+            "name": "Payment Webhooks",
+            "description": "Public provider callbacks with signature verification"
         },
         {
             "name": "Billing",

@@ -349,14 +349,68 @@ use OpenApi\Attributes as OA;
     schema: 'PlatformPayment',
     properties: [
         new OA\Property(property: 'payment_id', type: 'integer', example: 1),
-        new OA\Property(property: 'reference', type: 'string', example: 'SUB-ENR-ABC123XYZ0'),
+        new OA\Property(property: 'reference', type: 'string', example: 'PAY-ABC123XYZ0'),
+        new OA\Property(property: 'purpose', type: 'string', example: 'platform_subscription'),
+        new OA\Property(property: 'provider', type: 'string', example: 'flutterwave'),
+        new OA\Property(property: 'direction', type: 'string', example: 'collection'),
         new OA\Property(property: 'amount', type: 'number', example: 10000),
         new OA\Property(property: 'currency', type: 'string', example: 'TZS'),
-        new OA\Property(property: 'payment_method', type: 'string', example: 'mpesa'),
-        new OA\Property(property: 'status', type: 'string', enum: ['pending', 'paid', 'failed', 'cancelled']),
+        new OA\Property(property: 'payment_method', type: 'string', example: 'mobile_money'),
+        new OA\Property(property: 'status', type: 'string', enum: ['pending', 'paid', 'failed', 'cancelled', 'expired']),
         new OA\Property(property: 'line_items', type: 'array', items: new OA\Items(type: 'object'), nullable: true),
         new OA\Property(property: 'paid_at', type: 'string', format: 'date-time', nullable: true),
         new OA\Property(property: 'initiated_at', type: 'string', format: 'date-time', nullable: true),
+        new OA\Property(property: 'expires_at', type: 'string', format: 'date-time', nullable: true),
+    ]
+)]
+#[OA\Schema(
+    schema: 'PaymentProvider',
+    properties: [
+        new OA\Property(property: 'id', type: 'integer'),
+        new OA\Property(property: 'name', type: 'string', example: 'Flutterwave'),
+        new OA\Property(property: 'slug', type: 'string', example: 'flutterwave'),
+        new OA\Property(property: 'description', type: 'string', nullable: true),
+        new OA\Property(property: 'supports_payments', type: 'boolean'),
+        new OA\Property(property: 'supports_payouts', type: 'boolean'),
+        new OA\Property(property: 'is_active', type: 'boolean'),
+        new OA\Property(property: 'is_default_for_payments', type: 'boolean'),
+        new OA\Property(property: 'is_default_for_payouts', type: 'boolean'),
+        new OA\Property(property: 'credentials', type: 'object', description: 'Public-safe credential flags only (no secrets)'),
+        new OA\Property(property: 'settings', type: 'object', nullable: true),
+    ]
+)]
+#[OA\Schema(
+    schema: 'StorePaymentProviderRequest',
+    required: ['name'],
+    properties: [
+        new OA\Property(property: 'name', type: 'string', example: 'Flutterwave'),
+        new OA\Property(property: 'slug', type: 'string', example: 'flutterwave'),
+        new OA\Property(property: 'description', type: 'string', nullable: true),
+        new OA\Property(property: 'supports_payments', type: 'boolean', example: true),
+        new OA\Property(property: 'supports_payouts', type: 'boolean', example: true),
+        new OA\Property(property: 'is_active', type: 'boolean', example: true),
+        new OA\Property(property: 'is_default_for_payments', type: 'boolean', example: true),
+        new OA\Property(property: 'is_default_for_payouts', type: 'boolean', example: false),
+        new OA\Property(property: 'credentials', properties: [
+            new OA\Property(property: 'public_key', type: 'string', example: 'FLWPUBK-***'),
+            new OA\Property(property: 'secret_key', type: 'string', example: 'FLWSECK-***'),
+            new OA\Property(property: 'encryption_key', type: 'string', nullable: true),
+            new OA\Property(property: 'webhook_secret', type: 'string', nullable: true),
+            new OA\Property(property: 'api_base_url', type: 'string', example: 'https://api.flutterwave.com'),
+        ], type: 'object'),
+        new OA\Property(property: 'settings', type: 'object', nullable: true),
+    ]
+)]
+#[OA\Schema(
+    schema: 'UpdatePaymentProviderRequest',
+    properties: [
+        new OA\Property(property: 'name', type: 'string'),
+        new OA\Property(property: 'description', type: 'string', nullable: true),
+        new OA\Property(property: 'supports_payments', type: 'boolean'),
+        new OA\Property(property: 'supports_payouts', type: 'boolean'),
+        new OA\Property(property: 'is_active', type: 'boolean'),
+        new OA\Property(property: 'credentials', type: 'object'),
+        new OA\Property(property: 'settings', type: 'object', nullable: true),
     ]
 )]
 #[OA\Schema(

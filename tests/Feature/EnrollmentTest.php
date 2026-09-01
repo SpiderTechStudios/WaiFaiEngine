@@ -214,8 +214,6 @@ class EnrollmentTest extends TestCase
 
     public function test_webhook_marks_payment_and_completes_enrollment(): void
     {
-        config(['platform.payment_webhook_secret' => 'test-secret']);
-
         $reference = $this->postJson('/api/v1/auth/register', $this->enrollmentPayload())
             ->assertCreated()
             ->json('data.enrollment_reference');
@@ -223,13 +221,13 @@ class EnrollmentTest extends TestCase
         $payment = Enrollment::query()->where('reference', $reference)->firstOrFail()
             ->payments()->latest('id')->firstOrFail();
 
-        $this->postJson('/api/v1/webhooks/platform-payments', [
+        $this->postJson('/api/v1/webhooks/payments/stub', [
             'reference' => $payment->reference,
             'status' => 'paid',
             'amount' => 10000,
             'currency' => 'TZS',
         ], [
-            'X-Platform-Payment-Secret' => 'test-secret',
+            'X-Platform-Payment-Secret' => 'stub-webhook-secret',
         ])->assertOk();
 
         $this->assertDatabaseHas('users', ['email' => 'jane@example.com']);

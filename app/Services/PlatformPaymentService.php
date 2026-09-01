@@ -5,7 +5,9 @@ namespace App\Services;
 use App\Models\Company;
 use App\Models\Enrollment;
 use App\Models\InstallationRequest;
+use App\Models\PaymentProvider;
 use App\Models\PlatformPayment;
+use App\Payments\PaymentProviderManager;
 use App\Support\PlatformPricing;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -19,7 +21,7 @@ class PlatformPaymentService
         private EnrollmentCompletionService $enrollmentCompletionService,
         private SubscriptionService $subscriptionService,
         private InstallationRequestService $installationRequestService,
-        private PlatformPaymentGateway $paymentGateway,
+        private PaymentProviderManager $providerManager,
     ) {}
 
     /**
@@ -58,33 +60,32 @@ class PlatformPaymentService
 
         $enrollment->forceFill(['status' => Enrollment::STATUS_PENDING_PAYMENT])->save();
 
-        $lineItems = [
-            [
-                'code' => 'platform_subscription',
-                'label' => 'WaiFai Monthly Platform Subscription',
-                'amount' => (float) $enrollment->subscription_fee,
-            ],
-        ];
-
-        $payment = $this->createPendingPayment([
+        return $this->createPendingPayment([
             'type' => PlatformPayment::TYPE_PLATFORM_SUBSCRIPTION,
+            'purpose' => PlatformPayment::PURPOSE_PLATFORM_SUBSCRIPTION,
             'signup_intent_id' => $enrollment->id,
-            'reference_prefix' => 'SUB-ENR',
+            'reference_prefix' => 'PAY',
             'amount' => $amount,
             'currency' => $enrollment->currency,
-            'payment_method' => $data['payment_method'] ?? 'mpesa',
+            'payment_method' => $data['payment_method'] ?? 'mobile_money',
             'phone' => $enrollment->payment_phone,
-            'line_items' => $lineItems,
+            'line_items' => [
+                [
+                    'code' => 'platform_subscription',
+                    'label' => 'WaiFai Monthly Platform Subscription',
+                    'amount' => (float) $enrollment->subscription_fee,
+                ],
+            ],
             'metadata' => [
                 'source' => 'enrollment',
                 'payment_purpose' => PlatformPayment::PURPOSE_PLATFORM_SUBSCRIPTION,
                 'enrollment_reference' => $enrollment->reference,
+                'customer_email' => $enrollment->email,
+                'customer_name' => trim($enrollment->first_name.' '.$enrollment->last_name),
             ],
             'existing_paid_query' => fn ($q) => $q->where('signup_intent_id', $enrollment->id),
-            'push_ussd' => true,
+            'initiate' => true,
         ]);
-
-        return $payment;
     }
 
     /**
@@ -125,11 +126,12 @@ class PlatformPaymentService
 
         return $this->createPendingPayment([
             'type' => PlatformPayment::TYPE_SUBSCRIPTION_RENEWAL,
+            'purpose' => PlatformPayment::PURPOSE_SUBSCRIPTION_RENEWAL,
             'company_id' => $company->id,
-            'reference_prefix' => 'SUB-RENEW',
+            'reference_prefix' => 'PAY',
             'amount' => $amount,
             'currency' => PlatformPricing::currency(),
-            'payment_method' => $data['payment_method'] ?? 'mpesa',
+            'payment_method' => $data['payment_method'] ?? 'mobile_money',
             'phone' => $data['phone'] ?? $company->phone,
             'line_items' => [
                 [
@@ -141,9 +143,11 @@ class PlatformPaymentService
             'metadata' => [
                 'source' => 'renewal',
                 'payment_purpose' => PlatformPayment::PURPOSE_SUBSCRIPTION_RENEWAL,
+                'customer_email' => $company->email,
+                'customer_name' => $company->name,
             ],
             'existing_paid_query' => null,
-            'push_ussd' => true,
+            'initiate' => true,
         ]);
     }
 
@@ -174,12 +178,13 @@ class PlatformPaymentService
 
         return $this->createPendingPayment([
             'type' => PlatformPayment::TYPE_INSTALLATION,
+            'purpose' => PlatformPayment::PURPOSE_INSTALLATION_REQUEST,
             'company_id' => $request->company_id,
             'installation_request_id' => $request->id,
-            'reference_prefix' => 'INS-PAY',
+            'reference_prefix' => 'PAY',
             'amount' => $amount,
             'currency' => $request->currency,
-            'payment_method' => $data['payment_method'] ?? 'mpesa',
+            'payment_method' => $data['payment_method'] ?? 'mobile_money',
             'phone' => $data['phone'] ?? null,
             'line_items' => [
                 [
@@ -196,7 +201,7 @@ class PlatformPaymentService
                 'installation_request_id' => $request->id,
             ],
             'existing_paid_query' => fn ($q) => $q->where('installation_request_id', $request->id),
-            'push_ussd' => true,
+            'initiate' => true,
         ]);
     }
 
@@ -249,27 +254,12 @@ class PlatformPaymentService
             $payment->forceFill([
                 'status' => PlatformPayment::STATUS_PAID,
                 'paid_at' => now(),
+                'processed_at' => now(),
                 'failed_at' => null,
                 'cancelled_at' => null,
             ])->save();
 
-            if ($payment->type === PlatformPayment::TYPE_SUBSCRIPTION_RENEWAL && $payment->company_id) {
-                $company = Company::query()->whereKey($payment->company_id)->lockForUpdate()->first();
-                if ($company) {
-                    $this->subscriptionService->extendPeriod($company);
-                }
-            }
-
-            if ($payment->type === PlatformPayment::TYPE_INSTALLATION && $payment->installation_request_id) {
-                $request = InstallationRequest::query()
-                    ->whereKey($payment->installation_request_id)
-                    ->lockForUpdate()
-                    ->first();
-
-                if ($request) {
-                    $this->installationRequestService->markPaid($request);
-                }
-            }
+            $this->dispatchPurposeHandler($payment);
 
             $this->auditLogger->log(
                 'platform_payment_paid',
@@ -277,6 +267,7 @@ class PlatformPaymentService
                 $payment->company_id,
                 PlatformPayment::class,
                 $payment->id,
+                newValues: ['purpose' => $payment->resolvePurpose()],
             );
 
             return $payment->fresh();
@@ -307,6 +298,7 @@ class PlatformPaymentService
             $payment->forceFill([
                 'status' => PlatformPayment::STATUS_FAILED,
                 'failed_at' => now(),
+                'processed_at' => now(),
                 'metadata' => $metadata,
             ])->save();
 
@@ -343,13 +335,21 @@ class PlatformPaymentService
     }
 
     /**
-     * Trusted provider callback handler.
-     *
      * @param  array<string, mixed>  $payload
+     * @param  array<string, string|array|null>  $headers
      */
-    public function handleProviderCallback(array $payload): PlatformPayment
+    public function handleProviderWebhook(string $providerSlug, array $payload, array $headers = [], ?string $rawBody = null): PlatformPayment
     {
-        $reference = (string) ($payload['reference'] ?? $payload['transaction_reference'] ?? '');
+        $provider = PaymentProvider::query()->where('slug', $providerSlug)->firstOrFail();
+        $driver = $this->providerManager->driverFor($provider);
+
+        if (! $driver->validateWebhook($headers, $payload, $rawBody)) {
+            abort(401, 'Invalid payment provider webhook signature.');
+        }
+
+        $parsed = $driver->parseWebhook($payload);
+        $reference = (string) ($parsed->txRef ?: ($payload['reference'] ?? $payload['transaction_reference'] ?? ''));
+
         if ($reference === '') {
             throw ValidationException::withMessages([
                 'reference' => ['Payment reference is required.'],
@@ -358,31 +358,97 @@ class PlatformPaymentService
 
         $payment = $this->findByReferenceOrFail($reference);
 
-        $expectedAmount = (int) round((float) $payment->amount);
-        if (isset($payload['amount']) && (int) round((float) $payload['amount']) !== $expectedAmount) {
+        if ($payment->provider_slug && $payment->provider_slug !== $providerSlug) {
             throw ValidationException::withMessages([
-                'amount' => ['Callback amount does not match the payment.'],
+                'provider' => ['Callback provider does not match the payment intent provider.'],
             ]);
         }
 
-        if (isset($payload['currency']) && strtoupper((string) $payload['currency']) !== strtoupper((string) $payment->currency)) {
+        // Idempotent: already processed successfully.
+        if ($payment->status === PlatformPayment::STATUS_PAID) {
+            return $payment;
+        }
+
+        if ($parsed->amount !== null && (int) round($parsed->amount) !== (int) round((float) $payment->amount)) {
             throw ValidationException::withMessages([
-                'currency' => ['Callback currency does not match the payment.'],
+                'amount' => ['Callback amount does not match the payment intent.'],
             ]);
         }
 
-        $status = strtolower((string) ($payload['status'] ?? ''));
+        if ($parsed->currency !== null && strtoupper($parsed->currency) !== strtoupper((string) $payment->currency)) {
+            throw ValidationException::withMessages([
+                'currency' => ['Callback currency does not match the payment intent.'],
+            ]);
+        }
 
-        return match ($status) {
-            'paid', 'success', 'successful', 'completed' => $this->markPaid($payment),
-            'failed', 'failure', 'cancelled', 'canceled' => $this->markFailed(
-                $payment,
-                (string) ($payload['failure_reason'] ?? $payload['message'] ?? 'Provider reported failure'),
-            ),
-            default => throw ValidationException::withMessages([
-                'status' => ['Unsupported payment status.'],
-            ]),
-        };
+        // Prefer live verification when secrets exist.
+        try {
+            $verified = $driver->verifyTransaction($payment);
+            if ($verified->isSuccessful()) {
+                $parsed = $verified;
+            } elseif ($verified->isFailed()) {
+                $parsed = $verified;
+            }
+        } catch (\Throwable) {
+            // Keep webhook parse result if verify is unavailable.
+        }
+
+        if ($parsed->providerReference) {
+            $payment->forceFill([
+                'external_reference' => $parsed->providerReference,
+                'provider_event_id' => $parsed->providerReference,
+            ])->save();
+        }
+
+        if ($parsed->isSuccessful()) {
+            return $this->markPaid($payment->fresh());
+        }
+
+        if ($parsed->isFailed()) {
+            return $this->markFailed($payment->fresh(), 'Provider reported failure');
+        }
+
+        return $payment->fresh();
+    }
+
+    /**
+     * @deprecated Prefer handleProviderWebhook with provider slug.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    public function handleProviderCallback(array $payload): PlatformPayment
+    {
+        $slug = (string) ($payload['provider'] ?? PaymentProvider::SLUG_STUB);
+
+        return $this->handleProviderWebhook($slug, $payload, [
+            'X-Platform-Payment-Secret' => (string) request()->header('X-Platform-Payment-Secret'),
+        ]);
+    }
+
+    private function dispatchPurposeHandler(PlatformPayment $payment): void
+    {
+        $purpose = $payment->resolvePurpose();
+
+        if ($purpose === PlatformPayment::PURPOSE_SUBSCRIPTION_RENEWAL && $payment->company_id) {
+            $company = Company::query()->whereKey($payment->company_id)->lockForUpdate()->first();
+            if ($company) {
+                $this->subscriptionService->extendPeriod($company);
+            }
+        }
+
+        if ($purpose === PlatformPayment::PURPOSE_INSTALLATION_REQUEST && $payment->installation_request_id) {
+            $request = InstallationRequest::query()
+                ->whereKey($payment->installation_request_id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($request) {
+                $this->installationRequestService->markPaid($request);
+            }
+        }
+
+        // platform_subscription is completed after commit via EnrollmentCompletionService
+        // device_purchase / marketplace_order handlers can be registered here later.
     }
 
     /**
@@ -390,7 +456,9 @@ class PlatformPaymentService
      */
     private function createPendingPayment(array $payload): PlatformPayment
     {
-        return DB::transaction(function () use ($payload) {
+        $provider = $this->providerManager->defaultForPayments();
+
+        $payment = DB::transaction(function () use ($payload, $provider) {
             if ($payload['existing_paid_query']) {
                 $query = PlatformPayment::query()->where('status', PlatformPayment::STATUS_PAID)->lockForUpdate();
                 ($payload['existing_paid_query'])($query);
@@ -401,7 +469,11 @@ class PlatformPaymentService
             }
 
             $payment = PlatformPayment::query()->create([
+                'payment_provider_id' => $provider->id,
+                'provider_slug' => $provider->slug,
                 'type' => $payload['type'],
+                'purpose' => $payload['purpose'] ?? $payload['type'],
+                'direction' => PlatformPayment::DIRECTION_COLLECTION,
                 'signup_intent_id' => $payload['signup_intent_id'] ?? null,
                 'installation_request_id' => $payload['installation_request_id'] ?? null,
                 'company_id' => $payload['company_id'] ?? null,
@@ -416,11 +488,6 @@ class PlatformPaymentService
                 'initiated_at' => now(),
             ]);
 
-            if ($payload['push_ussd'] ?? false) {
-                $this->paymentGateway->pushUssd($payment);
-                $payment->refresh();
-            }
-
             $this->auditLogger->log(
                 'platform_payment_started',
                 null,
@@ -429,6 +496,8 @@ class PlatformPaymentService
                 $payment->id,
                 newValues: [
                     'type' => $payment->type,
+                    'purpose' => $payment->resolvePurpose(),
+                    'provider' => $provider->slug,
                     'reference' => $payment->reference,
                     'amount' => $payment->amount,
                 ],
@@ -437,10 +506,27 @@ class PlatformPaymentService
             return $payment;
         });
 
-        if (config('platform.payment_auto_paid') && $payment->status === PlatformPayment::STATUS_PENDING) {
-            return $this->markPaid($payment);
+        if (($payload['initiate'] ?? false) && $payment->status === PlatformPayment::STATUS_PENDING) {
+            $driver = $this->providerManager->driverFor($provider);
+            $result = $driver->initiateCollection($payment);
+
+            $metadata = $payment->metadata ?? [];
+            $metadata['provider_charge'] = [
+                'accepted' => $result->accepted,
+                'message' => $result->message,
+                'pushed_at' => now()->toIso8601String(),
+            ];
+
+            $payment->forceFill([
+                'external_reference' => $result->providerReference,
+                'metadata' => $metadata,
+            ])->save();
         }
 
-        return $payment;
+        if (config('platform.payment_auto_paid') && $payment->status === PlatformPayment::STATUS_PENDING) {
+            return $this->markPaid($payment->fresh());
+        }
+
+        return $payment->fresh();
     }
 }

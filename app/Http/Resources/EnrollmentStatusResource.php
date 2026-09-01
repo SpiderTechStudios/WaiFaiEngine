@@ -43,6 +43,8 @@ class EnrollmentStatusResource extends JsonResource
                 'amount' => $latestPayment->amount,
                 'currency' => $latestPayment->currency,
                 'reference' => $latestPayment->reference,
+                'purpose' => $latestPayment->resolvePurpose(),
+                'provider' => $latestPayment->provider_slug,
             ];
         }
 

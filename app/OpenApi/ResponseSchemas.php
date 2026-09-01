@@ -533,4 +533,22 @@ use OpenApi\Attributes as OA;
         ], type: 'object'),
     ]
 )]
+#[OA\Schema(
+    schema: 'PaymentProviderResponse',
+    properties: [
+        new OA\Property(property: 'status', type: 'boolean', example: true),
+        new OA\Property(property: 'code', type: 'integer', example: 200),
+        new OA\Property(property: 'message', type: 'string', example: 'Payment provider retrieved'),
+        new OA\Property(property: 'data', ref: '#/components/schemas/PaymentProvider'),
+    ]
+)]
+#[OA\Schema(
+    schema: 'PaymentProviderListResponse',
+    properties: [
+        new OA\Property(property: 'status', type: 'boolean', example: true),
+        new OA\Property(property: 'code', type: 'integer', example: 200),
+        new OA\Property(property: 'message', type: 'string', example: 'Payment providers retrieved'),
+        new OA\Property(property: 'data', type: 'array', items: new OA\Items(ref: '#/components/schemas/PaymentProvider')),
+    ]
+)]
 class ResponseSchemas {}

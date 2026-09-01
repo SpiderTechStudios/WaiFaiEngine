@@ -18,7 +18,9 @@ use OpenApi\Attributes as OA;
     description: 'Laravel Sanctum personal access token. Prefix with Bearer.'
 )]
 #[OA\Tag(name: 'Auth', description: 'Login, session, password, and email verification')]
-#[OA\Tag(name: 'Enrollment', description: 'Pay-first registration: enroll → USSD payment → poll/retry → account on webhook')]
+#[OA\Tag(name: 'Enrollment', description: 'Pay-first registration: enroll → provider payment → poll/retry → account on verified webhook')]
+#[OA\Tag(name: 'Payment Providers', description: 'Superadmin-managed collection/payout providers')]
+#[OA\Tag(name: 'Payment Webhooks', description: 'Public provider callbacks with signature verification')]
 #[OA\Tag(name: 'Billing', description: 'Company subscription status and renewal')]
 #[OA\Tag(name: 'Installation Requests', description: 'Post-subscription router installation / supply orders')]
 #[OA\Tag(name: 'Dashboard', description: 'Home KPIs')]

@@ -15,6 +15,9 @@ class PlatformPaymentResource extends JsonResource
         return [
             'payment_id' => $this->id,
             'reference' => $this->reference,
+            'purpose' => $this->resolvePurpose(),
+            'provider' => $this->provider_slug,
+            'direction' => $this->direction,
             'amount' => $this->amount,
             'currency' => $this->currency,
             'payment_method' => $this->payment_method,
@@ -22,6 +25,7 @@ class PlatformPaymentResource extends JsonResource
             'line_items' => $this->line_items,
             'paid_at' => $this->paid_at,
             'initiated_at' => $this->initiated_at,
+            'expires_at' => null,
         ];
     }
 }
