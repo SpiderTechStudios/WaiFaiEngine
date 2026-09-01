@@ -445,8 +445,8 @@ use OpenApi\Attributes as OA;
     schema: 'EnrollmentStatusResponse',
     properties: [
         new OA\Property(property: 'status', type: 'boolean', example: true),
-        new OA\Property(property: 'code', type: 'integer', example: 200),
-        new OA\Property(property: 'message', type: 'string', example: 'Waiting for payment confirmation.'),
+        new OA\Property(property: 'code', type: 'integer', example: 201),
+        new OA\Property(property: 'message', type: 'string', example: 'Registration submitted. Please complete the payment request on your phone.'),
         new OA\Property(property: 'data', ref: '#/components/schemas/EnrollmentStatus'),
     ]
 )]
@@ -476,8 +476,45 @@ use OpenApi\Attributes as OA;
     properties: [
         new OA\Property(property: 'status', type: 'boolean', example: true),
         new OA\Property(property: 'code', type: 'integer', example: 201),
-        new OA\Property(property: 'message', type: 'string', example: 'Payment initiated'),
+        new OA\Property(property: 'message', type: 'string', example: 'Payment initiated successfully.'),
         new OA\Property(property: 'data', ref: '#/components/schemas/PlatformPayment'),
+    ]
+)]
+#[OA\Schema(
+    schema: 'PayoutWebhookAcceptedResponse',
+    properties: [
+        new OA\Property(property: 'status', type: 'boolean', example: true),
+        new OA\Property(property: 'code', type: 'integer', example: 200),
+        new OA\Property(property: 'message', type: 'string', example: 'Payout webhook accepted'),
+        new OA\Property(property: 'data', properties: [
+            new OA\Property(property: 'provider', type: 'string', example: 'flutterwave'),
+            new OA\Property(property: 'accepted', type: 'boolean', example: true),
+        ], type: 'object'),
+    ]
+)]
+#[OA\Schema(
+    schema: 'FlutterwavePaymentWebhookRequest',
+    properties: [
+        new OA\Property(property: 'event', type: 'string', example: 'charge.completed'),
+        new OA\Property(property: 'data', properties: [
+            new OA\Property(property: 'id', type: 'integer', example: 123456),
+            new OA\Property(property: 'tx_ref', type: 'string', example: 'PAY-ABC123XYZ0', description: 'Internal payment intent reference'),
+            new OA\Property(property: 'flw_ref', type: 'string', example: 'FLW-REF-xxxx'),
+            new OA\Property(property: 'status', type: 'string', example: 'successful'),
+            new OA\Property(property: 'amount', type: 'number', example: 10000),
+            new OA\Property(property: 'currency', type: 'string', example: 'TZS'),
+        ], type: 'object'),
+    ]
+)]
+#[OA\Schema(
+    schema: 'StubPaymentWebhookRequest',
+    required: ['reference', 'status'],
+    properties: [
+        new OA\Property(property: 'reference', type: 'string', example: 'PAY-ABC123XYZ0'),
+        new OA\Property(property: 'transaction_reference', type: 'string', nullable: true),
+        new OA\Property(property: 'status', type: 'string', example: 'paid', description: 'paid|successful|failed'),
+        new OA\Property(property: 'amount', type: 'number', example: 10000),
+        new OA\Property(property: 'currency', type: 'string', example: 'TZS'),
     ]
 )]
 #[OA\Schema(

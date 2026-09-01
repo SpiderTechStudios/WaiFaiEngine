@@ -695,7 +695,7 @@
                                 "properties": {
                                     "payment_method": {
                                         "type": "string",
-                                        "example": "mpesa",
+                                        "example": "mobile_money",
                                         "nullable": true
                                     },
                                     "phone": {
@@ -816,7 +816,7 @@
                     "Enrollment"
                 ],
                 "summary": "Start pay-first registration enrollment",
-                "description": "Creates a temporary enrollment (no user/company yet), initiates the monthly platform subscription payment, and triggers a USSD/STK push to payment_phone. Enrollment expires after PLATFORM_ENROLLMENT_TTL_MINUTES (default 4). Account creation happens only after trusted payment confirmation.",
+                "description": "Creates a temporary enrollment (no user/company yet), creates a platform_subscription payment intent on the default collection provider, and initiates USSD/STK. Enrollment expires after PLATFORM_ENROLLMENT_TTL_MINUTES (default 4). Account creation happens only after a verified provider webhook.",
                 "operationId": "registerEnrollment",
                 "requestBody": {
                     "required": true,
@@ -830,7 +830,7 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Enrollment created and payment pending",
+                        "description": "Enrollment created; payment pending",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -858,7 +858,7 @@
                     "Enrollment"
                 ],
                 "summary": "Poll enrollment payment status",
-                "description": "Public polling endpoint for the payment waiting screen. Does not expose password hashes or provider secrets. Returns 410 when the enrollment has expired.",
+                "description": "Public polling endpoint for the payment waiting screen. Does not expose password hashes or provider secrets. status=false with HTTP 200 when payment_failed (retry allowed). HTTP 410 when expired.",
                 "operationId": "enrollmentPaymentStatus",
                 "parameters": [
                     {
@@ -911,7 +911,7 @@
                     "Enrollment"
                 ],
                 "summary": "Retry enrollment platform subscription payment",
-                "description": "Allowed while enrollment is not expired and fewer than 3 failed attempts have occurred. Optionally updates payment_phone. Does not create a new enrollment.",
+                "description": "Allowed while enrollment is not expired and fewer than 3 failed attempts have occurred. Optionally updates payment_phone. Reuses the same enrollment; creates a new payment intent on the current default provider.",
                 "operationId": "retryEnrollmentPayment",
                 "parameters": [
                     {
@@ -973,8 +973,8 @@
                 "tags": [
                     "Enrollment"
                 ],
-                "summary": "Trusted platform payment provider callback",
-                "description": "Authoritative payment confirmation. Requires X-Platform-Payment-Secret when PLATFORM_PAYMENT_WEBHOOK_SECRET is set. On paid enrollment payments, creates user + company + active subscription. Idempotent under replay.",
+                "summary": "Deprecated legacy webhook — use POST /webhooks/payments/{provider}",
+                "description": "Kept for compatibility. Prefer provider-scoped webhooks. Requires X-Platform-Payment-Secret for the stub provider.",
                 "operationId": "platformPaymentWebhook",
                 "parameters": [
                     {
@@ -991,37 +991,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "status"
-                                ],
-                                "properties": {
-                                    "reference": {
-                                        "type": "string",
-                                        "example": "SUB-ENR-ABC123XYZ0"
-                                    },
-                                    "transaction_reference": {
-                                        "type": "string",
-                                        "nullable": true
-                                    },
-                                    "status": {
-                                        "description": "paid|failed|success|completed",
-                                        "type": "string",
-                                        "example": "paid"
-                                    },
-                                    "amount": {
-                                        "type": "number",
-                                        "example": 10000
-                                    },
-                                    "currency": {
-                                        "type": "string",
-                                        "example": "TZS"
-                                    },
-                                    "failure_reason": {
-                                        "type": "string",
-                                        "nullable": true
-                                    }
-                                },
-                                "type": "object"
+                                "$ref": "#/components/schemas/StubPaymentWebhookRequest"
                             }
                         }
                     }
@@ -1037,7 +1007,7 @@
                             }
                         }
                     },
-                    "403": {
+                    "401": {
                         "description": "Invalid webhook secret",
                         "content": {
                             "application/json": {
@@ -1057,7 +1027,8 @@
                             }
                         }
                     }
-                }
+                },
+                "deprecated": true
             }
         },
         "/installation-requests": {
@@ -1291,7 +1262,7 @@
                                 "properties": {
                                     "payment_method": {
                                         "type": "string",
-                                        "example": "mpesa",
+                                        "example": "mobile_money",
                                         "nullable": true
                                     },
                                     "phone": {
@@ -4710,7 +4681,7 @@
                     "Payment Webhooks"
                 ],
                 "summary": "Public provider collection webhook (signature-verified)",
-                "description": "No Sanctum auth. Provider-specific validation (e.g. Flutterwave verif-hash). Resolves payment intent by tx_ref/reference and routes by purpose.",
+                "description": "No Sanctum auth. Identify provider from the path. Flutterwave: send verif-hash header matching the provider webhook_secret, body.event=charge.completed, data.tx_ref = payment intent reference. Stub: X-Platform-Payment-Secret. Backend looks up the payment intent by reference and routes by purpose (platform_subscription, subscription_renewal, installation_request, …). Idempotent.",
                 "operationId": "paymentProviderCollectionWebhook",
                 "parameters": [
                     {
@@ -4719,7 +4690,29 @@
                         "required": true,
                         "schema": {
                             "type": "string",
-                            "example": "flutterwave"
+                            "example": "flutterwave",
+                            "enum": [
+                                "flutterwave",
+                                "stub"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "verif-hash",
+                        "in": "header",
+                        "description": "Flutterwave webhook secret hash",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "X-Platform-Payment-Secret",
+                        "in": "header",
+                        "description": "Stub provider webhook secret",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
                         }
                     }
                 ],
@@ -4728,14 +4721,14 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "type": "object"
+                                "$ref": "#/components/schemas/FlutterwavePaymentWebhookRequest"
                             }
                         }
                     }
                 },
                 "responses": {
                     "200": {
-                        "description": "Processed",
+                        "description": "Processed (intent status updated; enrollment completed when purpose=platform_subscription and paid)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -4753,6 +4746,26 @@
                                 }
                             }
                         }
+                    },
+                    "404": {
+                        "description": "Unknown payment reference",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Amount/currency/provider mismatch",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -4763,6 +4776,7 @@
                     "Payment Webhooks"
                 ],
                 "summary": "Public provider payout webhook (signature-verified)",
+                "description": "No Sanctum auth. Same signature rules as collection webhooks. Does not mix with collection payment intents.",
                 "operationId": "paymentProviderPayoutWebhook",
                 "parameters": [
                     {
@@ -4773,6 +4787,14 @@
                             "type": "string",
                             "example": "flutterwave"
                         }
+                    },
+                    {
+                        "name": "verif-hash",
+                        "in": "header",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 ],
                 "requestBody": {
@@ -4780,7 +4802,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "type": "object"
+                                "$ref": "#/components/schemas/FlutterwavePaymentWebhookRequest"
                             }
                         }
                     }
@@ -4791,7 +4813,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/MessageResponse"
+                                    "$ref": "#/components/schemas/PayoutWebhookAcceptedResponse"
                                 }
                             }
                         }
@@ -7364,7 +7386,7 @@
                     },
                     "payment_method": {
                         "type": "string",
-                        "example": "mpesa",
+                        "example": "mobile_money",
                         "nullable": true
                     }
                 },
@@ -8567,6 +8589,42 @@
                 },
                 "type": "object"
             },
+            "EnrollmentPaymentSummary": {
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "example": "pending",
+                        "enum": [
+                            "pending",
+                            "paid",
+                            "failed",
+                            "cancelled",
+                            "expired"
+                        ]
+                    },
+                    "amount": {
+                        "type": "string",
+                        "example": "10000.00"
+                    },
+                    "currency": {
+                        "type": "string",
+                        "example": "TZS"
+                    },
+                    "reference": {
+                        "type": "string",
+                        "example": "PAY-ABC123XYZ0"
+                    },
+                    "purpose": {
+                        "type": "string",
+                        "example": "platform_subscription"
+                    },
+                    "provider": {
+                        "type": "string",
+                        "example": "flutterwave"
+                    }
+                },
+                "type": "object"
+            },
             "EnrollmentStatus": {
                 "properties": {
                     "enrollment_reference": {
@@ -8575,6 +8633,7 @@
                     },
                     "enrollment_status": {
                         "type": "string",
+                        "example": "pending_payment",
                         "enum": [
                             "pending_payment",
                             "payment_failed",
@@ -8586,6 +8645,7 @@
                     },
                     "payment_status": {
                         "type": "string",
+                        "example": "pending",
                         "nullable": true,
                         "enum": [
                             "pending",
@@ -8595,8 +8655,8 @@
                         ]
                     },
                     "amount": {
-                        "type": "number",
-                        "example": 10000
+                        "type": "string",
+                        "example": "10000.00"
                     },
                     "currency": {
                         "type": "string",
@@ -8604,7 +8664,8 @@
                     },
                     "expires_at": {
                         "type": "string",
-                        "format": "date-time"
+                        "format": "date-time",
+                        "example": "2026-09-01T12:04:00+00:00"
                     },
                     "remaining_attempts": {
                         "type": "integer",
@@ -8616,6 +8677,7 @@
                     },
                     "account_created": {
                         "type": "boolean",
+                        "example": true,
                         "nullable": true
                     },
                     "next_action": {
@@ -8629,21 +8691,11 @@
                         "nullable": true
                     },
                     "payment": {
-                        "properties": {
-                            "status": {
-                                "type": "string"
-                            },
-                            "amount": {
-                                "type": "number"
-                            },
-                            "currency": {
-                                "type": "string"
-                            },
-                            "reference": {
-                                "type": "string"
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/EnrollmentPaymentSummary"
                             }
-                        },
-                        "type": "object",
+                        ],
                         "nullable": true
                     }
                 },
@@ -8660,6 +8712,7 @@
                         "example": "PAY-ABC123XYZ0"
                     },
                     "purpose": {
+                        "description": "platform_subscription | subscription_renewal | installation_request | device_purchase | marketplace_order",
                         "type": "string",
                         "example": "platform_subscription"
                     },
@@ -8669,11 +8722,15 @@
                     },
                     "direction": {
                         "type": "string",
-                        "example": "collection"
+                        "example": "collection",
+                        "enum": [
+                            "collection",
+                            "payout"
+                        ]
                     },
                     "amount": {
-                        "type": "number",
-                        "example": 10000
+                        "type": "string",
+                        "example": "10000.00"
                     },
                     "currency": {
                         "type": "string",
@@ -8685,6 +8742,7 @@
                     },
                     "status": {
                         "type": "string",
+                        "example": "pending",
                         "enum": [
                             "pending",
                             "paid",
@@ -8718,10 +8776,39 @@
                 },
                 "type": "object"
             },
+            "PaymentProviderPublicCredentials": {
+                "description": "Safe credential view. Secret values are never returned.",
+                "properties": {
+                    "public_key": {
+                        "type": "string",
+                        "example": "FLWPUBK-xxxxxxxx",
+                        "nullable": true
+                    },
+                    "api_base_url": {
+                        "type": "string",
+                        "example": "https://api.flutterwave.com",
+                        "nullable": true
+                    },
+                    "has_secret_key": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "has_encryption_key": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "has_webhook_secret": {
+                        "type": "boolean",
+                        "example": true
+                    }
+                },
+                "type": "object"
+            },
             "PaymentProvider": {
                 "properties": {
                     "id": {
-                        "type": "integer"
+                        "type": "integer",
+                        "example": 1
                     },
                     "name": {
                         "type": "string",
@@ -8733,29 +8820,47 @@
                     },
                     "description": {
                         "type": "string",
+                        "example": "Flutterwave V3 collections and transfers.",
                         "nullable": true
                     },
                     "supports_payments": {
-                        "type": "boolean"
+                        "type": "boolean",
+                        "example": true
                     },
                     "supports_payouts": {
-                        "type": "boolean"
+                        "type": "boolean",
+                        "example": true
                     },
                     "is_active": {
-                        "type": "boolean"
+                        "type": "boolean",
+                        "example": true
                     },
                     "is_default_for_payments": {
-                        "type": "boolean"
+                        "type": "boolean",
+                        "example": true
                     },
                     "is_default_for_payouts": {
-                        "type": "boolean"
+                        "type": "boolean",
+                        "example": true
                     },
                     "credentials": {
-                        "description": "Public-safe credential flags only (no secrets)",
-                        "type": "object"
+                        "$ref": "#/components/schemas/PaymentProviderPublicCredentials"
                     },
                     "settings": {
                         "type": "object",
+                        "example": {
+                            "mobile_money_charge_type": "mobile_money_tanzania"
+                        },
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
                         "nullable": true
                     }
                 },
@@ -8776,6 +8881,7 @@
                     },
                     "description": {
                         "type": "string",
+                        "example": "Flutterwave V3 collections and transfers.",
                         "nullable": true
                     },
                     "supports_payments": {
@@ -8802,18 +8908,21 @@
                         "properties": {
                             "public_key": {
                                 "type": "string",
-                                "example": "FLWPUBK-***"
+                                "example": "your-public-key"
                             },
                             "secret_key": {
                                 "type": "string",
-                                "example": "FLWSECK-***"
+                                "format": "password",
+                                "example": "your-secret-key"
                             },
                             "encryption_key": {
                                 "type": "string",
+                                "format": "password",
                                 "nullable": true
                             },
                             "webhook_secret": {
                                 "type": "string",
+                                "format": "password",
                                 "nullable": true
                             },
                             "api_base_url": {
@@ -8825,6 +8934,9 @@
                     },
                     "settings": {
                         "type": "object",
+                        "example": {
+                            "mobile_money_charge_type": "mobile_money_tanzania"
+                        },
                         "nullable": true
                     }
                 },
@@ -8833,7 +8945,8 @@
             "UpdatePaymentProviderRequest": {
                 "properties": {
                     "name": {
-                        "type": "string"
+                        "type": "string",
+                        "example": "Flutterwave"
                     },
                     "description": {
                         "type": "string",
@@ -8848,7 +8961,38 @@
                     "is_active": {
                         "type": "boolean"
                     },
+                    "is_default_for_payments": {
+                        "type": "boolean"
+                    },
+                    "is_default_for_payouts": {
+                        "type": "boolean"
+                    },
                     "credentials": {
+                        "properties": {
+                            "public_key": {
+                                "type": "string",
+                                "example": "your-public-key"
+                            },
+                            "secret_key": {
+                                "type": "string",
+                                "format": "password",
+                                "example": "your-secret-key"
+                            },
+                            "encryption_key": {
+                                "type": "string",
+                                "format": "password",
+                                "nullable": true
+                            },
+                            "webhook_secret": {
+                                "type": "string",
+                                "format": "password",
+                                "nullable": true
+                            },
+                            "api_base_url": {
+                                "type": "string",
+                                "example": "https://api.flutterwave.com"
+                            }
+                        },
                         "type": "object"
                     },
                     "settings": {
@@ -10171,11 +10315,11 @@
                     },
                     "code": {
                         "type": "integer",
-                        "example": 200
+                        "example": 201
                     },
                     "message": {
                         "type": "string",
-                        "example": "Waiting for payment confirmation."
+                        "example": "Registration submitted. Please complete the payment request on your phone."
                     },
                     "data": {
                         "$ref": "#/components/schemas/EnrollmentStatus"
@@ -10245,10 +10389,109 @@
                     },
                     "message": {
                         "type": "string",
-                        "example": "Payment initiated"
+                        "example": "Payment initiated successfully."
                     },
                     "data": {
                         "$ref": "#/components/schemas/PlatformPayment"
+                    }
+                },
+                "type": "object"
+            },
+            "PayoutWebhookAcceptedResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Payout webhook accepted"
+                    },
+                    "data": {
+                        "properties": {
+                            "provider": {
+                                "type": "string",
+                                "example": "flutterwave"
+                            },
+                            "accepted": {
+                                "type": "boolean",
+                                "example": true
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "FlutterwavePaymentWebhookRequest": {
+                "properties": {
+                    "event": {
+                        "type": "string",
+                        "example": "charge.completed"
+                    },
+                    "data": {
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 123456
+                            },
+                            "tx_ref": {
+                                "description": "Internal payment intent reference",
+                                "type": "string",
+                                "example": "PAY-ABC123XYZ0"
+                            },
+                            "flw_ref": {
+                                "type": "string",
+                                "example": "FLW-REF-xxxx"
+                            },
+                            "status": {
+                                "type": "string",
+                                "example": "successful"
+                            },
+                            "amount": {
+                                "type": "number",
+                                "example": 10000
+                            },
+                            "currency": {
+                                "type": "string",
+                                "example": "TZS"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "StubPaymentWebhookRequest": {
+                "required": [
+                    "reference",
+                    "status"
+                ],
+                "properties": {
+                    "reference": {
+                        "type": "string",
+                        "example": "PAY-ABC123XYZ0"
+                    },
+                    "transaction_reference": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "status": {
+                        "description": "paid|successful|failed",
+                        "type": "string",
+                        "example": "paid"
+                    },
+                    "amount": {
+                        "type": "number",
+                        "example": 10000
+                    },
+                    "currency": {
+                        "type": "string",
+                        "example": "TZS"
                     }
                 },
                 "type": "object"

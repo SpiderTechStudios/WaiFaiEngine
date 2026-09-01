@@ -324,25 +324,31 @@ use OpenApi\Attributes as OA;
     ]
 )]
 #[OA\Schema(
+    schema: 'EnrollmentPaymentSummary',
+    properties: [
+        new OA\Property(property: 'status', type: 'string', example: 'pending', enum: ['pending', 'paid', 'failed', 'cancelled', 'expired']),
+        new OA\Property(property: 'amount', type: 'string', example: '10000.00'),
+        new OA\Property(property: 'currency', type: 'string', example: 'TZS'),
+        new OA\Property(property: 'reference', type: 'string', example: 'PAY-ABC123XYZ0'),
+        new OA\Property(property: 'purpose', type: 'string', example: 'platform_subscription'),
+        new OA\Property(property: 'provider', type: 'string', example: 'flutterwave'),
+    ]
+)]
+#[OA\Schema(
     schema: 'EnrollmentStatus',
     properties: [
         new OA\Property(property: 'enrollment_reference', type: 'string', example: 'ENR-ABC123XYZ'),
-        new OA\Property(property: 'enrollment_status', type: 'string', enum: ['pending_payment', 'payment_failed', 'processing_payment', 'completed', 'expired', 'cancelled']),
-        new OA\Property(property: 'payment_status', type: 'string', nullable: true, enum: ['pending', 'paid', 'failed', 'cancelled']),
-        new OA\Property(property: 'amount', type: 'number', example: 10000),
+        new OA\Property(property: 'enrollment_status', type: 'string', enum: ['pending_payment', 'payment_failed', 'processing_payment', 'completed', 'expired', 'cancelled'], example: 'pending_payment'),
+        new OA\Property(property: 'payment_status', type: 'string', nullable: true, enum: ['pending', 'paid', 'failed', 'cancelled'], example: 'pending'),
+        new OA\Property(property: 'amount', type: 'string', example: '10000.00'),
         new OA\Property(property: 'currency', type: 'string', example: 'TZS'),
-        new OA\Property(property: 'expires_at', type: 'string', format: 'date-time'),
+        new OA\Property(property: 'expires_at', type: 'string', format: 'date-time', example: '2026-09-01T12:04:00+00:00'),
         new OA\Property(property: 'remaining_attempts', type: 'integer', example: 3),
         new OA\Property(property: 'payment_phone', type: 'string', example: '0686911251'),
-        new OA\Property(property: 'account_created', type: 'boolean', nullable: true),
+        new OA\Property(property: 'account_created', type: 'boolean', nullable: true, example: true),
         new OA\Property(property: 'next_action', type: 'string', nullable: true, example: 'login'),
         new OA\Property(property: 'redirect_to', type: 'string', nullable: true, example: '/login'),
-        new OA\Property(property: 'payment', properties: [
-            new OA\Property(property: 'status', type: 'string'),
-            new OA\Property(property: 'amount', type: 'number'),
-            new OA\Property(property: 'currency', type: 'string'),
-            new OA\Property(property: 'reference', type: 'string'),
-        ], type: 'object', nullable: true),
+        new OA\Property(property: 'payment', ref: '#/components/schemas/EnrollmentPaymentSummary', nullable: true),
     ]
 )]
 #[OA\Schema(
@@ -350,13 +356,13 @@ use OpenApi\Attributes as OA;
     properties: [
         new OA\Property(property: 'payment_id', type: 'integer', example: 1),
         new OA\Property(property: 'reference', type: 'string', example: 'PAY-ABC123XYZ0'),
-        new OA\Property(property: 'purpose', type: 'string', example: 'platform_subscription'),
+        new OA\Property(property: 'purpose', type: 'string', example: 'platform_subscription', description: 'platform_subscription | subscription_renewal | installation_request | device_purchase | marketplace_order'),
         new OA\Property(property: 'provider', type: 'string', example: 'flutterwave'),
-        new OA\Property(property: 'direction', type: 'string', example: 'collection'),
-        new OA\Property(property: 'amount', type: 'number', example: 10000),
+        new OA\Property(property: 'direction', type: 'string', example: 'collection', enum: ['collection', 'payout']),
+        new OA\Property(property: 'amount', type: 'string', example: '10000.00'),
         new OA\Property(property: 'currency', type: 'string', example: 'TZS'),
         new OA\Property(property: 'payment_method', type: 'string', example: 'mobile_money'),
-        new OA\Property(property: 'status', type: 'string', enum: ['pending', 'paid', 'failed', 'cancelled', 'expired']),
+        new OA\Property(property: 'status', type: 'string', enum: ['pending', 'paid', 'failed', 'cancelled', 'expired'], example: 'pending'),
         new OA\Property(property: 'line_items', type: 'array', items: new OA\Items(type: 'object'), nullable: true),
         new OA\Property(property: 'paid_at', type: 'string', format: 'date-time', nullable: true),
         new OA\Property(property: 'initiated_at', type: 'string', format: 'date-time', nullable: true),
@@ -364,19 +370,32 @@ use OpenApi\Attributes as OA;
     ]
 )]
 #[OA\Schema(
+    schema: 'PaymentProviderPublicCredentials',
+    description: 'Safe credential view. Secret values are never returned.',
+    properties: [
+        new OA\Property(property: 'public_key', type: 'string', nullable: true, example: 'FLWPUBK-xxxxxxxx'),
+        new OA\Property(property: 'api_base_url', type: 'string', nullable: true, example: 'https://api.flutterwave.com'),
+        new OA\Property(property: 'has_secret_key', type: 'boolean', example: true),
+        new OA\Property(property: 'has_encryption_key', type: 'boolean', example: false),
+        new OA\Property(property: 'has_webhook_secret', type: 'boolean', example: true),
+    ]
+)]
+#[OA\Schema(
     schema: 'PaymentProvider',
     properties: [
-        new OA\Property(property: 'id', type: 'integer'),
+        new OA\Property(property: 'id', type: 'integer', example: 1),
         new OA\Property(property: 'name', type: 'string', example: 'Flutterwave'),
         new OA\Property(property: 'slug', type: 'string', example: 'flutterwave'),
-        new OA\Property(property: 'description', type: 'string', nullable: true),
-        new OA\Property(property: 'supports_payments', type: 'boolean'),
-        new OA\Property(property: 'supports_payouts', type: 'boolean'),
-        new OA\Property(property: 'is_active', type: 'boolean'),
-        new OA\Property(property: 'is_default_for_payments', type: 'boolean'),
-        new OA\Property(property: 'is_default_for_payouts', type: 'boolean'),
-        new OA\Property(property: 'credentials', type: 'object', description: 'Public-safe credential flags only (no secrets)'),
-        new OA\Property(property: 'settings', type: 'object', nullable: true),
+        new OA\Property(property: 'description', type: 'string', nullable: true, example: 'Flutterwave V3 collections and transfers.'),
+        new OA\Property(property: 'supports_payments', type: 'boolean', example: true),
+        new OA\Property(property: 'supports_payouts', type: 'boolean', example: true),
+        new OA\Property(property: 'is_active', type: 'boolean', example: true),
+        new OA\Property(property: 'is_default_for_payments', type: 'boolean', example: true),
+        new OA\Property(property: 'is_default_for_payouts', type: 'boolean', example: true),
+        new OA\Property(property: 'credentials', ref: '#/components/schemas/PaymentProviderPublicCredentials'),
+        new OA\Property(property: 'settings', type: 'object', nullable: true, example: ['mobile_money_charge_type' => 'mobile_money_tanzania']),
+        new OA\Property(property: 'created_at', type: 'string', format: 'date-time', nullable: true),
+        new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', nullable: true),
     ]
 )]
 #[OA\Schema(
@@ -385,31 +404,39 @@ use OpenApi\Attributes as OA;
     properties: [
         new OA\Property(property: 'name', type: 'string', example: 'Flutterwave'),
         new OA\Property(property: 'slug', type: 'string', example: 'flutterwave'),
-        new OA\Property(property: 'description', type: 'string', nullable: true),
+        new OA\Property(property: 'description', type: 'string', nullable: true, example: 'Flutterwave V3 collections and transfers.'),
         new OA\Property(property: 'supports_payments', type: 'boolean', example: true),
         new OA\Property(property: 'supports_payouts', type: 'boolean', example: true),
         new OA\Property(property: 'is_active', type: 'boolean', example: true),
         new OA\Property(property: 'is_default_for_payments', type: 'boolean', example: true),
         new OA\Property(property: 'is_default_for_payouts', type: 'boolean', example: false),
         new OA\Property(property: 'credentials', properties: [
-            new OA\Property(property: 'public_key', type: 'string', example: 'FLWPUBK-***'),
-            new OA\Property(property: 'secret_key', type: 'string', example: 'FLWSECK-***'),
-            new OA\Property(property: 'encryption_key', type: 'string', nullable: true),
-            new OA\Property(property: 'webhook_secret', type: 'string', nullable: true),
+            new OA\Property(property: 'public_key', type: 'string', example: 'your-public-key'),
+            new OA\Property(property: 'secret_key', type: 'string', format: 'password', example: 'your-secret-key'),
+            new OA\Property(property: 'encryption_key', type: 'string', format: 'password', nullable: true),
+            new OA\Property(property: 'webhook_secret', type: 'string', format: 'password', nullable: true),
             new OA\Property(property: 'api_base_url', type: 'string', example: 'https://api.flutterwave.com'),
         ], type: 'object'),
-        new OA\Property(property: 'settings', type: 'object', nullable: true),
+        new OA\Property(property: 'settings', type: 'object', nullable: true, example: ['mobile_money_charge_type' => 'mobile_money_tanzania']),
     ]
 )]
 #[OA\Schema(
     schema: 'UpdatePaymentProviderRequest',
     properties: [
-        new OA\Property(property: 'name', type: 'string'),
+        new OA\Property(property: 'name', type: 'string', example: 'Flutterwave'),
         new OA\Property(property: 'description', type: 'string', nullable: true),
         new OA\Property(property: 'supports_payments', type: 'boolean'),
         new OA\Property(property: 'supports_payouts', type: 'boolean'),
         new OA\Property(property: 'is_active', type: 'boolean'),
-        new OA\Property(property: 'credentials', type: 'object'),
+        new OA\Property(property: 'is_default_for_payments', type: 'boolean'),
+        new OA\Property(property: 'is_default_for_payouts', type: 'boolean'),
+        new OA\Property(property: 'credentials', properties: [
+            new OA\Property(property: 'public_key', type: 'string', example: 'your-public-key'),
+            new OA\Property(property: 'secret_key', type: 'string', format: 'password', example: 'your-secret-key'),
+            new OA\Property(property: 'encryption_key', type: 'string', format: 'password', nullable: true),
+            new OA\Property(property: 'webhook_secret', type: 'string', format: 'password', nullable: true),
+            new OA\Property(property: 'api_base_url', type: 'string', example: 'https://api.flutterwave.com'),
+        ], type: 'object'),
         new OA\Property(property: 'settings', type: 'object', nullable: true),
     ]
 )]

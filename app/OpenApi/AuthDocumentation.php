@@ -216,7 +216,7 @@ class AuthDocumentation
     schema: 'RetryEnrollmentPaymentRequest',
     properties: [
         new OA\Property(property: 'payment_phone', type: 'string', nullable: true, example: '0686911251'),
-        new OA\Property(property: 'payment_method', type: 'string', nullable: true, example: 'mpesa'),
+        new OA\Property(property: 'payment_method', type: 'string', nullable: true, example: 'mobile_money'),
     ]
 )]
 #[OA\Schema(

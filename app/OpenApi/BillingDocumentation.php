@@ -29,7 +29,7 @@ class BillingDocumentation
         summary: 'Start monthly subscription renewal payment',
         description: 'Creates a platform payment of type subscription_renewal for PLATFORM_SUBSCRIPTION_MONTHLY. Amount is server-side; client amount is optional and must match if sent. When payment is marked paid, subscription period is extended by one month.',
         requestBody: new OA\RequestBody(required: false, content: new OA\JsonContent(properties: [
-            new OA\Property(property: 'payment_method', type: 'string', nullable: true, example: 'mpesa'),
+            new OA\Property(property: 'payment_method', type: 'string', nullable: true, example: 'mobile_money'),
             new OA\Property(property: 'phone', type: 'string', nullable: true, example: '0711987654'),
             new OA\Property(property: 'amount', type: 'number', nullable: true, example: 10000, description: 'Optional; must equal configured monthly fee'),
         ])),

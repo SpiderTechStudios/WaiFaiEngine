@@ -74,7 +74,7 @@ class InstallationDocumentation
             new OA\Parameter(name: 'installationRequest', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
         ],
         requestBody: new OA\RequestBody(required: false, content: new OA\JsonContent(properties: [
-            new OA\Property(property: 'payment_method', type: 'string', nullable: true, example: 'mpesa'),
+            new OA\Property(property: 'payment_method', type: 'string', nullable: true, example: 'mobile_money'),
             new OA\Property(property: 'phone', type: 'string', nullable: true),
             new OA\Property(property: 'amount', type: 'number', nullable: true, description: 'Optional; must match request total if sent'),
         ])),
