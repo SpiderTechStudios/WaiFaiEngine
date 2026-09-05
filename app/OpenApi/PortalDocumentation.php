@@ -73,6 +73,8 @@ class PortalDocumentation
             new OA\Property(property: 'customer_name', type: 'string', example: 'Jane Guest'),
             new OA\Property(property: 'customer_phone', type: 'string', example: '0712345678'),
             new OA\Property(property: 'customer_email', type: 'string', format: 'email', nullable: true),
+            new OA\Property(property: 'captive_session', type: 'string', nullable: true, description: '64-char token from WiFiDog login'),
+            new OA\Property(property: 'mac_address', type: 'string', nullable: true, example: 'AA:BB:CC:DD:EE:FF'),
         ])),
         responses: [
             new OA\Response(response: 201, description: 'Redeemed', content: new OA\JsonContent(ref: '#/components/schemas/PortalVoucherRedeemResponse')),
@@ -97,6 +99,7 @@ class PortalDocumentation
             new OA\Property(property: 'ip_address', type: 'string', format: 'ipv4', nullable: true),
             new OA\Property(property: 'router_id', type: 'integer', nullable: true),
             new OA\Property(property: 'session_id', type: 'string', nullable: true),
+            new OA\Property(property: 'captive_session', type: 'string', nullable: true, description: '64-char token from WiFiDog login redirect'),
         ])),
         responses: [
             new OA\Response(response: 201, description: 'Session started', content: new OA\JsonContent(ref: '#/components/schemas/SessionCreatedResponse')),

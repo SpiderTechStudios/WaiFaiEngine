@@ -11,12 +11,14 @@ use App\Http\Resources\NetworkSessionResource;
 use App\Http\Resources\PortalPaymentResource;
 use App\Models\Company;
 use App\Models\PaymentTransaction;
-use App\Support\PortalContext;
+use App\Services\CaptiveSessionService;
 use App\Services\NetworkSessionService;
 use App\Services\PaymentService;
 use App\Services\PortalService;
 use App\Services\VoucherService;
+use App\Support\PortalContext;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\ValidationException;
 
 class PortalController extends Controller
 {
@@ -26,6 +28,7 @@ class PortalController extends Controller
         private PaymentService $paymentService,
         private VoucherService $voucherService,
         private NetworkSessionService $networkSessionService,
+        private CaptiveSessionService $captiveSessionService,
     ) {}
 
     public function bootstrap(): JsonResponse
@@ -65,15 +68,16 @@ class PortalController extends Controller
 
     public function redeemVoucher(PortalRedeemVoucherRequest $request): JsonResponse
     {
+        $validated = $request->validated();
         $result = $this->voucherService->redeemByCode(
             $this->portalCompany(),
-            $request->validated(),
+            $validated,
         );
 
         $grant = $result['access_grant'];
         $plan = $result['voucher']->internetPlan;
 
-        return $this->success([
+        $payload = [
             'customer' => [
                 'id' => $result['customer']->id,
                 'name' => $result['customer']->name,
@@ -92,21 +96,88 @@ class PortalController extends Controller
                 'duration' => $plan->duration,
                 'duration_unit' => $plan->duration_unit,
             ] : null,
-        ], 'Voucher redeemed', 201);
+        ];
+
+        if (! empty($validated['captive_session'])) {
+            $payload['captive'] = $this->authorizeCaptiveSession(
+                (string) $validated['captive_session'],
+                [
+                    'access_grant_id' => $grant->id,
+                    'mac_address' => $validated['mac_address'] ?? null,
+                ],
+            );
+        }
+
+        return $this->success($payload, 'Voucher redeemed', 201);
     }
 
     public function createSession(PortalStoreSessionRequest $request): JsonResponse
     {
+        $validated = $request->validated();
+        $captiveToken = $validated['captive_session'] ?? null;
+        unset($validated['captive_session']);
+
+        if ($captiveToken) {
+            $captive = $this->captiveSessionService->findByToken((string) $captiveToken);
+            if (! $captive || (int) $captive->company_id !== (int) $this->portalCompany()->id) {
+                throw ValidationException::withMessages([
+                    'captive_session' => ['Captive session not found for this portal.'],
+                ]);
+            }
+
+            $validated['router_id'] = $validated['router_id'] ?? $captive->network_device_id;
+            $validated['network_station_id'] = $validated['network_station_id'] ?? $captive->network_station_id;
+            $validated['ip_address'] = $validated['ip_address'] ?? $captive->client_ip;
+            $validated['mac_address'] = $validated['mac_address'] ?? $captive->client_mac;
+            $validated['session_id'] = $validated['session_id'] ?? $captive->token;
+        }
+
         $session = $this->networkSessionService->create(
             $this->portalCompany(),
-            $request->validated(),
+            $validated,
         );
 
-        return $this->success(
-            (new NetworkSessionResource($session))->resolve(),
-            'Session started',
-            201,
-        );
+        $payload = (new NetworkSessionResource($session))->resolve();
+
+        if ($captiveToken) {
+            $captive = $this->captiveSessionService->findByToken((string) $captiveToken);
+            $captive = $this->captiveSessionService->linkHotspotSession($captive, $session);
+            $payload['captive'] = [
+                ...$this->captiveSessionService->toPublicArray($captive),
+                'gateway_auth_url' => $this->captiveSessionService->gatewayAuthRedirectUrl($captive),
+            ];
+        }
+
+        return $this->success($payload, 'Session started', 201);
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function authorizeCaptiveSession(string $token, array $data): array
+    {
+        $captive = $this->captiveSessionService->findByToken($token);
+
+        if (! $captive || (int) $captive->company_id !== (int) $this->portalCompany()->id) {
+            throw ValidationException::withMessages([
+                'captive_session' => ['Captive session not found for this portal.'],
+            ]);
+        }
+
+        if ($captive->isAuthenticated()) {
+            return [
+                ...$this->captiveSessionService->toPublicArray($captive),
+                'gateway_auth_url' => $this->captiveSessionService->gatewayAuthRedirectUrl($captive),
+            ];
+        }
+
+        $captive = $this->captiveSessionService->authenticate($captive, $data);
+
+        return [
+            ...$this->captiveSessionService->toPublicArray($captive),
+            'gateway_auth_url' => $this->captiveSessionService->gatewayAuthRedirectUrl($captive),
+        ];
     }
 
     public function restore(PortalRestoreRequest $request): JsonResponse

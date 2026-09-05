@@ -7,9 +7,10 @@ use OpenApi\Attributes as OA;
 #[OA\Info(
     title: 'WaiFai Engine API',
     version: '1.0.0',
-    description: 'WaiFai Engine API v1: payment-gated enrollment (4-minute session, max 3 failed attempts), company billing/renewal, optional installation/router orders, captive portal, hotspot operations, staff, and platform administration. Envelope: { status, code, message, data }. Platform ops require an active subscription (except /billing/*).'
+    description: 'WaiFai Engine API v1: payment-gated enrollment (4-minute session, max 3 failed attempts), company billing/renewal, optional installation/router orders, captive portal, hotspot operations, staff, and platform administration. Envelope: { status, code, message, data }. Platform ops require an active subscription (except /billing/*). WiFiDog gateway protocol lives at /api/wifidog/* (select API root server in Swagger).'
 )]
 #[OA\Server(url: '/api/v1', description: 'API v1')]
+#[OA\Server(url: '/api', description: 'API root — WiFiDog gateway protocol (/wifidog/*)')]
 #[OA\SecurityScheme(
     securityScheme: 'sanctum',
     type: 'http',
@@ -36,6 +37,8 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: 'Withdrawals', description: 'Payouts from company wallet')]
 #[OA\Tag(name: 'Settings', description: 'Company branding and integrations')]
 #[OA\Tag(name: 'Portal', description: 'Public captive portal (no authentication)')]
+#[OA\Tag(name: 'Captive Session', description: 'Public captive session resolve/authorize for the connect frontend')]
+#[OA\Tag(name: 'WiFiDog Gateway Protocol', description: 'Public machine endpoints for Ruijie/WiFiDog gateways (login redirect, auth, ping) — no Sanctum')]
 #[OA\Tag(name: 'Superadmin', description: 'Platform administration')]
 #[OA\Tag(name: 'Platform Admin', description: 'Cross-tenant router management for platform admins')]
 class OpenApiDefinition {}

@@ -83,4 +83,9 @@ class NetworkDevice extends Model
     {
         return $this->hasMany(NetworkSession::class);
     }
+
+    public function captiveSessions(): HasMany
+    {
+        return $this->hasMany(CaptiveSession::class);
+    }
 }

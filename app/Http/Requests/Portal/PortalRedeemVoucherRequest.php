@@ -21,6 +21,8 @@ class PortalRedeemVoucherRequest extends FormRequest
             'customer_name' => ['required', 'string', 'max:255'],
             'customer_phone' => ['required', 'string', 'max:50'],
             'customer_email' => ['nullable', 'email'],
+            'captive_session' => ['nullable', 'string', 'size:64'],
+            'mac_address' => ['nullable', 'string', 'max:32'],
         ];
     }
 }

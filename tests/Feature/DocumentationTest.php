@@ -49,6 +49,11 @@ class DocumentationTest extends TestCase
         $this->assertContains('/packages', $paths);
         $this->assertContains('/settings', $paths);
         $this->assertContains('/portal/{subdomain}', $paths);
+        $this->assertContains('/captive/sessions/{token}', $paths);
+        $this->assertContains('/captive/sessions/{token}/authorize', $paths);
+        $this->assertContains('/wifidog/login', $paths);
+        $this->assertContains('/wifidog/auth', $paths);
+        $this->assertContains('/wifidog/ping', $paths);
         $this->assertNotContains('/companies', $paths);
     }
 }

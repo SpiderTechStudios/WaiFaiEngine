@@ -2,13 +2,17 @@
     "openapi": "3.0.0",
     "info": {
         "title": "WaiFai Engine API",
-        "description": "WaiFai Engine API v1: payment-gated enrollment (4-minute session, max 3 failed attempts), company billing/renewal, optional installation/router orders, captive portal, hotspot operations, staff, and platform administration. Envelope: { status, code, message, data }. Platform ops require an active subscription (except /billing/*).",
+        "description": "WaiFai Engine API v1: payment-gated enrollment (4-minute session, max 3 failed attempts), company billing/renewal, optional installation/router orders, captive portal, hotspot operations, staff, and platform administration. Envelope: { status, code, message, data }. Platform ops require an active subscription (except /billing/*). WiFiDog gateway protocol lives at /api/wifidog/* (select API root server in Swagger).",
         "version": "1.0.0"
     },
     "servers": [
         {
             "url": "/api/v1",
             "description": "API v1"
+        },
+        {
+            "url": "/api",
+            "description": "API root — WiFiDog gateway protocol (/wifidog/*)"
         }
     ],
     "paths": {
@@ -808,6 +812,133 @@
                         "sanctum": []
                     }
                 ]
+            }
+        },
+        "/captive/sessions/{token}": {
+            "get": {
+                "tags": [
+                    "Captive Session"
+                ],
+                "summary": "Resolve a captive portal session by token",
+                "description": "Public frontend API. Returns safe network/gateway/client context for the connect portal. Network is bound to the session created by WiFiDog login — do not trust subdomain from the URL alone for authorization.",
+                "operationId": "captiveSessionShow",
+                "parameters": [
+                    {
+                        "name": "token",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 64,
+                            "minLength": 64
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Captive session",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CaptiveSessionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/captive/sessions/{token}/authorize": {
+            "post": {
+                "tags": [
+                    "Captive Session"
+                ],
+                "summary": "Authorize a captive session after voucher or payment",
+                "description": "Marks the captive session authenticated, creates a hotspot NetworkSession, and returns gateway_auth_url for the client to hit the gateway WiFiDog auth endpoint.",
+                "operationId": "captiveSessionAuthorize",
+                "parameters": [
+                    {
+                        "name": "token",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 64,
+                            "minLength": 64
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "access_grant_id": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "payment_transaction_id": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "mac_address": {
+                                        "type": "string",
+                                        "example": "AA:BB:CC:DD:EE:FF",
+                                        "nullable": true
+                                    },
+                                    "ip_address": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Authorized",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CaptiveSessionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
         "/auth/register": {
@@ -5644,6 +5775,16 @@
                                         "type": "string",
                                         "format": "email",
                                         "nullable": true
+                                    },
+                                    "captive_session": {
+                                        "description": "64-char token from WiFiDog login",
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "mac_address": {
+                                        "type": "string",
+                                        "example": "AA:BB:CC:DD:EE:FF",
+                                        "nullable": true
                                     }
                                 },
                                 "type": "object"
@@ -5733,6 +5874,11 @@
                                         "nullable": true
                                     },
                                     "session_id": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "captive_session": {
+                                        "description": "64-char token from WiFiDog login redirect",
                                         "type": "string",
                                         "nullable": true
                                     }
@@ -7303,6 +7449,268 @@
                         "sanctum": []
                     }
                 ]
+            }
+        },
+        "/wifidog/login": {
+            "get": {
+                "tags": [
+                    "WiFiDog Gateway Protocol"
+                ],
+                "summary": "WiFiDog login — validate gateway and redirect to captive portal",
+                "description": "Public gateway protocol endpoint (no Sanctum). Resolves gw_id to a registered Ruijie/WiFiDog router, creates or reuses a captive session, then 302-redirects the client browser to the frontend /connect portal. Do not send client_ip — use ip. Never trust subdomain/company_id from the client; network is derived from the gateway.",
+                "operationId": "wifiDogLogin",
+                "parameters": [
+                    {
+                        "name": "gw_id",
+                        "in": "query",
+                        "description": "WiFiDog gateway id registered on the router",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "G1UQCC8000976"
+                        }
+                    },
+                    {
+                        "name": "ip",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "192.168.0.35"
+                        }
+                    },
+                    {
+                        "name": "mac",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "AA:BB:CC:DD:EE:FF"
+                        }
+                    },
+                    {
+                        "name": "gw_address",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "192.168.0.1"
+                        }
+                    },
+                    {
+                        "name": "gw_port",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 2060
+                        }
+                    },
+                    {
+                        "name": "ssid",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "url",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "description": "Original URL the client tried to open",
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "302": {
+                        "description": "Redirect to /connect?subdomain=...&session=... or gateway auth if already authenticated"
+                    },
+                    "400": {
+                        "description": "Missing gw_id",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Unknown or inactive gateway",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/wifidog/auth": {
+            "get": {
+                "tags": [
+                    "WiFiDog Gateway Protocol"
+                ],
+                "summary": "WiFiDog auth — authorize or deny a client token",
+                "description": "Public gateway protocol. Returns plain text Auth: 1 or Auth: 0 (not JSON).",
+                "operationId": "wifiDogAuth",
+                "parameters": [
+                    {
+                        "name": "token",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "stage",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "login",
+                            "enum": [
+                                "login",
+                                "counters",
+                                "logout"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "ip",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "mac",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "gw_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "incoming",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "outgoing",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Plain text Auth: 1 or Auth: 0",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string",
+                                    "example": "Auth: 1"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/wifidog/ping": {
+            "get": {
+                "tags": [
+                    "WiFiDog Gateway Protocol"
+                ],
+                "summary": "WiFiDog ping — gateway heartbeat",
+                "description": "Public gateway protocol. Updates gateway last_seen_at and returns plain text Pong.",
+                "operationId": "wifiDogPing",
+                "parameters": [
+                    {
+                        "name": "gw_id",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "sys_uptime",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "sys_memfree",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "sys_load",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "number"
+                        }
+                    },
+                    {
+                        "name": "wifidog_uptime",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Plain text Pong",
+                        "content": {
+                            "text/plain": {
+                                "schema": {
+                                    "type": "string",
+                                    "example": "Pong"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Unknown or inactive gateway",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     },
@@ -10123,6 +10531,98 @@
                 },
                 "type": "object"
             },
+            "CaptiveSessionData": {
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "example": "pending",
+                        "enum": [
+                            "pending",
+                            "authenticated",
+                            "expired",
+                            "rejected",
+                            "disconnected"
+                        ]
+                    },
+                    "expires_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "authenticated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "network": {
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "example": "Spider WiFi"
+                            },
+                            "subdomain": {
+                                "type": "string",
+                                "example": "spider"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "gateway": {
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "example": "Spider Gateway"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "client": {
+                        "properties": {
+                            "ip": {
+                                "type": "string",
+                                "example": "192.168.0.35",
+                                "nullable": true
+                            },
+                            "mac": {
+                                "type": "string",
+                                "example": "AA:BB:CC:DD:EE:FF",
+                                "nullable": true
+                            },
+                            "ssid": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "gateway_auth_url": {
+                        "type": "string",
+                        "example": "http://192.168.0.1:2060/wifidog/auth?token=...",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "CaptiveSessionResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Captive session retrieved"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/CaptiveSessionData"
+                    }
+                },
+                "type": "object"
+            },
             "ValidationErrorResponse": {
                 "properties": {
                     "status": {
@@ -11292,6 +11792,14 @@
         {
             "name": "Portal",
             "description": "Public captive portal (no authentication)"
+        },
+        {
+            "name": "Captive Session",
+            "description": "Public captive session resolve/authorize for the connect frontend"
+        },
+        {
+            "name": "WiFiDog Gateway Protocol",
+            "description": "Public machine endpoints for Ruijie/WiFiDog gateways (login redirect, auth, ping) — no Sanctum"
         },
         {
             "name": "Superadmin",

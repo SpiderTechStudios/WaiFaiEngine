@@ -172,6 +172,11 @@ class Company extends Model
         return $this->hasMany(CaptivePortal::class);
     }
 
+    public function captiveSessions(): HasMany
+    {
+        return $this->hasMany(CaptiveSession::class);
+    }
+
     public function revenueRecords(): HasMany
     {
         return $this->hasMany(RevenueRecord::class);

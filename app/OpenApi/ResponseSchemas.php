@@ -367,6 +367,36 @@ use OpenApi\Attributes as OA;
     ]
 )]
 #[OA\Schema(
+    schema: 'CaptiveSessionData',
+    properties: [
+        new OA\Property(property: 'status', type: 'string', enum: ['pending', 'authenticated', 'expired', 'rejected', 'disconnected'], example: 'pending'),
+        new OA\Property(property: 'expires_at', type: 'string', format: 'date-time', nullable: true),
+        new OA\Property(property: 'authenticated_at', type: 'string', format: 'date-time', nullable: true),
+        new OA\Property(property: 'network', properties: [
+            new OA\Property(property: 'name', type: 'string', example: 'Spider WiFi'),
+            new OA\Property(property: 'subdomain', type: 'string', example: 'spider'),
+        ], type: 'object'),
+        new OA\Property(property: 'gateway', properties: [
+            new OA\Property(property: 'name', type: 'string', example: 'Spider Gateway'),
+        ], type: 'object'),
+        new OA\Property(property: 'client', properties: [
+            new OA\Property(property: 'ip', type: 'string', nullable: true, example: '192.168.0.35'),
+            new OA\Property(property: 'mac', type: 'string', nullable: true, example: 'AA:BB:CC:DD:EE:FF'),
+            new OA\Property(property: 'ssid', type: 'string', nullable: true),
+        ], type: 'object'),
+        new OA\Property(property: 'gateway_auth_url', type: 'string', nullable: true, example: 'http://192.168.0.1:2060/wifidog/auth?token=...'),
+    ]
+)]
+#[OA\Schema(
+    schema: 'CaptiveSessionResponse',
+    properties: [
+        new OA\Property(property: 'status', type: 'boolean', example: true),
+        new OA\Property(property: 'code', type: 'integer', example: 200),
+        new OA\Property(property: 'message', type: 'string', example: 'Captive session retrieved'),
+        new OA\Property(property: 'data', ref: '#/components/schemas/CaptiveSessionData'),
+    ]
+)]
+#[OA\Schema(
     schema: 'ValidationErrorResponse',
     properties: [
         new OA\Property(property: 'status', type: 'boolean', example: false),
