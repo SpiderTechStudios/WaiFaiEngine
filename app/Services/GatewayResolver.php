@@ -10,7 +10,7 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 class GatewayResolver
 {
     /**
-     * Resolve an active WiFiDog-capable gateway by gw_id.
+     * Resolve an active WiFiDog-capable gateway by gw_id / device id.
      *
      * @throws HttpException
      */
@@ -22,56 +22,64 @@ class GatewayResolver
             throw new HttpException(400, 'gw_id is required.');
         }
 
-        $gateway = NetworkDevice::query()
-            ->with(['company', 'networkStation'])
-            ->where('gateway_id', $gwId)
-            ->whereNull('deleted_at')
-            ->where('type', 'router')
-            ->orderByDesc('id')
-            ->first();
+        $gateway = $this->findByGatewayIdentifier($gwId);
 
         if (! $gateway) {
-            Log::info('wifidog.gateway_unknown', [
-                'gw_id' => $gwId,
+            Log::warning('wifidog.gateway_unknown', [
+                'received_gw_id' => $gwId,
+                'hint' => 'Register a Ruijie router whose gateway_id exactly matches this value (Routers API / admin).',
             ]);
 
-            throw new HttpException(404, 'Unknown or inactive WiFiDog gateway');
+            throw new HttpException(
+                404,
+                'Unknown WiFiDog gateway. No router is registered with gateway_id "'.$gwId.'".'
+            );
         }
 
         if ($gateway->status !== 'active') {
             Log::info('wifidog.gateway_inactive', [
-                'gw_id' => $gwId,
+                'received_gw_id' => $gwId,
                 'gateway_id' => $gateway->id,
                 'status' => $gateway->status,
             ]);
 
-            throw new HttpException(404, 'Unknown or inactive WiFiDog gateway');
+            throw new HttpException(
+                404,
+                'WiFiDog gateway "'.$gwId.'" is registered but inactive (status: '.$gateway->status.').'
+            );
         }
 
         if (! $this->supportsWiFiDog($gateway)) {
             Log::info('wifidog.gateway_not_enabled', [
-                'gw_id' => $gwId,
+                'received_gw_id' => $gwId,
                 'gateway_id' => $gateway->id,
                 'gateway_type' => $gateway->gateway_type,
             ]);
 
-            throw new HttpException(404, 'Unknown or inactive WiFiDog gateway');
+            throw new HttpException(
+                404,
+                'Router "'.$gwId.'" is not configured for WiFiDog (expected Ruijie/Wavlink with gateway_id).'
+            );
         }
 
         $company = $gateway->company;
         if (! $company || $company->status !== 'active') {
             Log::info('wifidog.company_inactive', [
-                'gw_id' => $gwId,
+                'received_gw_id' => $gwId,
                 'gateway_id' => $gateway->id,
                 'company_id' => $gateway->company_id,
+                'company_status' => $company?->status,
             ]);
 
-            throw new HttpException(404, 'Unknown or inactive WiFiDog gateway');
+            throw new HttpException(
+                404,
+                'WiFiDog gateway "'.$gwId.'" belongs to an inactive company.'
+            );
         }
 
         if (blank($company->subdomain)) {
             Log::warning('wifidog.company_missing_subdomain', [
-                'gw_id' => $gwId,
+                'received_gw_id' => $gwId,
                 'gateway_id' => $gateway->id,
                 'company_id' => $company->id,
             ]);
@@ -82,9 +90,29 @@ class GatewayResolver
         return $gateway;
     }
 
+    /**
+     * Match WiFiDog gw_id / Ruijie device id against network_devices.gateway_id or serial_number.
+     */
+    public function findByGatewayIdentifier(string $gwId): ?NetworkDevice
+    {
+        $normalized = strtolower(trim($gwId));
+
+        return NetworkDevice::query()
+            ->with(['company', 'networkStation'])
+            ->where('type', 'router')
+            ->where(function ($query) use ($gwId, $normalized): void {
+                $query->whereRaw('LOWER(gateway_id) = ?', [$normalized])
+                    ->orWhereRaw('LOWER(serial_number) = ?', [$normalized])
+                    ->orWhere('gateway_id', $gwId)
+                    ->orWhere('serial_number', $gwId);
+            })
+            ->orderByDesc('id')
+            ->first();
+    }
+
     public function supportsWiFiDog(NetworkDevice $gateway): bool
     {
-        if (blank($gateway->gateway_id)) {
+        if (blank($gateway->gateway_id) && blank($gateway->serial_number)) {
             return false;
         }
 

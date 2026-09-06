@@ -15,11 +15,28 @@ class WiFiDogService
     public function __construct(
         private GatewayResolver $gatewayResolver,
         private CaptiveSessionService $captiveSessionService,
-    ) {}
+    ) {
+    }
 
     public function login(Request $request): RedirectResponse
     {
-        $gwId = (string) $request->query('gw_id', '');
+
+        $gwId = $this->extractGatewayId($request);
+        Log::info('reequest from mobile', json_decode($request));
+
+        Log::info('wifidog.login_request', [
+            'received_gw_id' => $gwId,
+            'query' => [
+                'gw_id' => $request->query('gw_id'),
+                'dev_id' => $request->query('dev_id'),
+                'ip' => $request->query('ip'),
+                'mac' => $request->query('mac'),
+                'gw_address' => $request->query('gw_address'),
+                'gw_port' => $request->query('gw_port'),
+                'ssid' => $request->query('ssid'),
+            ],
+        ]);
+
         $gateway = $this->gatewayResolver->resolveActive($gwId);
 
         $this->touchGateway($gateway, $request);
@@ -85,7 +102,7 @@ class WiFiDogService
         $stage = (string) $request->query('stage', 'login');
         $mac = $request->query('mac');
         $ip = $request->query('ip');
-        $gwId = $request->query('gw_id');
+        $gwId = $request->query('gw_id') ?: $request->query('dev_id');
 
         if ($token === '') {
             return $this->authResponse(0);
@@ -135,7 +152,7 @@ class WiFiDogService
 
     public function ping(Request $request): Response
     {
-        $gwId = (string) $request->query('gw_id', '');
+        $gwId = $this->extractGatewayId($request);
 
         try {
             $gateway = $this->gatewayResolver->resolveActive($gwId);
@@ -167,8 +184,21 @@ class WiFiDogService
         $gateway->forceFill(['last_seen_at' => now()])->save();
     }
 
+    /**
+     * WiFiDog v1 uses gw_id; some Ruijie builds also send dev_id.
+     */
+    private function extractGatewayId(Request $request): string
+    {
+        $gwId = trim((string) $request->query('gw_id', ''));
+        if ($gwId !== '') {
+            return $gwId;
+        }
+
+        return trim((string) $request->query('dev_id', ''));
+    }
+
     private function authResponse(int $code): Response
     {
-        return response('Auth: '.$code, 200)->header('Content-Type', 'text/plain');
+        return response('Auth: ' . $code, 200)->header('Content-Type', 'text/plain');
     }
 }

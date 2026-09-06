@@ -17,7 +17,7 @@ class WiFiDogTest extends TestCase
     {
         $this->get('/api/wifidog/login?gw_id=unknown')
             ->assertNotFound()
-            ->assertJsonPath('message', 'Unknown or inactive WiFiDog gateway');
+            ->assertJsonPath('message', 'Unknown WiFiDog gateway. No router is registered with gateway_id "unknown".');
     }
 
     public function test_inactive_gateway_returns_404(): void
@@ -28,7 +28,38 @@ class WiFiDogTest extends TestCase
 
         $this->get('/api/wifidog/login?gw_id=323&ip=192.168.0.35')
             ->assertNotFound()
-            ->assertJsonPath('message', 'Unknown or inactive WiFiDog gateway');
+            ->assertJsonPath('message', 'WiFiDog gateway "323" is registered but inactive (status: inactive).');
+    }
+
+    public function test_gateway_id_match_is_case_insensitive(): void
+    {
+        config([
+            'captive.portal_url' => 'https://waifai.test/connect',
+            'captive.portal_base_url' => 'https://waifai.test/connect',
+        ]);
+
+        $owner = $this->createUser();
+        $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'spider']);
+        $this->createRuijieRouter($company, 'G1ABC123');
+
+        $this->get('/api/wifidog/login?gw_id=g1abc123&ip=192.168.0.35')
+            ->assertRedirect()
+            ->assertHeader('Location');
+    }
+
+    public function test_dev_id_is_accepted_as_gateway_identifier(): void
+    {
+        config([
+            'captive.portal_url' => 'https://waifai.test/connect',
+            'captive.portal_base_url' => 'https://waifai.test/connect',
+        ]);
+
+        $owner = $this->createUser();
+        $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'spider']);
+        $this->createRuijieRouter($company, 'DEV-99');
+
+        $this->get('/api/wifidog/login?dev_id=DEV-99&ip=192.168.0.35')
+            ->assertRedirect();
     }
 
     public function test_valid_gateway_redirects_to_connect_portal(): void
