@@ -38,20 +38,21 @@ return new class extends Migration
                 ->on('network_devices')
                 ->restrictOnDelete();
 
+            // Composite FKs that include non-nullable company_id cannot use ON DELETE SET NULL on MySQL.
             $table->foreign(['network_station_id', 'company_id'])
                 ->references(['id', 'company_id'])
                 ->on('network_stations')
-                ->nullOnDelete();
+                ->restrictOnDelete();
 
             $table->foreign(['access_grant_id', 'company_id'])
                 ->references(['id', 'company_id'])
                 ->on('access_grants')
-                ->nullOnDelete();
+                ->restrictOnDelete();
 
             $table->foreign(['network_session_id', 'company_id'])
                 ->references(['id', 'company_id'])
                 ->on('network_sessions')
-                ->nullOnDelete();
+                ->restrictOnDelete();
         });
     }
 
