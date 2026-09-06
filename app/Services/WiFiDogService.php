@@ -50,16 +50,29 @@ class WiFiDogService
             }
         }
 
-        $portalUrl = $this->captiveSessionService->portalRedirectUrl($session);
+        try {
+            $portalUrl = $this->captiveSessionService->portalRedirectUrl($session);
+        } catch (\RuntimeException $e) {
+            Log::error('wifidog.portal_url_misconfigured', [
+                'gw_id' => $gateway->gateway_id,
+                'gateway_id' => $gateway->id,
+                'message' => $e->getMessage(),
+            ]);
+
+            throw new HttpException(500, $e->getMessage());
+        }
 
         Log::info('wifidog.login_redirect_portal', [
             'gw_id' => $gateway->gateway_id,
             'gateway_id' => $gateway->id,
             'network_id' => $gateway->network_station_id,
+            'company_id' => $gateway->company_id,
             'client_mac' => $session->client_mac,
             'client_ip' => $session->client_ip,
+            'captive_session_id' => $session->id,
             'session_token_hash' => hash('sha256', $session->token),
             'subdomain' => $gateway->company?->subdomain,
+            'generated_portal_url' => preg_replace('/([?&]session=)[a-f0-9]+/i', '$1***', $portalUrl),
             'response_status' => 302,
         ]);
 

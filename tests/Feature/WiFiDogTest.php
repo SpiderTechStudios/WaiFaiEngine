@@ -33,7 +33,10 @@ class WiFiDogTest extends TestCase
 
     public function test_valid_gateway_redirects_to_connect_portal(): void
     {
-        config(['captive.portal_base_url' => 'https://waifai.test']);
+        config([
+            'captive.portal_url' => 'https://waifai.test/connect',
+            'captive.portal_base_url' => 'https://waifai.test/connect',
+        ]);
 
         $owner = $this->createUser();
         $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'spider']);
@@ -45,6 +48,8 @@ class WiFiDogTest extends TestCase
         $location = $response->headers->get('Location');
         $this->assertNotNull($location);
         $this->assertStringStartsWith('https://waifai.test/connect?', $location);
+        $this->assertStringNotContainsString('/api/wifidog', $location);
+        $this->assertStringNotContainsString('/login/login', $location);
         $this->assertStringContainsString('subdomain=spider', $location);
         $this->assertMatchesRegularExpression('/session=[a-f0-9]{64}/', $location);
 
@@ -57,9 +62,47 @@ class WiFiDogTest extends TestCase
         ]);
     }
 
+    public function test_portal_url_origin_appends_connect_path(): void
+    {
+        config([
+            'captive.portal_url' => 'https://waifai.test',
+            'captive.portal_base_url' => 'https://waifai.test',
+            'captive.portal_connect_path' => '/connect',
+        ]);
+
+        $owner = $this->createUser();
+        $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'spider']);
+        $this->createRuijieRouter($company, '323');
+
+        $location = $this->get('/api/wifidog/login?gw_id=323&ip=192.168.0.35')
+            ->assertRedirect()
+            ->headers->get('Location');
+
+        $this->assertStringStartsWith('https://waifai.test/connect?', $location);
+    }
+
+    public function test_misconfigured_portal_url_pointing_at_wifidog_api_is_rejected(): void
+    {
+        config([
+            'captive.portal_url' => 'https://waifai.test/api/wifidog/login',
+            'captive.portal_base_url' => 'https://waifai.test/api/wifidog/login',
+            'captive.portal_connect_path' => '/login',
+        ]);
+
+        $owner = $this->createUser();
+        $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'spider']);
+        $this->createRuijieRouter($company, '323');
+
+        $this->get('/api/wifidog/login?gw_id=323&ip=192.168.0.35')
+            ->assertStatus(500);
+    }
+
     public function test_valid_gateway_with_mac_creates_session(): void
     {
-        config(['captive.portal_base_url' => 'https://waifai.test']);
+        config([
+            'captive.portal_url' => 'https://waifai.test/connect',
+            'captive.portal_base_url' => 'https://waifai.test',
+        ]);
 
         $owner = $this->createUser();
         $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'spider']);
@@ -78,7 +121,10 @@ class WiFiDogTest extends TestCase
 
     public function test_duplicate_login_reuses_pending_session(): void
     {
-        config(['captive.portal_base_url' => 'https://waifai.test']);
+        config([
+            'captive.portal_url' => 'https://waifai.test/connect',
+            'captive.portal_base_url' => 'https://waifai.test',
+        ]);
 
         $owner = $this->createUser();
         $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'spider']);
@@ -102,7 +148,10 @@ class WiFiDogTest extends TestCase
 
     public function test_subdomain_query_cannot_hijack_tenant(): void
     {
-        config(['captive.portal_base_url' => 'https://waifai.test']);
+        config([
+            'captive.portal_url' => 'https://waifai.test/connect',
+            'captive.portal_base_url' => 'https://waifai.test',
+        ]);
 
         $ownerA = $this->createUser();
         $companyA = $this->createCompanyFor($ownerA, 'owner', ['subdomain' => 'spider']);
@@ -235,7 +284,10 @@ class WiFiDogTest extends TestCase
 
     public function test_captive_session_api_returns_safe_payload(): void
     {
-        config(['captive.portal_base_url' => 'https://waifai.test']);
+        config([
+            'captive.portal_url' => 'https://waifai.test/connect',
+            'captive.portal_base_url' => 'https://waifai.test',
+        ]);
 
         $owner = $this->createUser();
         $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'spider']);
@@ -257,7 +309,10 @@ class WiFiDogTest extends TestCase
 
     public function test_authenticated_login_redirects_to_gateway_auth(): void
     {
-        config(['captive.portal_base_url' => 'https://waifai.test']);
+        config([
+            'captive.portal_url' => 'https://waifai.test/connect',
+            'captive.portal_base_url' => 'https://waifai.test',
+        ]);
 
         $owner = $this->createUser();
         $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'spider']);

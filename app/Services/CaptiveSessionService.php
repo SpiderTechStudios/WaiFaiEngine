@@ -290,13 +290,73 @@ class CaptiveSessionService
     public function portalRedirectUrl(CaptiveSession $session): string
     {
         $session->loadMissing('company');
-        $base = config('captive.portal_base_url');
-        $path = config('captive.portal_connect_path', '/connect');
 
-        return $base.$path.'?'.http_build_query([
+        $portalPage = $this->resolvePortalPageUrl();
+
+        $url = $portalPage.'?'.http_build_query([
             'subdomain' => $session->company->subdomain,
             'session' => $session->token,
         ]);
+
+        $this->assertSafePortalRedirectUrl($url);
+
+        return $url;
+    }
+
+    /**
+     * Build the absolute connect-page URL (no query string).
+     */
+    public function resolvePortalPageUrl(): string
+    {
+        $connectPath = '/'.trim((string) config('captive.portal_connect_path', '/connect'), '/');
+        if ($connectPath === '/') {
+            $connectPath = '/connect';
+        }
+
+        $configured = trim((string) (config('captive.portal_url') ?: config('captive.portal_base_url') ?: ''));
+        $configured = rtrim($configured, '/');
+
+        if ($configured === '') {
+            $configured = rtrim((string) config('captive.portal_origin', config('app.url')), '/');
+        }
+
+        if ($configured === '' || ! preg_match('#^https?://#i', $configured)) {
+            throw new \RuntimeException(
+                'CAPTIVE_PORTAL_URL must be an absolute http(s) URL to the customer captive portal (e.g. https://waifai.shereheyangu.com/connect).'
+            );
+        }
+
+        $path = parse_url($configured, PHP_URL_PATH) ?: '/';
+        $path = rtrim($path, '/') ?: '/';
+
+        // Full connect URL already configured.
+        if ($path === $connectPath || str_ends_with($path, $connectPath)) {
+            return $configured;
+        }
+
+        // Origin-only (or other path) — append connect path.
+        return $configured.$connectPath;
+    }
+
+    private function assertSafePortalRedirectUrl(string $url): void
+    {
+        $parts = parse_url($url);
+        $path = $parts['path'] ?? '';
+
+        if (! isset($parts['scheme'], $parts['host']) || ! in_array(strtolower($parts['scheme']), ['http', 'https'], true)) {
+            throw new \RuntimeException('Captive portal redirect must be an absolute http(s) URL.');
+        }
+
+        if (str_contains($path, '/api/wifidog') || str_contains($path, '/api/v1/wifidog')) {
+            throw new \RuntimeException(
+                'Captive portal URL must not point at the WiFiDog API. Set CAPTIVE_PORTAL_URL to the frontend connect page (e.g. https://waifai.shereheyangu.com/connect), not /api/wifidog/login. On the Ruijie/WiFiDog gateway, AuthServer Path must be /api/wifidog/ (not /api/wifidog/login/).'
+            );
+        }
+
+        // Relative Location headers resolve against /api/wifidog/login and produce /api/wifidog/login/login.
+        if (! str_starts_with($url, 'http://') && ! str_starts_with($url, 'https://')) {
+            throw new \RuntimeException('Captive portal redirect must be absolute to avoid /api/wifidog/login/login.');
+        }
     }
 
     public function gatewayAuthRedirectUrl(CaptiveSession $session): ?string
