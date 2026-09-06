@@ -22,7 +22,8 @@ class WiFiDogService
     {
 
         $gwId = $this->extractGatewayId($request);
-        Log::info('reequest from mobile', json_decode($request));
+Log::info('request from mobile', $request->all());
+
 
         Log::info('wifidog.login_request', [
             'received_gw_id' => $gwId,
