@@ -941,6 +941,365 @@
                 }
             }
         },
+        "/superadmin/brands": {
+            "get": {
+                "tags": [
+                    "Device Catalog"
+                ],
+                "summary": "List brands",
+                "operationId": "listBrands",
+                "responses": {
+                    "200": {
+                        "description": "Brands"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Device Catalog"
+                ],
+                "summary": "Create a brand, optionally with a logo file",
+                "operationId": "createBrand",
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "name"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "slug": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "logo": {
+                                        "type": "string",
+                                        "format": "binary",
+                                        "nullable": true
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/superadmin/brands/{brand}": {
+            "delete": {
+                "tags": [
+                    "Device Catalog"
+                ],
+                "summary": "Delete a brand with no devices",
+                "operationId": "deleteBrand",
+                "parameters": [
+                    {
+                        "name": "brand",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Deleted"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Device Catalog"
+                ],
+                "summary": "Update a brand or replace its logo",
+                "operationId": "updateBrand",
+                "parameters": [
+                    {
+                        "name": "brand",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Updated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/superadmin/device-categories": {
+            "get": {
+                "tags": [
+                    "Device Catalog"
+                ],
+                "summary": "List device categories",
+                "operationId": "listDeviceCategories",
+                "responses": {
+                    "200": {
+                        "description": "Categories"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Device Catalog"
+                ],
+                "summary": "Create a device category",
+                "operationId": "createDeviceCategory",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/superadmin/device-categories/{deviceCategory}": {
+            "delete": {
+                "tags": [
+                    "Device Catalog"
+                ],
+                "summary": "Delete a device category with no devices",
+                "operationId": "deleteDeviceCategory",
+                "parameters": [
+                    {
+                        "name": "deviceCategory",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Deleted"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Device Catalog"
+                ],
+                "summary": "Update a device category",
+                "operationId": "updateDeviceCategory",
+                "parameters": [
+                    {
+                        "name": "deviceCategory",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Updated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/superadmin/devices": {
+            "get": {
+                "tags": [
+                    "Device Catalog"
+                ],
+                "summary": "List catalog devices",
+                "operationId": "listCatalogDevices",
+                "responses": {
+                    "200": {
+                        "description": "Devices"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Device Catalog"
+                ],
+                "summary": "Create a catalog device",
+                "operationId": "createCatalogDevice",
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/superadmin/devices/{device}": {
+            "get": {
+                "tags": [
+                    "Device Catalog"
+                ],
+                "summary": "Show a catalog device",
+                "operationId": "showCatalogDevice",
+                "parameters": [
+                    {
+                        "name": "device",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Device"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Device Catalog"
+                ],
+                "summary": "Delete a catalog device",
+                "operationId": "deleteCatalogDevice",
+                "parameters": [
+                    {
+                        "name": "device",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Deleted"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Device Catalog"
+                ],
+                "summary": "Update a catalog device",
+                "operationId": "updateCatalogDevice",
+                "parameters": [
+                    {
+                        "name": "device",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Updated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/auth/register": {
             "post": {
                 "tags": [
@@ -1765,6 +2124,707 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/marketplace/devices": {
+            "get": {
+                "tags": [
+                    "Marketplace"
+                ],
+                "summary": "List devices available for purchase",
+                "operationId": "listMarketplaceDevices",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "brand_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "device_category_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Available devices",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedMarketplaceDevicesResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/marketplace/devices/{device}": {
+            "get": {
+                "tags": [
+                    "Marketplace"
+                ],
+                "summary": "Show one marketplace device",
+                "operationId": "showMarketplaceDevice",
+                "parameters": [
+                    {
+                        "name": "device",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Device",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MarketplaceDeviceResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/cart": {
+            "get": {
+                "tags": [
+                    "Marketplace"
+                ],
+                "summary": "Get the current company cart",
+                "operationId": "showCart",
+                "responses": {
+                    "200": {
+                        "description": "Cart",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CartResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Marketplace"
+                ],
+                "summary": "Clear the current cart",
+                "operationId": "clearCart",
+                "responses": {
+                    "200": {
+                        "description": "Cart cleared",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CartResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/cart/items": {
+            "post": {
+                "tags": [
+                    "Marketplace"
+                ],
+                "summary": "Add a device to the cart",
+                "operationId": "addCartItem",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "device_id"
+                                ],
+                                "properties": {
+                                    "device_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "quantity": {
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Item added",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CartResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Unavailable or insufficient stock",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/cart/items/{cartItem}": {
+            "delete": {
+                "tags": [
+                    "Marketplace"
+                ],
+                "summary": "Remove an item from the cart",
+                "operationId": "removeCartItem",
+                "parameters": [
+                    {
+                        "name": "cartItem",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Item removed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CartResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Marketplace"
+                ],
+                "summary": "Change a cart item quantity",
+                "operationId": "updateCartItem",
+                "parameters": [
+                    {
+                        "name": "cartItem",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "quantity"
+                                ],
+                                "properties": {
+                                    "quantity": {
+                                        "type": "integer",
+                                        "example": 2
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Quantity updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CartResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/cart/checkout": {
+            "post": {
+                "tags": [
+                    "Marketplace"
+                ],
+                "summary": "Pay for the cart and create a pending device purchase order",
+                "description": "Creates an order with status pending and a platform payment whose purpose is device_purchase. Payment success moves the order to processing.",
+                "operationId": "checkoutCart",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "fulfillment_method": {
+                                        "type": "string",
+                                        "example": "delivery",
+                                        "enum": [
+                                            "delivery",
+                                            "pickup"
+                                        ]
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "0712345678",
+                                        "nullable": true
+                                    },
+                                    "notes": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "payment_method": {
+                                        "type": "string",
+                                        "example": "mobile_money",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Order and payment created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CartCheckoutResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Empty cart or stock error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/orders": {
+            "get": {
+                "tags": [
+                    "Marketplace"
+                ],
+                "summary": "List the current company device orders",
+                "operationId": "listCompanyOrders",
+                "responses": {
+                    "200": {
+                        "description": "Orders",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedOrdersResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/orders/{order}": {
+            "get": {
+                "tags": [
+                    "Marketplace"
+                ],
+                "summary": "Show a company device order",
+                "operationId": "showCompanyOrder",
+                "parameters": [
+                    {
+                        "name": "order",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Order",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrderResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/orders/{order}/confirm-delivery": {
+            "post": {
+                "tags": [
+                    "Marketplace"
+                ],
+                "summary": "Confirm the order was delivered or collected",
+                "operationId": "confirmOrderDelivery",
+                "parameters": [
+                    {
+                        "name": "order",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Delivered",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrderResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Order is not ready to confirm",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/superadmin/orders": {
+            "get": {
+                "tags": [
+                    "Marketplace"
+                ],
+                "summary": "List device purchase orders",
+                "operationId": "listAdminOrders",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "pending",
+                                "processing",
+                                "in-transit",
+                                "delivered",
+                                "cancelled"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "company_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Orders",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedOrdersResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/superadmin/orders/{order}": {
+            "get": {
+                "tags": [
+                    "Marketplace"
+                ],
+                "summary": "Show a device purchase order",
+                "operationId": "showAdminOrder",
+                "parameters": [
+                    {
+                        "name": "order",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Order",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrderResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/superadmin/orders/{order}/in-transit": {
+            "post": {
+                "tags": [
+                    "Marketplace"
+                ],
+                "summary": "Mark a paid order as sent",
+                "operationId": "markOrderInTransit",
+                "parameters": [
+                    {
+                        "name": "order",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "In transit",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrderResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/superadmin/orders/{order}/delivered": {
+            "post": {
+                "tags": [
+                    "Marketplace"
+                ],
+                "summary": "Mark an order delivered",
+                "operationId": "markOrderDelivered",
+                "parameters": [
+                    {
+                        "name": "order",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Delivered",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrderResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/superadmin/orders/{order}/cancel": {
+            "post": {
+                "tags": [
+                    "Marketplace"
+                ],
+                "summary": "Cancel an order",
+                "operationId": "cancelOrder",
+                "parameters": [
+                    {
+                        "name": "order",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Cancelled",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrderResponse"
                                 }
                             }
                         }
@@ -9682,6 +10742,343 @@
                 },
                 "type": "object"
             },
+            "CartItem": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "device_id": {
+                        "type": "integer",
+                        "example": 4
+                    },
+                    "quantity": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "unit_price": {
+                        "type": "string",
+                        "example": "100000.00"
+                    },
+                    "line_total": {
+                        "type": "string",
+                        "example": "100000.00"
+                    },
+                    "device": {
+                        "type": "object",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "Cart": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "status": {
+                        "type": "string",
+                        "example": "open"
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CartItem"
+                        }
+                    },
+                    "total_amount": {
+                        "type": "string",
+                        "example": "100000.00"
+                    },
+                    "currency": {
+                        "type": "string",
+                        "example": "TZS"
+                    }
+                },
+                "type": "object"
+            },
+            "CartResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Cart retrieved"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/Cart"
+                    }
+                },
+                "type": "object"
+            },
+            "OrderItem": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "device_id": {
+                        "type": "integer",
+                        "example": 4,
+                        "nullable": true
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Office Router"
+                    },
+                    "sku": {
+                        "type": "string",
+                        "example": "SKU-1"
+                    },
+                    "quantity": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "unit_price": {
+                        "type": "string",
+                        "example": "100000.00"
+                    },
+                    "line_total": {
+                        "type": "string",
+                        "example": "100000.00"
+                    }
+                },
+                "type": "object"
+            },
+            "Order": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "reference": {
+                        "type": "string",
+                        "example": "ORD-ABC123XYZ0"
+                    },
+                    "status": {
+                        "type": "string",
+                        "example": "pending",
+                        "enum": [
+                            "pending",
+                            "processing",
+                            "in-transit",
+                            "delivered",
+                            "cancelled"
+                        ]
+                    },
+                    "payment_status": {
+                        "type": "string",
+                        "example": "pending",
+                        "enum": [
+                            "pending",
+                            "paid",
+                            "failed",
+                            "cancelled"
+                        ]
+                    },
+                    "fulfillment_method": {
+                        "type": "string",
+                        "example": "delivery",
+                        "enum": [
+                            "delivery",
+                            "pickup"
+                        ]
+                    },
+                    "total_amount": {
+                        "type": "string",
+                        "example": "100000.00"
+                    },
+                    "currency": {
+                        "type": "string",
+                        "example": "TZS"
+                    },
+                    "phone": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "notes": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "paid_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "shipped_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "delivered_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "cancelled_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/OrderItem"
+                        }
+                    },
+                    "payment": {
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/PlatformPayment"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "OrderResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Order retrieved"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/Order"
+                    }
+                },
+                "type": "object"
+            },
+            "CartCheckoutResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 201
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Order created and payment initiated"
+                    },
+                    "data": {
+                        "properties": {
+                            "order": {
+                                "$ref": "#/components/schemas/Order"
+                            },
+                            "payment": {
+                                "$ref": "#/components/schemas/PlatformPayment"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "PaginatedOrdersResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Orders retrieved"
+                    },
+                    "data": {
+                        "properties": {
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/Order"
+                                }
+                            },
+                            "meta": {
+                                "$ref": "#/components/schemas/PaginationMeta"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "MarketplaceDeviceResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Marketplace device retrieved"
+                    },
+                    "data": {
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "PaginatedMarketplaceDevicesResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Marketplace devices retrieved"
+                    },
+                    "data": {
+                        "properties": {
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object"
+                                }
+                            },
+                            "meta": {
+                                "$ref": "#/components/schemas/PaginationMeta"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
             "DashboardResponse": {
                 "properties": {
                     "status": {
@@ -11804,6 +13201,14 @@
         {
             "name": "Superadmin",
             "description": "Platform administration"
+        },
+        {
+            "name": "Device Catalog",
+            "description": "Superadmin catalog for brands, device categories, and devices"
+        },
+        {
+            "name": "Marketplace",
+            "description": "Company cart and device purchases. Payment purpose is device_purchase, separate from subscription and installation."
         },
         {
             "name": "Platform Admin",

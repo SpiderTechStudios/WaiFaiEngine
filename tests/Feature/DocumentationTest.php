@@ -47,6 +47,13 @@ class DocumentationTest extends TestCase
         $this->assertContains('/dashboard', $paths);
         $this->assertContains('/routers', $paths);
         $this->assertContains('/packages', $paths);
+        $this->assertContains('/cart', $paths);
+        $this->assertContains('/cart/items', $paths);
+        $this->assertContains('/cart/checkout', $paths);
+        $this->assertContains('/orders', $paths);
+        $this->assertContains('/orders/{order}/confirm-delivery', $paths);
+        $this->assertContains('/superadmin/orders', $paths);
+        $this->assertContains('/superadmin/orders/{order}/in-transit', $paths);
         $this->assertContains('/settings', $paths);
         $this->assertContains('/portal/{subdomain}', $paths);
         $this->assertContains('/captive/sessions/{token}', $paths);
