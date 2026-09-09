@@ -22,6 +22,22 @@ class SuperAdminAndSecurityTest extends TestCase
             ->assertJsonPath('data.status', 'suspended');
     }
 
+    public function test_missing_models_do_not_expose_eloquent_class_names(): void
+    {
+        $admin = $this->createUser(['is_superadmin' => true]);
+
+        $this->withHeaders($this->authHeaders($admin))
+            ->getJson('/api/v1/superadmin/users/999999')
+            ->assertNotFound()
+            ->assertJsonPath('message', 'User not found.')
+            ->assertJsonMissing(['message' => 'No query results for model']);
+
+        $this->withHeaders($this->authHeaders($admin))
+            ->getJson('/api/v1/superadmin/companies/999999')
+            ->assertNotFound()
+            ->assertJsonPath('message', 'Company not found.');
+    }
+
     public function test_non_superadmin_cannot_access_platform_routes(): void
     {
         $user = $this->createUser();

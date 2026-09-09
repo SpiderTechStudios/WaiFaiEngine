@@ -45,6 +45,22 @@ class PaymentProvider extends Model
         return 'slug';
     }
 
+    public function resolveRouteBinding($value, $field = null)
+    {
+        return static::findBySlugOrFail((string) $value);
+    }
+
+    public static function findBySlugOrFail(string $slug): self
+    {
+        $provider = static::query()->where('slug', $slug)->first();
+
+        if (! $provider) {
+            abort(404, 'Payment provider not found.');
+        }
+
+        return $provider;
+    }
+
     public function credential(string $key, mixed $default = null): mixed
     {
         return data_get($this->credentials ?? [], $key, $default);

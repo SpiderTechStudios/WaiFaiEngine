@@ -46,6 +46,20 @@ class PaymentProviderTest extends TestCase
         $this->assertTrue($azam->fresh()->is_default_for_payments);
     }
 
+    public function test_unknown_payment_provider_returns_not_found(): void
+    {
+        $superadmin = User::factory()->create(['is_superadmin' => true]);
+
+        $this->withHeaders($this->authHeaders($superadmin))
+            ->getJson('/api/v1/superadmin/payment-providers/flutter')
+            ->assertNotFound()
+            ->assertJsonPath('message', 'Payment provider not found.');
+
+        $this->postJson('/api/v1/webhooks/payments/flutter', [])
+            ->assertNotFound()
+            ->assertJsonPath('message', 'Payment provider not found.');
+    }
+
     public function test_non_superadmin_cannot_manage_providers(): void
     {
         $user = $this->createUser();

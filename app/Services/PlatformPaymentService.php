@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Company;
 use App\Models\Enrollment;
 use App\Models\InstallationRequest;
+use App\Models\Order;
 use App\Models\PaymentProvider;
 use App\Models\PlatformPayment;
 use App\Payments\PaymentProviderManager;
@@ -340,7 +341,7 @@ class PlatformPaymentService
      */
     public function handleProviderWebhook(string $providerSlug, array $payload, array $headers = [], ?string $rawBody = null): PlatformPayment
     {
-        $provider = PaymentProvider::query()->where('slug', $providerSlug)->firstOrFail();
+        $provider = PaymentProvider::findBySlugOrFail($providerSlug);
         $driver = $this->providerManager->driverFor($provider);
 
         if (! $driver->validateWebhook($headers, $payload, $rawBody)) {
@@ -447,8 +448,55 @@ class PlatformPaymentService
             }
         }
 
+        if (
+            in_array($purpose, [
+                PlatformPayment::PURPOSE_DEVICE_PURCHASE,
+                PlatformPayment::PURPOSE_MARKETPLACE_ORDER,
+            ], true)
+            && $payment->order_id
+        ) {
+            $order = Order::query()->whereKey($payment->order_id)->lockForUpdate()->first();
+            if ($order) {
+                app(MarketplaceOrderService::class)->markPaid($order);
+            }
+        }
+
         // platform_subscription is completed after commit via EnrollmentCompletionService
-        // device_purchase / marketplace_order handlers can be registered here later.
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    public function startDevicePurchasePayment(Order $order, array $data = []): PlatformPayment
+    {
+        $order->loadMissing('items');
+
+        return $this->createPendingPayment([
+            'type' => PlatformPayment::TYPE_DEVICE_PURCHASE,
+            'purpose' => PlatformPayment::PURPOSE_DEVICE_PURCHASE,
+            'order_id' => $order->id,
+            'company_id' => $order->company_id,
+            'reference_prefix' => 'DEV',
+            'amount' => (float) $order->total_amount,
+            'currency' => $order->currency,
+            'payment_method' => $data['payment_method'] ?? 'mobile_money',
+            'phone' => $data['phone'] ?? $order->phone,
+            'line_items' => $order->items->map(fn ($item) => [
+                'code' => 'device_purchase',
+                'device_id' => $item->device_id,
+                'label' => $item->name,
+                'sku' => $item->sku,
+                'quantity' => $item->quantity,
+                'amount' => (float) $item->line_total,
+            ])->all(),
+            'metadata' => [
+                'source' => 'marketplace',
+                'payment_purpose' => PlatformPayment::PURPOSE_DEVICE_PURCHASE,
+                'order_reference' => $order->reference,
+            ],
+            'existing_paid_query' => fn ($query) => $query->where('order_id', $order->id),
+            'initiate' => true,
+        ]);
     }
 
     /**
@@ -476,6 +524,7 @@ class PlatformPaymentService
                 'direction' => PlatformPayment::DIRECTION_COLLECTION,
                 'signup_intent_id' => $payload['signup_intent_id'] ?? null,
                 'installation_request_id' => $payload['installation_request_id'] ?? null,
+                'order_id' => $payload['order_id'] ?? null,
                 'company_id' => $payload['company_id'] ?? null,
                 'reference' => $payload['reference_prefix'].'-'.strtoupper(Str::random(10)),
                 'amount' => $payload['amount'],

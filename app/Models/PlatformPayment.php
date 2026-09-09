@@ -16,6 +16,8 @@ class PlatformPayment extends Model
 
     public const TYPE_INSTALLATION = 'installation';
 
+    public const TYPE_DEVICE_PURCHASE = 'device_purchase';
+
     public const PURPOSE_PLATFORM_SUBSCRIPTION = 'platform_subscription';
 
     public const PURPOSE_SUBSCRIPTION_RENEWAL = 'subscription_renewal';
@@ -50,6 +52,7 @@ class PlatformPayment extends Model
         'direction',
         'signup_intent_id',
         'installation_request_id',
+        'order_id',
         'company_id',
         'reference',
         'external_reference',
@@ -126,6 +129,11 @@ class PlatformPayment extends Model
     public function installationRequest(): BelongsTo
     {
         return $this->belongsTo(InstallationRequest::class);
+    }
+
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class);
     }
 
     public function company(): BelongsTo

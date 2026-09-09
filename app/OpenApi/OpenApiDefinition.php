@@ -40,5 +40,7 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: 'Captive Session', description: 'Public captive session resolve/authorize for the connect frontend')]
 #[OA\Tag(name: 'WiFiDog Gateway Protocol', description: 'Public machine endpoints for Ruijie/WiFiDog gateways (login redirect, auth, ping) — no Sanctum')]
 #[OA\Tag(name: 'Superadmin', description: 'Platform administration')]
+#[OA\Tag(name: 'Device Catalog', description: 'Superadmin catalog for brands, device categories, and devices')]
+#[OA\Tag(name: 'Marketplace', description: 'Company cart and device purchases. Payment purpose is device_purchase, separate from subscription and installation.')]
 #[OA\Tag(name: 'Platform Admin', description: 'Cross-tenant router management for platform admins')]
 class OpenApiDefinition {}

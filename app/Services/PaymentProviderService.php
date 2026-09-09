@@ -9,7 +9,9 @@ use Illuminate\Validation\ValidationException;
 
 class PaymentProviderService
 {
-    public function __construct(private AuditLogger $auditLogger) {}
+    public function __construct(private AuditLogger $auditLogger)
+    {
+    }
 
     /**
      * @param  array<string, mixed>  $data
@@ -17,24 +19,41 @@ class PaymentProviderService
     public function create(array $data): PaymentProvider
     {
         return DB::transaction(function () use ($data) {
+            $name = trim((string) $data['name']);
+            $slug = Str::slug((string) ($data['slug'] ?? $name));
+
+            // Check if provider already exists
+            $exists = PaymentProvider::query()
+                ->whereRaw('LOWER(name) = ?', [strtolower($name)])
+                ->orWhere('slug', $slug)
+                ->exists();
+
+            if ($exists) {
+                throw ValidationException::withMessages([
+                    'name' => 'A payment provider with this name already exists.',
+                ]);
+            }
+
             $provider = PaymentProvider::query()->create([
-                'name' => $data['name'],
-                'slug' => Str::slug((string) ($data['slug'] ?? $data['name'])),
+                'name' => $name,
+                'slug' => $slug,
                 'description' => $data['description'] ?? null,
                 'supports_payments' => (bool) ($data['supports_payments'] ?? true),
                 'supports_payouts' => (bool) ($data['supports_payouts'] ?? false),
                 'is_active' => (bool) ($data['is_active'] ?? true),
                 'is_default_for_payments' => false,
                 'is_default_for_payouts' => false,
-                'credentials' => $this->normalizeCredentials($data['credentials'] ?? []),
+                'credentials' => $this->normalizeCredentials(
+                    $data['credentials'] ?? []
+                ),
                 'settings' => $data['settings'] ?? [],
             ]);
 
-            if (! empty($data['is_default_for_payments'])) {
+            if (!empty($data['is_default_for_payments'])) {
                 $this->setDefaultForPayments($provider);
             }
 
-            if (! empty($data['is_default_for_payouts'])) {
+            if (!empty($data['is_default_for_payouts'])) {
                 $this->setDefaultForPayouts($provider);
             }
 
@@ -50,7 +69,6 @@ class PaymentProviderService
             return $provider->fresh();
         });
     }
-
     /**
      * @param  array<string, mixed>  $data
      */
@@ -139,7 +157,7 @@ class PaymentProviderService
 
     public function setDefaultForPayments(PaymentProvider $provider): PaymentProvider
     {
-        if (! $provider->is_active || ! $provider->supports_payments) {
+        if (!$provider->is_active || !$provider->supports_payments) {
             throw ValidationException::withMessages([
                 'provider' => ['Provider must be active and support collections.'],
             ]);
@@ -159,7 +177,7 @@ class PaymentProviderService
 
     public function setDefaultForPayouts(PaymentProvider $provider): PaymentProvider
     {
-        if (! $provider->is_active || ! $provider->supports_payouts) {
+        if (!$provider->is_active || !$provider->supports_payouts) {
             throw ValidationException::withMessages([
                 'provider' => ['Provider must be active and support payouts.'],
             ]);
@@ -189,7 +207,7 @@ class PaymentProviderService
             'encryption_key' => $credentials['encryption_key'] ?? null,
             'webhook_secret' => $credentials['webhook_secret'] ?? null,
             'api_base_url' => $credentials['api_base_url'] ?? null,
-        ], fn ($value) => $value !== null && $value !== '');
+        ], fn($value) => $value !== null && $value !== '');
     }
 
     /**

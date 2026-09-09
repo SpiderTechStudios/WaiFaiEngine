@@ -14,11 +14,13 @@ Route::prefix('v1')->group(function () {
     require __DIR__.'/Api/v1/auth.php';
     require __DIR__.'/Api/v1/admin.php';
     require __DIR__.'/Api/v1/billing.php';
+    require __DIR__.'/Api/v1/business.php';
     require __DIR__.'/Api/v1/installation_requests.php';
     require __DIR__.'/Api/v1/routers.php';
     require __DIR__.'/Api/v1/branches.php';
     require __DIR__.'/Api/v1/customers.php';
     require __DIR__.'/Api/v1/dashboard.php';
+    require __DIR__.'/Api/v1/devices.php';
     require __DIR__.'/Api/v1/packages.php';
     require __DIR__.'/Api/v1/payments.php';
     require __DIR__.'/Api/v1/session.php';

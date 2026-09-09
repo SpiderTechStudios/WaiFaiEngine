@@ -1,0 +1,19 @@
+------------------------------ superadmin logs in
+------------------------------ superadmin creates a payment provider & payout providers
+------------------------------ superadmin edits payment providers & payout providers
+------------------------------ enable disable providers
+------------------------------ delete providers
+- get list of all payment providers & payout providers
+
+- superadmin adds items on market place.
+- superadmin edits items on market place
+- superadmin deletes item on marketplace
+- users gets list of available items on market place. 
+- users add items on cart
+- users get cart list
+- users remove item from cart
+- user changes quantity on cart.
+- user clears cart
+- user pays for the cart. 
+- superadmin delivers on the cart items. (processing, in-transit, delivered, cancelled, pending)
+

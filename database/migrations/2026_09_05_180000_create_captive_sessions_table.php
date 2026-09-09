@@ -25,7 +25,7 @@ return new class extends Migration
             $table->unsignedBigInteger('access_grant_id')->nullable();
             $table->unsignedBigInteger('network_session_id')->nullable();
             $table->timestamp('authenticated_at')->nullable();
-            $table->timestamp('expires_at')->index();
+            $table->timestamp('expires_at')->nullable()->index();
             $table->timestamp('last_seen_at')->nullable();
             $table->timestamps();
 

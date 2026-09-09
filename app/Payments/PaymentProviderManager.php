@@ -21,7 +21,7 @@ class PaymentProviderManager
 
     public function driverBySlug(string $slug): PaymentProviderDriver
     {
-        $provider = PaymentProvider::query()->where('slug', $slug)->firstOrFail();
+        $provider = PaymentProvider::findBySlugOrFail($slug);
 
         return $this->driverFor($provider);
     }

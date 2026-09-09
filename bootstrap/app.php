@@ -9,10 +9,12 @@ use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\ResolvePortalCompany;
 use App\Http\Middleware\SetCompanyContext;
+use App\Support\ApiErrorMessage;
 use App\Support\CompanyContext;
 use App\Support\PortalContext;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -72,12 +74,24 @@ return Application::configure(basePath: dirname(__DIR__))
             }
         });
 
-        $exceptions->render(function (HttpException $e, Request $request) {
+        $exceptions->render(function (ModelNotFoundException $e, Request $request) {
             if ($request->is('api/*')) {
                 return response()->json([
                     'status' => false,
+                    'code' => 404,
+                    'message' => ApiErrorMessage::from($e, 'Resource not found.'),
+                ], 404);
+            }
+        });
+
+        $exceptions->render(function (HttpException $e, Request $request) {
+            if ($request->is('api/*')) {
+                $fallback = $e->getStatusCode() === 404 ? 'Resource not found.' : 'Request failed.';
+
+                return response()->json([
+                    'status' => false,
                     'code' => $e->getStatusCode(),
-                    'message' => $e->getMessage() ?: 'Request failed.',
+                    'message' => ApiErrorMessage::from($e, $fallback),
                 ], $e->getStatusCode());
             }
         });
