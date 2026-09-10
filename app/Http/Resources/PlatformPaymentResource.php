@@ -12,6 +12,8 @@ class PlatformPaymentResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $charge = data_get($this->metadata, 'provider_charge.raw', []);
+
         return [
             'payment_id' => $this->id,
             'reference' => $this->reference,
@@ -26,6 +28,11 @@ class PlatformPaymentResource extends JsonResource
             'paid_at' => $this->paid_at,
             'initiated_at' => $this->initiated_at,
             'expires_at' => null,
+            'checkout_url' => data_get($charge, 'checkoutUrl'),
+            'payment_instructions' => array_filter([
+                'virtual_account' => data_get($charge, 'virtual_account'),
+                'message' => data_get($this->metadata, 'provider_charge.message'),
+            ], fn ($value) => filled($value)),
         ];
     }
 }

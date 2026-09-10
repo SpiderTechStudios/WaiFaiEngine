@@ -126,15 +126,15 @@ class PaymentProviderDocumentation
         operationId: 'paymentProviderCollectionWebhook',
         tags: ['Payment Webhooks'],
         summary: 'Public provider collection webhook (signature-verified)',
-        description: 'No Sanctum auth. Identify provider from the path. Flutterwave: send verif-hash header matching the provider webhook_secret, body.event=charge.completed, data.tx_ref = payment intent reference. Stub: X-Platform-Payment-Secret. Backend looks up the payment intent by reference and routes by purpose (platform_subscription, subscription_renewal, installation_request, …). Idempotent.',
+        description: 'No Sanctum auth. Identify provider from the path. Flutterwave: send verif-hash header matching the provider webhook_secret, body.event=charge.completed, data.tx_ref = payment intent reference. PalmPay: body.orderId = payment intent reference, orderStatus=2 for success, signed with RSA-SHA1 in body.sign; response is plain text "success". Stub: X-Platform-Payment-Secret. Backend looks up the payment intent by reference and routes by purpose (platform_subscription, subscription_renewal, installation_request, device_purchase, …). Idempotent.',
         parameters: [
-            new OA\Parameter(name: 'provider', in: 'path', required: true, schema: new OA\Schema(type: 'string', example: 'flutterwave', enum: ['flutterwave', 'stub'])),
+            new OA\Parameter(name: 'provider', in: 'path', required: true, schema: new OA\Schema(type: 'string', example: 'palmpay', enum: ['flutterwave', 'palmpay', 'stub'])),
             new OA\Parameter(name: 'verif-hash', in: 'header', required: false, description: 'Flutterwave webhook secret hash', schema: new OA\Schema(type: 'string')),
             new OA\Parameter(name: 'X-Platform-Payment-Secret', in: 'header', required: false, description: 'Stub provider webhook secret', schema: new OA\Schema(type: 'string')),
         ],
         requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(ref: '#/components/schemas/FlutterwavePaymentWebhookRequest')),
         responses: [
-            new OA\Response(response: 200, description: 'Processed (intent status updated; enrollment completed when purpose=platform_subscription and paid)', content: new OA\JsonContent(ref: '#/components/schemas/PlatformPaymentResponse')),
+            new OA\Response(response: 200, description: 'Processed. PalmPay returns plain text "success"; other providers return PlatformPayment JSON.', content: new OA\JsonContent(ref: '#/components/schemas/PlatformPaymentResponse')),
             new OA\Response(response: 401, description: 'Invalid signature', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
             new OA\Response(response: 404, description: 'Unknown payment reference', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
             new OA\Response(response: 422, description: 'Amount/currency/provider mismatch', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
@@ -149,12 +149,12 @@ class PaymentProviderDocumentation
         summary: 'Public provider payout webhook (signature-verified)',
         description: 'No Sanctum auth. Same signature rules as collection webhooks. Does not mix with collection payment intents.',
         parameters: [
-            new OA\Parameter(name: 'provider', in: 'path', required: true, schema: new OA\Schema(type: 'string', example: 'flutterwave')),
+            new OA\Parameter(name: 'provider', in: 'path', required: true, schema: new OA\Schema(type: 'string', example: 'palmpay', enum: ['flutterwave', 'palmpay', 'stub'])),
             new OA\Parameter(name: 'verif-hash', in: 'header', required: false, schema: new OA\Schema(type: 'string')),
         ],
         requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(ref: '#/components/schemas/FlutterwavePaymentWebhookRequest')),
         responses: [
-            new OA\Response(response: 200, description: 'Accepted', content: new OA\JsonContent(ref: '#/components/schemas/PayoutWebhookAcceptedResponse')),
+            new OA\Response(response: 200, description: 'Accepted (PalmPay: plain text success)', content: new OA\JsonContent(ref: '#/components/schemas/PayoutWebhookAcceptedResponse')),
             new OA\Response(response: 401, description: 'Invalid signature', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
         ]
     )]

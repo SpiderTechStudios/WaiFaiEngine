@@ -332,6 +332,8 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'reference', type: 'string', example: 'PAY-ABC123XYZ0'),
         new OA\Property(property: 'purpose', type: 'string', example: 'platform_subscription'),
         new OA\Property(property: 'provider', type: 'string', example: 'flutterwave'),
+        new OA\Property(property: 'checkout_url', type: 'string', nullable: true, example: 'https://checkout.palmpay.com/...'),
+        new OA\Property(property: 'payment_instructions', type: 'object', nullable: true),
     ]
 )]
 #[OA\Schema(
@@ -367,6 +369,8 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'paid_at', type: 'string', format: 'date-time', nullable: true),
         new OA\Property(property: 'initiated_at', type: 'string', format: 'date-time', nullable: true),
         new OA\Property(property: 'expires_at', type: 'string', format: 'date-time', nullable: true),
+        new OA\Property(property: 'checkout_url', type: 'string', nullable: true, example: 'https://checkout.palmpay.com/...'),
+        new OA\Property(property: 'payment_instructions', type: 'object', nullable: true),
     ]
 )]
 #[OA\Schema(
@@ -374,10 +378,13 @@ use OpenApi\Attributes as OA;
     description: 'Safe credential view. Secret values are never returned.',
     properties: [
         new OA\Property(property: 'public_key', type: 'string', nullable: true, example: 'FLWPUBK-xxxxxxxx'),
+        new OA\Property(property: 'app_id', type: 'string', nullable: true, example: 'palmpay-app-id'),
         new OA\Property(property: 'api_base_url', type: 'string', nullable: true, example: 'https://api.flutterwave.com'),
         new OA\Property(property: 'has_secret_key', type: 'boolean', example: true),
         new OA\Property(property: 'has_encryption_key', type: 'boolean', example: false),
         new OA\Property(property: 'has_webhook_secret', type: 'boolean', example: true),
+        new OA\Property(property: 'has_private_key', type: 'boolean', example: false),
+        new OA\Property(property: 'has_app_id', type: 'boolean', example: false),
     ]
 )]
 #[OA\Schema(
@@ -402,9 +409,9 @@ use OpenApi\Attributes as OA;
     schema: 'StorePaymentProviderRequest',
     required: ['name'],
     properties: [
-        new OA\Property(property: 'name', type: 'string', example: 'Flutterwave'),
-        new OA\Property(property: 'slug', type: 'string', example: 'flutterwave'),
-        new OA\Property(property: 'description', type: 'string', nullable: true, example: 'Flutterwave V3 collections and transfers.'),
+        new OA\Property(property: 'name', type: 'string', example: 'PalmPay'),
+        new OA\Property(property: 'slug', type: 'string', example: 'palmpay'),
+        new OA\Property(property: 'description', type: 'string', nullable: true, example: 'PalmPay merchant collections and payouts.'),
         new OA\Property(property: 'supports_payments', type: 'boolean', example: true),
         new OA\Property(property: 'supports_payouts', type: 'boolean', example: true),
         new OA\Property(property: 'is_active', type: 'boolean', example: true),
@@ -415,15 +422,17 @@ use OpenApi\Attributes as OA;
             new OA\Property(property: 'secret_key', type: 'string', format: 'password', example: 'your-secret-key'),
             new OA\Property(property: 'encryption_key', type: 'string', format: 'password', nullable: true),
             new OA\Property(property: 'webhook_secret', type: 'string', format: 'password', nullable: true),
-            new OA\Property(property: 'api_base_url', type: 'string', example: 'https://api.flutterwave.com'),
+            new OA\Property(property: 'api_base_url', type: 'string', example: 'https://open-gw-prod.palmpay-inc.com'),
+            new OA\Property(property: 'app_id', type: 'string', example: 'your-palmpay-app-id'),
+            new OA\Property(property: 'private_key', type: 'string', format: 'password', example: 'PEM or base64 RSA private key'),
         ], type: 'object'),
-        new OA\Property(property: 'settings', type: 'object', nullable: true, example: ['mobile_money_charge_type' => 'mobile_money_tanzania']),
+        new OA\Property(property: 'settings', type: 'object', nullable: true, example: ['country_code' => 'NG', 'product_type' => 'bank_transfer']),
     ]
 )]
 #[OA\Schema(
     schema: 'UpdatePaymentProviderRequest',
     properties: [
-        new OA\Property(property: 'name', type: 'string', example: 'Flutterwave'),
+        new OA\Property(property: 'name', type: 'string', example: 'PalmPay'),
         new OA\Property(property: 'description', type: 'string', nullable: true),
         new OA\Property(property: 'supports_payments', type: 'boolean'),
         new OA\Property(property: 'supports_payouts', type: 'boolean'),
@@ -435,7 +444,9 @@ use OpenApi\Attributes as OA;
             new OA\Property(property: 'secret_key', type: 'string', format: 'password', example: 'your-secret-key'),
             new OA\Property(property: 'encryption_key', type: 'string', format: 'password', nullable: true),
             new OA\Property(property: 'webhook_secret', type: 'string', format: 'password', nullable: true),
-            new OA\Property(property: 'api_base_url', type: 'string', example: 'https://api.flutterwave.com'),
+            new OA\Property(property: 'api_base_url', type: 'string', example: 'https://open-gw-prod.palmpay-inc.com'),
+            new OA\Property(property: 'app_id', type: 'string', example: 'your-palmpay-app-id'),
+            new OA\Property(property: 'private_key', type: 'string', format: 'password', example: 'PEM or base64 RSA private key'),
         ], type: 'object'),
         new OA\Property(property: 'settings', type: 'object', nullable: true),
     ]

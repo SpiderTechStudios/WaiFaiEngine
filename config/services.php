@@ -48,4 +48,13 @@ return [
         'base_url' => env('FLUTTERWAVE_BASE_URL', 'https://api.flutterwave.com'),
     ],
 
+    'palmpay' => [
+        'app_id' => env('PALMPAY_APP_ID'),
+        'private_key' => env('PALMPAY_PRIVATE_KEY'),
+        'public_key' => env('PALMPAY_PUBLIC_KEY'),
+        'country_code' => env('PALMPAY_COUNTRY_CODE', 'NG'),
+        'version' => env('PALMPAY_VERSION', 'V2'),
+        'base_url' => env('PALMPAY_BASE_URL', 'https://open-gw-prod.palmpay-inc.com'),
+    ],
+
 ];

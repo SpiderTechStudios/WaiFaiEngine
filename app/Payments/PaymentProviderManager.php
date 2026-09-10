@@ -4,6 +4,7 @@ namespace App\Payments;
 
 use App\Models\PaymentProvider;
 use App\Payments\Drivers\FlutterwavePaymentProvider;
+use App\Payments\Drivers\PalmPayPaymentProvider;
 use App\Payments\Drivers\StubPaymentProvider;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
@@ -14,6 +15,7 @@ class PaymentProviderManager
     {
         return match ($provider->slug) {
             PaymentProvider::SLUG_FLUTTERWAVE => new FlutterwavePaymentProvider($provider),
+            PaymentProvider::SLUG_PALMPAY => new PalmPayPaymentProvider($provider),
             PaymentProvider::SLUG_STUB => new StubPaymentProvider($provider),
             default => throw new InvalidArgumentException("Unsupported payment provider [{$provider->slug}]."),
         };

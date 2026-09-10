@@ -48,7 +48,33 @@ class PaymentProviderSeeder extends Seeder
             ]
         );
 
+        PaymentProvider::query()->updateOrCreate(
+            ['slug' => PaymentProvider::SLUG_PALMPAY],
+            [
+                'name' => 'PalmPay',
+                'description' => 'PalmPay merchant collections (createorder) and payouts.',
+                'supports_payments' => true,
+                'supports_payouts' => true,
+                'is_active' => true,
+                'credentials' => array_filter([
+                    'app_id' => config('services.palmpay.app_id'),
+                    'private_key' => config('services.palmpay.private_key'),
+                    'public_key' => config('services.palmpay.public_key'),
+                    'api_base_url' => config('services.palmpay.base_url'),
+                ]),
+                'settings' => [
+                    'country_code' => config('services.palmpay.country_code', 'NG'),
+                    'version' => config('services.palmpay.version', 'V2'),
+                    'product_type' => 'bank_transfer',
+                    'goods_details' => '[{"goodsId":"-1"}]',
+                    'minor_unit_factor' => 100,
+                    'payout_path' => '/api/v2/payment/merchant/payout',
+                ],
+            ]
+        );
+
         // Prefer Flutterwave as platform default when a secret is configured; otherwise stub for local/tests.
+        // PalmPay is seeded active but must be set as default manually from the admin dashboard.
         if (filled(config('services.flutterwave.secret_key'))) {
             $service->setDefaultForPayments($flutterwave->fresh());
             $service->setDefaultForPayouts($flutterwave->fresh());
@@ -64,5 +90,12 @@ class PaymentProviderSeeder extends Seeder
                 'is_default_for_payouts' => false,
             ])->save();
         }
+
+        PaymentProvider::query()
+            ->where('slug', PaymentProvider::SLUG_PALMPAY)
+            ->update([
+                'is_default_for_payments' => false,
+                'is_default_for_payouts' => false,
+            ]);
     }
 }

@@ -38,6 +38,7 @@ class EnrollmentStatusResource extends JsonResource
         }
 
         if ($latestPayment) {
+            $charge = data_get($latestPayment->metadata, 'provider_charge.raw', []);
             $payload['payment'] = [
                 'status' => $latestPayment->status,
                 'amount' => $latestPayment->amount,
@@ -45,6 +46,11 @@ class EnrollmentStatusResource extends JsonResource
                 'reference' => $latestPayment->reference,
                 'purpose' => $latestPayment->resolvePurpose(),
                 'provider' => $latestPayment->provider_slug,
+                'checkout_url' => data_get($charge, 'checkoutUrl'),
+                'payment_instructions' => array_filter([
+                    'virtual_account' => data_get($charge, 'virtual_account'),
+                    'message' => data_get($latestPayment->metadata, 'provider_charge.message'),
+                ], fn ($value) => filled($value)),
             ];
         }
 

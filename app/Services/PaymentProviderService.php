@@ -207,7 +207,9 @@ class PaymentProviderService
             'encryption_key' => $credentials['encryption_key'] ?? null,
             'webhook_secret' => $credentials['webhook_secret'] ?? null,
             'api_base_url' => $credentials['api_base_url'] ?? null,
-        ], fn($value) => $value !== null && $value !== '');
+            'app_id' => $credentials['app_id'] ?? null,
+            'private_key' => $credentials['private_key'] ?? null,
+        ], fn ($value) => $value !== null && $value !== '');
     }
 
     /**
@@ -217,7 +219,15 @@ class PaymentProviderService
      */
     private function mergeCredentials(array $existing, array $incoming): array
     {
-        foreach (['public_key', 'secret_key', 'encryption_key', 'webhook_secret', 'api_base_url'] as $key) {
+        foreach ([
+            'public_key',
+            'secret_key',
+            'encryption_key',
+            'webhook_secret',
+            'api_base_url',
+            'app_id',
+            'private_key',
+        ] as $key) {
             if (array_key_exists($key, $incoming) && filled($incoming[$key])) {
                 $existing[$key] = $incoming[$key];
             }

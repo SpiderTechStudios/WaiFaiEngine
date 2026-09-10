@@ -9,6 +9,8 @@ class PaymentProvider extends Model
 {
     public const SLUG_FLUTTERWAVE = 'flutterwave';
 
+    public const SLUG_PALMPAY = 'palmpay';
+
     public const SLUG_STUB = 'stub';
 
     protected $fillable = [
@@ -82,10 +84,13 @@ class PaymentProvider extends Model
 
         return array_filter([
             'public_key' => $credentials['public_key'] ?? null,
+            'app_id' => $credentials['app_id'] ?? null,
             'api_base_url' => $credentials['api_base_url'] ?? null,
             'has_secret_key' => filled($credentials['secret_key'] ?? null),
             'has_encryption_key' => filled($credentials['encryption_key'] ?? null),
             'has_webhook_secret' => filled($credentials['webhook_secret'] ?? null),
+            'has_private_key' => filled($credentials['private_key'] ?? null),
+            'has_app_id' => filled($credentials['app_id'] ?? null),
         ], fn ($value) => $value !== null && $value !== '');
     }
 

@@ -564,6 +564,7 @@ class PlatformPaymentService
                 'accepted' => $result->accepted,
                 'message' => $result->message,
                 'pushed_at' => now()->toIso8601String(),
+                'raw' => $result->raw,
             ];
 
             $payment->forceFill([

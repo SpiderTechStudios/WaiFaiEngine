@@ -5872,7 +5872,7 @@
                     "Payment Webhooks"
                 ],
                 "summary": "Public provider collection webhook (signature-verified)",
-                "description": "No Sanctum auth. Identify provider from the path. Flutterwave: send verif-hash header matching the provider webhook_secret, body.event=charge.completed, data.tx_ref = payment intent reference. Stub: X-Platform-Payment-Secret. Backend looks up the payment intent by reference and routes by purpose (platform_subscription, subscription_renewal, installation_request, …). Idempotent.",
+                "description": "No Sanctum auth. Identify provider from the path. Flutterwave: send verif-hash header matching the provider webhook_secret, body.event=charge.completed, data.tx_ref = payment intent reference. PalmPay: body.orderId = payment intent reference, orderStatus=2 for success, signed with RSA-SHA1 in body.sign; response is plain text \"success\". Stub: X-Platform-Payment-Secret. Backend looks up the payment intent by reference and routes by purpose (platform_subscription, subscription_renewal, installation_request, device_purchase, …). Idempotent.",
                 "operationId": "paymentProviderCollectionWebhook",
                 "parameters": [
                     {
@@ -5881,9 +5881,10 @@
                         "required": true,
                         "schema": {
                             "type": "string",
-                            "example": "flutterwave",
+                            "example": "palmpay",
                             "enum": [
                                 "flutterwave",
+                                "palmpay",
                                 "stub"
                             ]
                         }
@@ -5919,7 +5920,7 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Processed (intent status updated; enrollment completed when purpose=platform_subscription and paid)",
+                        "description": "Processed. PalmPay returns plain text \"success\"; other providers return PlatformPayment JSON.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -5976,7 +5977,12 @@
                         "required": true,
                         "schema": {
                             "type": "string",
-                            "example": "flutterwave"
+                            "example": "palmpay",
+                            "enum": [
+                                "flutterwave",
+                                "palmpay",
+                                "stub"
+                            ]
                         }
                     },
                     {
@@ -6000,7 +6006,7 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Accepted",
+                        "description": "Accepted (PalmPay: plain text success)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -10089,6 +10095,15 @@
                     "provider": {
                         "type": "string",
                         "example": "flutterwave"
+                    },
+                    "checkout_url": {
+                        "type": "string",
+                        "example": "https://checkout.palmpay.com/...",
+                        "nullable": true
+                    },
+                    "payment_instructions": {
+                        "type": "object",
+                        "nullable": true
                     }
                 },
                 "type": "object"
@@ -10240,6 +10255,15 @@
                         "type": "string",
                         "format": "date-time",
                         "nullable": true
+                    },
+                    "checkout_url": {
+                        "type": "string",
+                        "example": "https://checkout.palmpay.com/...",
+                        "nullable": true
+                    },
+                    "payment_instructions": {
+                        "type": "object",
+                        "nullable": true
                     }
                 },
                 "type": "object"
@@ -10250,6 +10274,11 @@
                     "public_key": {
                         "type": "string",
                         "example": "FLWPUBK-xxxxxxxx",
+                        "nullable": true
+                    },
+                    "app_id": {
+                        "type": "string",
+                        "example": "palmpay-app-id",
                         "nullable": true
                     },
                     "api_base_url": {
@@ -10268,6 +10297,14 @@
                     "has_webhook_secret": {
                         "type": "boolean",
                         "example": true
+                    },
+                    "has_private_key": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "has_app_id": {
+                        "type": "boolean",
+                        "example": false
                     }
                 },
                 "type": "object"
@@ -10341,15 +10378,15 @@
                 "properties": {
                     "name": {
                         "type": "string",
-                        "example": "Flutterwave"
+                        "example": "PalmPay"
                     },
                     "slug": {
                         "type": "string",
-                        "example": "flutterwave"
+                        "example": "palmpay"
                     },
                     "description": {
                         "type": "string",
-                        "example": "Flutterwave V3 collections and transfers.",
+                        "example": "PalmPay merchant collections and payouts.",
                         "nullable": true
                     },
                     "supports_payments": {
@@ -10395,7 +10432,16 @@
                             },
                             "api_base_url": {
                                 "type": "string",
-                                "example": "https://api.flutterwave.com"
+                                "example": "https://open-gw-prod.palmpay-inc.com"
+                            },
+                            "app_id": {
+                                "type": "string",
+                                "example": "your-palmpay-app-id"
+                            },
+                            "private_key": {
+                                "type": "string",
+                                "format": "password",
+                                "example": "PEM or base64 RSA private key"
                             }
                         },
                         "type": "object"
@@ -10403,7 +10449,8 @@
                     "settings": {
                         "type": "object",
                         "example": {
-                            "mobile_money_charge_type": "mobile_money_tanzania"
+                            "country_code": "NG",
+                            "product_type": "bank_transfer"
                         },
                         "nullable": true
                     }
@@ -10414,7 +10461,7 @@
                 "properties": {
                     "name": {
                         "type": "string",
-                        "example": "Flutterwave"
+                        "example": "PalmPay"
                     },
                     "description": {
                         "type": "string",
@@ -10458,7 +10505,16 @@
                             },
                             "api_base_url": {
                                 "type": "string",
-                                "example": "https://api.flutterwave.com"
+                                "example": "https://open-gw-prod.palmpay-inc.com"
+                            },
+                            "app_id": {
+                                "type": "string",
+                                "example": "your-palmpay-app-id"
+                            },
+                            "private_key": {
+                                "type": "string",
+                                "format": "password",
+                                "example": "PEM or base64 RSA private key"
                             }
                         },
                         "type": "object"
