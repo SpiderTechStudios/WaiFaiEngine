@@ -188,14 +188,15 @@ class PaymentProviderTest extends TestCase
 
     public function test_palmpesa_initiates_mobile_money_and_handles_callback(): void
     {
+        config([
+            'services.palmpesa.api_token' => 'test-palmpesa-token',
+            'services.palmpesa.user_id' => '25',
+            'services.palmpesa.base_url' => 'https://palmpesa.drmlelwa.co.tz',
+        ]);
+
         $palmpesa = PaymentProvider::query()->where('slug', PaymentProvider::SLUG_PALMPESA)->firstOrFail();
         $palmpesa->forceFill([
-            'credentials' => [
-                'secret_key' => 'test-palmpesa-token',
-                'api_token' => 'test-palmpesa-token',
-                'user_id' => '25',
-                'api_base_url' => 'https://palmpesa.drmlelwa.co.tz',
-            ],
+            'credentials' => [],
             'is_active' => true,
             'supports_payments' => true,
         ])->save();
@@ -244,12 +245,14 @@ class PaymentProviderTest extends TestCase
 
     public function test_palmpesa_reconciles_still_pending_after_four_minutes_via_order_status(): void
     {
+        config([
+            'services.palmpesa.api_token' => 'test-palmpesa-token',
+            'services.palmpesa.base_url' => 'https://palmpesa.drmlelwa.co.tz',
+        ]);
+
         $palmpesa = PaymentProvider::query()->where('slug', PaymentProvider::SLUG_PALMPESA)->firstOrFail();
         $palmpesa->forceFill([
-            'credentials' => [
-                'secret_key' => 'test-palmpesa-token',
-                'api_base_url' => 'https://palmpesa.drmlelwa.co.tz',
-            ],
+            'credentials' => [],
             'is_active' => true,
             'supports_payments' => true,
         ])->save();
@@ -290,12 +293,14 @@ class PaymentProviderTest extends TestCase
 
     public function test_palmpesa_reconcile_marks_failed_when_order_status_failed(): void
     {
+        config([
+            'services.palmpesa.api_token' => 'test-palmpesa-token',
+            'services.palmpesa.base_url' => 'https://palmpesa.drmlelwa.co.tz',
+        ]);
+
         $palmpesa = PaymentProvider::query()->where('slug', PaymentProvider::SLUG_PALMPESA)->firstOrFail();
         $palmpesa->forceFill([
-            'credentials' => [
-                'secret_key' => 'test-palmpesa-token',
-                'api_base_url' => 'https://palmpesa.drmlelwa.co.tz',
-            ],
+            'credentials' => [],
             'is_active' => true,
             'supports_payments' => true,
         ])->save();
@@ -333,14 +338,16 @@ class PaymentProviderTest extends TestCase
 
     public function test_superadmin_can_dry_run_provider_payment_without_persisting(): void
     {
+        config([
+            'services.palmpesa.api_token' => 'test-palmpesa-token',
+            'services.palmpesa.base_url' => 'https://palmpesa.drmlelwa.co.tz',
+        ]);
+
         $superadmin = User::factory()->create(['is_superadmin' => true]);
 
         $palmpesa = PaymentProvider::query()->where('slug', PaymentProvider::SLUG_PALMPESA)->firstOrFail();
         $palmpesa->forceFill([
-            'credentials' => [
-                'secret_key' => 'test-palmpesa-token',
-                'api_base_url' => 'https://palmpesa.drmlelwa.co.tz',
-            ],
+            'credentials' => [],
             'is_active' => true,
             'supports_payments' => true,
         ])->save();

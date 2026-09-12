@@ -230,18 +230,17 @@ class PalmPesaPaymentProvider implements PaymentProviderDriver
 
     private function apiToken(): string
     {
-        return (string) $this->provider->credential(
-            'secret_key',
-            $this->provider->credential('api_token', config('services.palmpesa.api_token', ''))
-        );
+        return (string) config('services.palmpesa.api_token', '');
+    }
+
+    private function userId(): string
+    {
+        return (string) config('services.palmpesa.user_id', '');
     }
 
     private function baseUrl(): string
     {
-        return rtrim((string) $this->provider->credential(
-            'api_base_url',
-            config('services.palmpesa.base_url', 'https://palmpesa.drmlelwa.co.tz')
-        ), '/');
+        return rtrim((string) config('services.palmpesa.base_url', 'https://palmpesa.drmlelwa.co.tz'), '/');
     }
 
     private function normalizePhone(string $phone): string

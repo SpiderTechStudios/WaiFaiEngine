@@ -19,13 +19,3 @@ Route::prefix('test/payments')->middleware(['auth:sanctum', 'active.user', 'supe
     Route::post('/{provider}', [TestPaymentController::class, 'testCollection'])
         ->where('provider', '[A-Za-z0-9_-]+');
 });
-
-
-Route::get('/test/env', function () {
-    return response()->json([
-        'env' => env('APP_ENV'),
-        'debug' => env('APP_DEBUG'),
-        'palmpesa_token' => env('PALMPESA_API_TOKEN'),
-        'palmpesa_userid' => env('PALMPESA_USER_ID'),
-    ]);
-});

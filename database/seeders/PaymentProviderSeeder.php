@@ -85,12 +85,7 @@ class PaymentProviderSeeder extends Seeder
                 'supports_payments' => true,
                 'supports_payouts' => false,
                 'is_active' => true,
-                'credentials' => array_filter([
-                    'secret_key' => config('services.palmpesa.api_token'),
-                    'api_token' => config('services.palmpesa.api_token'),
-                    'user_id' => config('services.palmpesa.user_id'),
-                    'api_base_url' => config('services.palmpesa.base_url'),
-                ], fn ($value) => filled($value)),
+                'credentials' => [],
                 'settings' => [
                     'driver' => PaymentProvider::SLUG_PALMPESA,
                     'vendor' => config('services.palmpesa.vendor', 'TILL61103867'),
