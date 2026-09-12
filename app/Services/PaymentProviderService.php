@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\PaymentProvider;
+use App\Models\PlatformPayment;
+use App\Payments\PaymentProviderManager;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -193,6 +195,72 @@ class PaymentProviderService
 
             return $provider->fresh();
         });
+    }
+
+    /**
+     * Dry-run a provider collection. Hits the live provider API but never persists a payment.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public function testCollection(PaymentProvider $provider, array $data): array
+    {
+        if (! $provider->is_active || ! $provider->supports_payments) {
+            throw ValidationException::withMessages([
+                'provider' => ['Provider must be active and support collections.'],
+            ]);
+        }
+
+        $driver = app(PaymentProviderManager::class)->driverFor($provider);
+
+        $reference = 'TEST-'.strtoupper(Str::random(10));
+        $payment = new PlatformPayment([
+            'payment_provider_id' => $provider->id,
+            'provider_slug' => $provider->slug,
+            'type' => PlatformPayment::TYPE_PLATFORM_SUBSCRIPTION,
+            'purpose' => 'provider_test',
+            'direction' => PlatformPayment::DIRECTION_COLLECTION,
+            'reference' => $reference,
+            'amount' => $data['amount'],
+            'currency' => strtoupper((string) ($data['currency'] ?? config('platform.currency', 'TZS'))),
+            'payment_method' => 'mobile_money',
+            'phone' => $data['phone'],
+            'status' => PlatformPayment::STATUS_PENDING,
+            'metadata' => [
+                'customer_name' => $data['name'] ?? 'Test Customer',
+                'customer_email' => $data['email'] ?? 'test@waifai.local',
+                'customer_address' => $data['address'] ?? 'Dar es Salaam',
+                'customer_postcode' => $data['postcode'] ?? '11111',
+                'provider_test' => true,
+            ],
+            'initiated_at' => now(),
+        ]);
+
+        $result = $driver->initiateCollection($payment);
+
+        $this->auditLogger->log(
+            'payment_provider_test_collection',
+            null,
+            null,
+            PaymentProvider::class,
+            $provider->id,
+            newValues: [
+                'slug' => $provider->slug,
+                'test_reference' => $reference,
+                'accepted' => $result->accepted,
+                'provider_reference' => $result->providerReference,
+            ],
+        );
+
+        return [
+            'provider' => $provider->slug,
+            'persisted' => false,
+            'test_reference' => $reference,
+            'accepted' => $result->accepted,
+            'provider_reference' => $result->providerReference,
+            'message' => $result->message,
+            'provider_response' => $result->raw,
+        ];
     }
 
     /**

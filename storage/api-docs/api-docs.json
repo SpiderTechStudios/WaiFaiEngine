@@ -5866,6 +5866,171 @@
                 ]
             }
         },
+        "/test/payments/{provider}": {
+            "post": {
+                "tags": [
+                    "Payment Providers"
+                ],
+                "summary": "Dry-run provider collection (no DB payment record)",
+                "description": "Superadmin only. Calls the live provider (e.g. PalmPesa /api/palmpesa/initiate) and returns the provider response. Does not create platform_payments or payment_transactions.",
+                "operationId": "testPaymentProviderCollection",
+                "parameters": [
+                    {
+                        "name": "provider",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "palmpesa",
+                            "enum": [
+                                "flutterwave",
+                                "palmpay",
+                                "palmpesa",
+                                "stub"
+                            ]
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "phone",
+                                    "amount"
+                                ],
+                                "properties": {
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "0711987654"
+                                    },
+                                    "amount": {
+                                        "type": "number",
+                                        "example": 500
+                                    },
+                                    "currency": {
+                                        "type": "string",
+                                        "example": "TZS"
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Test Customer"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "example": "test@example.com"
+                                    },
+                                    "address": {
+                                        "type": "string",
+                                        "example": "Dar es Salaam"
+                                    },
+                                    "postcode": {
+                                        "type": "string",
+                                        "example": "11111"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Provider response (not persisted)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "code": {
+                                            "type": "integer",
+                                            "example": 200
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Provider test payment response"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "provider": {
+                                                    "type": "string",
+                                                    "example": "palmpesa"
+                                                },
+                                                "persisted": {
+                                                    "type": "boolean",
+                                                    "example": false
+                                                },
+                                                "test_reference": {
+                                                    "type": "string",
+                                                    "example": "TEST-ABC123XYZ0"
+                                                },
+                                                "accepted": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                },
+                                                "provider_reference": {
+                                                    "type": "string",
+                                                    "example": "PALMPESA17682869972044",
+                                                    "nullable": true
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "provider_response": {
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Unknown provider",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation / provider error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/webhooks/payments/{provider}": {
             "post": {
                 "tags": [

@@ -2,8 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\Enrollment;
 use App\Models\PaymentProvider;
+use App\Models\PlatformPayment;
 use App\Models\User;
+use App\Services\PaymentProviderService;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class PaymentProviderTest extends TestCase
@@ -86,7 +90,7 @@ class PaymentProviderTest extends TestCase
             ->assertCreated()
             ->json('data.enrollment_reference');
 
-        $payment = \App\Models\Enrollment::query()->where('reference', $reference)->firstOrFail()
+        $payment = Enrollment::query()->where('reference', $reference)->firstOrFail()
             ->payments()->latest('id')->firstOrFail();
 
         $this->postJson('/api/v1/webhooks/payments/stub', [
@@ -128,13 +132,13 @@ class PaymentProviderTest extends TestCase
             'supports_payments' => true,
         ])->save();
 
-        app(\App\Services\PaymentProviderService::class)->setDefaultForPayments($palmpay->fresh());
+        app(PaymentProviderService::class)->setDefaultForPayments($palmpay->fresh());
 
         $reference = $this->postJson('/api/v1/auth/register', $this->enrollmentPayload())
             ->assertCreated()
             ->json('data.enrollment_reference');
 
-        $payment = \App\Models\Enrollment::query()->where('reference', $reference)->firstOrFail()
+        $payment = Enrollment::query()->where('reference', $reference)->firstOrFail()
             ->payments()->latest('id')->firstOrFail();
 
         $this->assertSame('palmpay', $payment->provider_slug);
@@ -166,14 +170,14 @@ class PaymentProviderTest extends TestCase
             'supports_payments' => true,
         ])->save();
 
-        app(\App\Services\PaymentProviderService::class)->setDefaultForPayments($palmpesa->fresh());
+        app(PaymentProviderService::class)->setDefaultForPayments($palmpesa->fresh());
 
-        \Illuminate\Support\Facades\Http::fake([
-            '*/api/palmpesa/initiate' => \Illuminate\Support\Facades\Http::response([
+        Http::fake([
+            '*/api/palmpesa/initiate' => Http::response([
                 'message' => 'Payment initiated. Processing will continue asynchronously.',
                 'order_id' => 'PALMPESA17682869972044',
             ], 200),
-            '*/api/order-status' => \Illuminate\Support\Facades\Http::response([
+            '*/api/order-status' => Http::response([
                 'reference' => '0927530628',
                 'resultcode' => '000',
                 'result' => 'SUCCESS',
@@ -194,7 +198,7 @@ class PaymentProviderTest extends TestCase
             ->assertJsonPath('data.payment.provider', 'palmpesa')
             ->json('data.enrollment_reference');
 
-        $payment = \App\Models\Enrollment::query()->where('reference', $reference)->firstOrFail()
+        $payment = Enrollment::query()->where('reference', $reference)->firstOrFail()
             ->payments()->latest('id')->firstOrFail();
 
         $this->assertSame('PALMPESA17682869972044', $payment->external_reference);
@@ -220,14 +224,14 @@ class PaymentProviderTest extends TestCase
             'supports_payments' => true,
         ])->save();
 
-        app(\App\Services\PaymentProviderService::class)->setDefaultForPayments($palmpesa->fresh());
+        app(PaymentProviderService::class)->setDefaultForPayments($palmpesa->fresh());
 
-        \Illuminate\Support\Facades\Http::fake([
-            '*/api/palmpesa/initiate' => \Illuminate\Support\Facades\Http::response([
+        Http::fake([
+            '*/api/palmpesa/initiate' => Http::response([
                 'message' => 'Payment initiated. Processing will continue asynchronously.',
                 'order_id' => 'PALMPESA17683440586334',
             ], 200),
-            '*/api/order-status' => \Illuminate\Support\Facades\Http::response([
+            '*/api/order-status' => Http::response([
                 'resultcode' => '000',
                 'result' => 'SUCCESS',
                 'data' => [[
@@ -242,16 +246,14 @@ class PaymentProviderTest extends TestCase
             ->assertCreated()
             ->json('data.enrollment_reference');
 
-        $payment = \App\Models\Enrollment::query()->where('reference', $reference)->firstOrFail()
+        $payment = Enrollment::query()->where('reference', $reference)->firstOrFail()
             ->payments()->latest('id')->firstOrFail();
 
         $this->assertSame('pending', $payment->status);
 
-        // Still pending after 4 minutes — scheduled reconcile polls Get Order Status.
         $payment->forceFill(['initiated_at' => now()->subMinutes(5)])->save();
 
-        $this->artisan('payments:reconcile-palmpesa')
-            ->assertSuccessful();
+        $this->artisan('payments:reconcile-palmpesa')->assertSuccessful();
 
         $this->assertSame('paid', $payment->fresh()->status);
     }
@@ -268,14 +270,14 @@ class PaymentProviderTest extends TestCase
             'supports_payments' => true,
         ])->save();
 
-        app(\App\Services\PaymentProviderService::class)->setDefaultForPayments($palmpesa->fresh());
+        app(PaymentProviderService::class)->setDefaultForPayments($palmpesa->fresh());
 
-        \Illuminate\Support\Facades\Http::fake([
-            '*/api/palmpesa/initiate' => \Illuminate\Support\Facades\Http::response([
+        Http::fake([
+            '*/api/palmpesa/initiate' => Http::response([
                 'message' => 'Payment initiated. Processing will continue asynchronously.',
                 'order_id' => 'PALMPESA-FAILED-001',
             ], 200),
-            '*/api/order-status' => \Illuminate\Support\Facades\Http::response([
+            '*/api/order-status' => Http::response([
                 'resultcode' => '000',
                 'data' => [[
                     'order_id' => 'PALMPESA-FAILED-001',
@@ -289,7 +291,7 @@ class PaymentProviderTest extends TestCase
             ->assertCreated()
             ->json('data.enrollment_reference');
 
-        $payment = \App\Models\Enrollment::query()->where('reference', $reference)->firstOrFail()
+        $payment = Enrollment::query()->where('reference', $reference)->firstOrFail()
             ->payments()->latest('id')->firstOrFail();
 
         $payment->forceFill(['initiated_at' => now()->subMinutes(5)])->save();
@@ -297,5 +299,58 @@ class PaymentProviderTest extends TestCase
         $this->artisan('payments:reconcile-palmpesa')->assertSuccessful();
 
         $this->assertSame('failed', $payment->fresh()->status);
+    }
+
+    public function test_superadmin_can_dry_run_provider_payment_without_persisting(): void
+    {
+        $superadmin = User::factory()->create(['is_superadmin' => true]);
+
+        $palmpesa = PaymentProvider::query()->where('slug', PaymentProvider::SLUG_PALMPESA)->firstOrFail();
+        $palmpesa->forceFill([
+            'credentials' => [
+                'secret_key' => 'test-palmpesa-token',
+                'api_base_url' => 'https://palmpesa.drmlelwa.co.tz',
+            ],
+            'is_active' => true,
+            'supports_payments' => true,
+        ])->save();
+
+        Http::fake([
+            '*/api/palmpesa/initiate' => Http::response([
+                'message' => 'Payment initiated. Processing will continue asynchronously.',
+                'order_id' => 'PALMPESA-TEST-ORDER-99',
+            ], 200),
+        ]);
+
+        $before = PlatformPayment::query()->count();
+
+        $this->withHeaders($this->authHeaders($superadmin))
+            ->postJson('/api/v1/test/payments/palmpesa', [
+                'phone' => '0711987654',
+                'amount' => 500,
+                'currency' => 'TZS',
+                'name' => 'Test Customer',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.provider', 'palmpesa')
+            ->assertJsonPath('data.persisted', false)
+            ->assertJsonPath('data.accepted', true)
+            ->assertJsonPath('data.provider_reference', 'PALMPESA-TEST-ORDER-99')
+            ->assertJsonPath('data.provider_response.order_id', 'PALMPESA-TEST-ORDER-99');
+
+        $this->assertSame($before, PlatformPayment::query()->count());
+    }
+
+    public function test_non_superadmin_cannot_dry_run_provider_payment(): void
+    {
+        $user = $this->createUser();
+        $this->createCompanyFor($user);
+
+        $this->withHeaders($this->authHeaders($user))
+            ->postJson('/api/v1/test/payments/palmpesa', [
+                'phone' => '0711987654',
+                'amount' => 500,
+            ])
+            ->assertForbidden();
     }
 }

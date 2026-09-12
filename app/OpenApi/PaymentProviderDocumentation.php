@@ -122,6 +122,52 @@ class PaymentProviderDocumentation
     public function setDefaultPayouts(): void {}
 
     #[OA\Post(
+        path: '/test/payments/{provider}',
+        operationId: 'testPaymentProviderCollection',
+        tags: ['Payment Providers'],
+        summary: 'Dry-run provider collection (no DB payment record)',
+        description: 'Superadmin only. Calls the live provider (e.g. PalmPesa /api/palmpesa/initiate) and returns the provider response. Does not create platform_payments or payment_transactions.',
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'provider', in: 'path', required: true, schema: new OA\Schema(type: 'string', example: 'palmpesa', enum: ['flutterwave', 'palmpay', 'palmpesa', 'stub'])),
+        ],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(
+            required: ['phone', 'amount'],
+            properties: [
+                new OA\Property(property: 'phone', type: 'string', example: '0711987654'),
+                new OA\Property(property: 'amount', type: 'number', example: 500),
+                new OA\Property(property: 'currency', type: 'string', example: 'TZS'),
+                new OA\Property(property: 'name', type: 'string', example: 'Test Customer'),
+                new OA\Property(property: 'email', type: 'string', example: 'test@example.com'),
+                new OA\Property(property: 'address', type: 'string', example: 'Dar es Salaam'),
+                new OA\Property(property: 'postcode', type: 'string', example: '11111'),
+            ]
+        )),
+        responses: [
+            new OA\Response(response: 200, description: 'Provider response (not persisted)', content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'status', type: 'boolean', example: true),
+                    new OA\Property(property: 'code', type: 'integer', example: 200),
+                    new OA\Property(property: 'message', type: 'string', example: 'Provider test payment response'),
+                    new OA\Property(property: 'data', properties: [
+                        new OA\Property(property: 'provider', type: 'string', example: 'palmpesa'),
+                        new OA\Property(property: 'persisted', type: 'boolean', example: false),
+                        new OA\Property(property: 'test_reference', type: 'string', example: 'TEST-ABC123XYZ0'),
+                        new OA\Property(property: 'accepted', type: 'boolean', example: true),
+                        new OA\Property(property: 'provider_reference', type: 'string', nullable: true, example: 'PALMPESA17682869972044'),
+                        new OA\Property(property: 'message', type: 'string', nullable: true),
+                        new OA\Property(property: 'provider_response', type: 'object'),
+                    ], type: 'object'),
+                ]
+            )),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+            new OA\Response(response: 404, description: 'Unknown provider', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
+            new OA\Response(response: 422, description: 'Validation / provider error', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
+        ]
+    )]
+    public function testCollection(): void {}
+
+    #[OA\Post(
         path: '/webhooks/payments/{provider}',
         operationId: 'paymentProviderCollectionWebhook',
         tags: ['Payment Webhooks'],
