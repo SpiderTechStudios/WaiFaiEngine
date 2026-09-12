@@ -24,7 +24,7 @@ class PaymentProviderWebhookController extends Controller
         );
 
         // PalmPay requires a plain-text "success" body or it retries the notifyUrl.
-        if ($provider === PaymentProvider::SLUG_PALMPAY) {
+        if ($this->isPalmPayProvider($provider)) {
             return response('success', 200)->header('Content-Type', 'text/plain');
         }
 
@@ -44,7 +44,7 @@ class PaymentProviderWebhookController extends Controller
             abort(401, 'Invalid payout provider webhook signature.');
         }
 
-        if ($provider === PaymentProvider::SLUG_PALMPAY) {
+        if ($this->isPalmPayProvider($provider)) {
             return response('success', 200)->header('Content-Type', 'text/plain');
         }
 
@@ -52,5 +52,17 @@ class PaymentProviderWebhookController extends Controller
             'provider' => $provider,
             'accepted' => true,
         ], 'Payout webhook accepted');
+    }
+
+    private function isPalmPayProvider(string $providerSlug): bool
+    {
+        if ($providerSlug === PaymentProvider::SLUG_PALMPAY) {
+            return true;
+        }
+
+        $provider = PaymentProvider::query()->where('slug', $providerSlug)->first();
+
+        return $provider !== null
+            && (string) $provider->setting('driver', $provider->slug) === PaymentProvider::SLUG_PALMPAY;
     }
 }

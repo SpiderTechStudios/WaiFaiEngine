@@ -14,12 +14,14 @@ class PaymentProviderManager
 {
     public function driverFor(PaymentProvider $provider): PaymentProviderDriver
     {
-        return match ($provider->slug) {
+        $driverKey = (string) $provider->setting('driver', $provider->slug);
+
+        return match ($driverKey) {
             PaymentProvider::SLUG_FLUTTERWAVE => new FlutterwavePaymentProvider($provider),
             PaymentProvider::SLUG_PALMPAY => new PalmPayPaymentProvider($provider),
             PaymentProvider::SLUG_PALMPESA => new PalmPesaPaymentProvider($provider),
             PaymentProvider::SLUG_STUB => new StubPaymentProvider($provider),
-            default => throw new InvalidArgumentException("Unsupported payment provider [{$provider->slug}]."),
+            default => throw new InvalidArgumentException("Unsupported payment provider [{$driverKey}]."),
         };
     }
 

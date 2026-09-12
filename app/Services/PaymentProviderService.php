@@ -48,7 +48,10 @@ class PaymentProviderService
                 'credentials' => $this->normalizeCredentials(
                     $data['credentials'] ?? []
                 ),
-                'settings' => $data['settings'] ?? [],
+                'settings' => array_merge(
+                    ['driver' => $slug],
+                    is_array($data['settings'] ?? null) ? $data['settings'] : [],
+                ),
             ]);
 
             if (!empty($data['is_default_for_payments'])) {
@@ -82,8 +85,29 @@ class PaymentProviderService
                 $credentials = $this->mergeCredentials($credentials, $data['credentials']);
             }
 
+            $name = array_key_exists('name', $data)
+                ? trim((string) $data['name'])
+                : $provider->name;
+
+            $settings = array_key_exists('settings', $data)
+                ? ($data['settings'] ?? [])
+                : ($provider->settings ?? []);
+
+            // Keep a stable driver key so renaming does not break provider integrations.
+            if (! filled(data_get($settings, 'driver'))) {
+                $settings['driver'] = data_get($provider->settings, 'driver', $provider->slug);
+            }
+
+            $slug = $provider->slug;
+            $oldSlug = $provider->slug;
+
+            if (array_key_exists('name', $data) && $name !== $provider->name) {
+                $slug = $this->uniqueSlugFromName($name, $provider->id);
+            }
+
             $provider->forceFill([
-                'name' => $data['name'] ?? $provider->name,
+                'name' => $name,
+                'slug' => $slug,
                 'description' => array_key_exists('description', $data) ? $data['description'] : $provider->description,
                 'supports_payments' => array_key_exists('supports_payments', $data)
                     ? (bool) $data['supports_payments']
@@ -95,10 +119,14 @@ class PaymentProviderService
                     ? (bool) $data['is_active']
                     : $provider->is_active,
                 'credentials' => $credentials,
-                'settings' => array_key_exists('settings', $data)
-                    ? ($data['settings'] ?? [])
-                    : $provider->settings,
+                'settings' => $settings,
             ])->save();
+
+            if ($slug !== $oldSlug) {
+                PlatformPayment::query()
+                    ->where('provider_slug', $oldSlug)
+                    ->update(['provider_slug' => $slug]);
+            }
 
             if (array_key_exists('is_default_for_payments', $data) && $data['is_default_for_payments']) {
                 $this->setDefaultForPayments($provider->fresh());
@@ -114,6 +142,10 @@ class PaymentProviderService
                 null,
                 PaymentProvider::class,
                 $provider->id,
+                newValues: [
+                    'name' => $provider->name,
+                    'slug' => $provider->slug,
+                ],
             );
 
             return $provider->fresh();
@@ -306,5 +338,30 @@ class PaymentProviderService
         }
 
         return $existing;
+    }
+
+    private function uniqueSlugFromName(string $name, ?int $ignoreId = null): string
+    {
+        $base = Str::slug($name);
+        if ($base === '') {
+            throw ValidationException::withMessages([
+                'name' => ['Name must produce a valid slug.'],
+            ]);
+        }
+
+        $slug = $base;
+        $suffix = 2;
+
+        while (
+            PaymentProvider::query()
+                ->when($ignoreId, fn ($query) => $query->whereKeyNot($ignoreId))
+                ->where('slug', $slug)
+                ->exists()
+        ) {
+            $slug = $base.'-'.$suffix;
+            $suffix++;
+        }
+
+        return $slug;
     }
 }

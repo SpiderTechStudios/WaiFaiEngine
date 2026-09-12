@@ -636,7 +636,8 @@ class PlatformPaymentService
                 'metadata' => $metadata,
             ])->save();
 
-            if ($provider->slug === PaymentProvider::SLUG_PALMPESA && $payment->status === PlatformPayment::STATUS_PENDING) {
+            if ($provider->slug === PaymentProvider::SLUG_PALMPESA
+                || (string) $provider->setting('driver', $provider->slug) === PaymentProvider::SLUG_PALMPESA) {
                 $delayMinutes = (int) $provider->setting(
                     'status_check_minutes',
                     config('services.palmpesa.status_check_minutes', 4)

@@ -52,6 +52,36 @@ class PaymentProviderTest extends TestCase
         $this->assertTrue($azam->fresh()->is_default_for_payments);
     }
 
+    public function test_renaming_provider_updates_slug_and_keeps_driver(): void
+    {
+        $superadmin = User::factory()->create(['is_superadmin' => true]);
+
+        $this->withHeaders($this->authHeaders($superadmin))
+            ->postJson('/api/v1/superadmin/payment-providers', [
+                'name' => 'AzamPay',
+                'slug' => 'azampay',
+                'supports_payments' => true,
+                'credentials' => [
+                    'secret_key' => 'sec-test',
+                ],
+            ])->assertCreated();
+
+        $this->withHeaders($this->authHeaders($superadmin))
+            ->patchJson('/api/v1/superadmin/payment-providers/azampay', [
+                'name' => 'Azam Pay Tanzania',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.name', 'Azam Pay Tanzania')
+            ->assertJsonPath('data.slug', 'azam-pay-tanzania')
+            ->assertJsonPath('data.settings.driver', 'azampay');
+
+        $this->assertDatabaseMissing('payment_providers', ['slug' => 'azampay']);
+        $this->assertDatabaseHas('payment_providers', [
+            'slug' => 'azam-pay-tanzania',
+            'name' => 'Azam Pay Tanzania',
+        ]);
+    }
+
     public function test_unknown_payment_provider_returns_not_found(): void
     {
         $superadmin = User::factory()->create(['is_superadmin' => true]);

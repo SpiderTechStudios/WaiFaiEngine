@@ -20,10 +20,13 @@ class ReconcilePalmPesaPaymentsCommand extends Command
         $cutoff = now()->subMinutes(max(1, $minutes));
 
         $payments = PlatformPayment::query()
-            ->where('provider_slug', PaymentProvider::SLUG_PALMPESA)
             ->where('status', PlatformPayment::STATUS_PENDING)
             ->where('initiated_at', '<=', $cutoff)
             ->whereNotNull('external_reference')
+            ->whereHas('provider', function ($query) {
+                $query->where('slug', PaymentProvider::SLUG_PALMPESA)
+                    ->orWhere('settings->driver', PaymentProvider::SLUG_PALMPESA);
+            })
             ->orderBy('id')
             ->limit(100)
             ->get();

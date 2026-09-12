@@ -48,7 +48,7 @@ class PalmPayPaymentProvider implements PaymentProviderDriver
             'currency' => strtoupper((string) $payment->currency),
             'notifyUrl' => (string) $this->provider->setting(
                 'notify_url',
-                rtrim((string) config('app.url'), '/').'/api/v1/webhooks/payments/palmpay'
+                rtrim((string) config('app.url'), '/').'/api/v1/webhooks/payments/'.$this->provider->slug
             ),
             'callBackUrl' => (string) $this->provider->setting(
                 'redirect_url',

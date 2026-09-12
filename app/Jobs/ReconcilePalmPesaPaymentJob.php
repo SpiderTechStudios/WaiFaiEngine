@@ -26,7 +26,9 @@ class ReconcilePalmPesaPaymentJob implements ShouldQueue
             return;
         }
 
-        if ($payment->provider_slug !== PaymentProvider::SLUG_PALMPESA) {
+        $driverKey = (string) optional($payment->provider)->setting('driver', $payment->provider_slug);
+        if ($payment->provider_slug !== PaymentProvider::SLUG_PALMPESA
+            && $driverKey !== PaymentProvider::SLUG_PALMPESA) {
             return;
         }
 

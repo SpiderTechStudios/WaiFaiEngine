@@ -23,7 +23,9 @@ class PaymentProviderSeeder extends Seeder
                 'credentials' => [
                     'webhook_secret' => config('platform.payment_webhook_secret') ?: 'stub-webhook-secret',
                 ],
-                'settings' => [],
+                'settings' => [
+                    'driver' => PaymentProvider::SLUG_STUB,
+                ],
             ]
         );
 
@@ -43,6 +45,7 @@ class PaymentProviderSeeder extends Seeder
                     'api_base_url' => config('services.flutterwave.base_url'),
                 ]),
                 'settings' => [
+                    'driver' => PaymentProvider::SLUG_FLUTTERWAVE,
                     'mobile_money_charge_type' => 'mobile_money_tanzania',
                 ],
             ]
@@ -63,6 +66,7 @@ class PaymentProviderSeeder extends Seeder
                     'api_base_url' => config('services.palmpay.base_url'),
                 ]),
                 'settings' => [
+                    'driver' => PaymentProvider::SLUG_PALMPAY,
                     'country_code' => config('services.palmpay.country_code', 'NG'),
                     'version' => config('services.palmpay.version', 'V2'),
                     'product_type' => 'bank_transfer',
@@ -88,6 +92,7 @@ class PaymentProviderSeeder extends Seeder
                     'api_base_url' => config('services.palmpesa.base_url'),
                 ], fn ($value) => filled($value)),
                 'settings' => [
+                    'driver' => PaymentProvider::SLUG_PALMPESA,
                     'vendor' => config('services.palmpesa.vendor', 'TILL61103867'),
                     'status_check_minutes' => (int) config('services.palmpesa.status_check_minutes', 4),
                     'default_address' => 'Dar es Salaam',

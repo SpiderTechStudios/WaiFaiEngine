@@ -56,7 +56,7 @@ class PalmPesaPaymentProvider implements PaymentProviderDriver
             ),
             'callback_url' => (string) $this->provider->setting(
                 'callback_url',
-                rtrim((string) config('app.url'), '/').'/api/v1/webhooks/payments/palmpesa'
+                rtrim((string) config('app.url'), '/').'/api/v1/webhooks/payments/'.$this->provider->slug
             ),
         ];
 
