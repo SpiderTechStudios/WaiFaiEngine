@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Jobs\ReconcilePalmPesaPaymentJob;
 use App\Models\Company;
 use App\Models\Enrollment;
 use App\Models\InstallationRequest;
@@ -232,9 +233,63 @@ class PlatformPaymentService
 
     public function findByReferenceOrFail(string $reference): PlatformPayment
     {
-        return PlatformPayment::query()
-            ->where('reference', $reference)
-            ->firstOrFail();
+        $payment = PlatformPayment::query()->where('reference', $reference)->first();
+
+        if (! $payment) {
+            abort(404, 'Payment not found.');
+        }
+
+        return $payment;
+    }
+
+    public function findByExternalReferenceOrFail(string $externalReference): PlatformPayment
+    {
+        $payment = PlatformPayment::query()
+            ->where('external_reference', $externalReference)
+            ->first();
+
+        if (! $payment) {
+            abort(404, 'Payment not found.');
+        }
+
+        return $payment;
+    }
+
+    /**
+     * Re-check a pending payment with the provider (e.g. PalmPesa order-status).
+     */
+    public function reconcileProviderPayment(PlatformPayment $payment): PlatformPayment
+    {
+        $payment->refresh();
+
+        if ($payment->status !== PlatformPayment::STATUS_PENDING) {
+            return $payment;
+        }
+
+        if (! $payment->provider_slug) {
+            return $payment;
+        }
+
+        $provider = PaymentProvider::findBySlugOrFail($payment->provider_slug);
+        $driver = $this->providerManager->driverFor($provider);
+        $verified = $driver->verifyTransaction($payment);
+
+        if ($verified->providerReference) {
+            $payment->forceFill([
+                'external_reference' => $verified->providerReference,
+                'provider_event_id' => $verified->providerReference,
+            ])->save();
+        }
+
+        if ($verified->isSuccessful()) {
+            return $this->markPaid($payment->fresh());
+        }
+
+        if ($verified->isFailed()) {
+            return $this->markFailed($payment->fresh(), 'Provider reported failure on status check');
+        }
+
+        return $payment->fresh();
     }
 
     public function markPaid(PlatformPayment $payment): PlatformPayment
@@ -349,15 +404,24 @@ class PlatformPaymentService
         }
 
         $parsed = $driver->parseWebhook($payload);
-        $reference = (string) ($parsed->txRef ?: ($payload['reference'] ?? $payload['transaction_reference'] ?? ''));
+        $reference = (string) ($parsed->txRef ?: ($payload['reference'] ?? $payload['transaction_reference'] ?? $payload['transaction_id'] ?? ''));
+        $externalReference = (string) ($parsed->providerReference ?: ($payload['order_id'] ?? ''));
 
-        if ($reference === '') {
-            throw ValidationException::withMessages([
-                'reference' => ['Payment reference is required.'],
-            ]);
+        $payment = null;
+        if ($reference !== '') {
+            $payment = PlatformPayment::query()->where('reference', $reference)->first();
+        }
+        if (! $payment && $externalReference !== '') {
+            $payment = PlatformPayment::query()->where('external_reference', $externalReference)->first();
+        }
+        // PalmPesa callbacks often send only provider order_id; if txRef was set to that order_id, try external_reference.
+        if (! $payment && $reference !== '') {
+            $payment = PlatformPayment::query()->where('external_reference', $reference)->first();
         }
 
-        $payment = $this->findByReferenceOrFail($reference);
+        if (! $payment) {
+            abort(404, 'Payment not found.');
+        }
 
         if ($payment->provider_slug && $payment->provider_slug !== $providerSlug) {
             throw ValidationException::withMessages([
@@ -571,6 +635,19 @@ class PlatformPaymentService
                 'external_reference' => $result->providerReference,
                 'metadata' => $metadata,
             ])->save();
+
+            if ($provider->slug === PaymentProvider::SLUG_PALMPESA && $payment->status === PlatformPayment::STATUS_PENDING) {
+                $delayMinutes = (int) $provider->setting(
+                    'status_check_minutes',
+                    config('services.palmpesa.status_check_minutes', 4)
+                );
+
+                // Avoid running immediately on sync queues; the scheduled command covers that case.
+                if (config('queue.default') !== 'sync') {
+                    ReconcilePalmPesaPaymentJob::dispatch($payment->id)
+                        ->delay(now()->addMinutes(max(1, $delayMinutes)));
+                }
+            }
         }
 
         if (config('platform.payment_auto_paid') && $payment->status === PlatformPayment::STATUS_PENDING) {

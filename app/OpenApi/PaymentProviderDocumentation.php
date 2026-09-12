@@ -126,11 +126,11 @@ class PaymentProviderDocumentation
         operationId: 'paymentProviderCollectionWebhook',
         tags: ['Payment Webhooks'],
         summary: 'Public provider collection webhook (signature-verified)',
-        description: 'No Sanctum auth. Identify provider from the path. Flutterwave: send verif-hash header matching the provider webhook_secret, body.event=charge.completed, data.tx_ref = payment intent reference. PalmPay: body.orderId = payment intent reference, orderStatus=2 for success, signed with RSA-SHA1 in body.sign; response is plain text "success". Stub: X-Platform-Payment-Secret. Backend looks up the payment intent by reference and routes by purpose (platform_subscription, subscription_renewal, installation_request, device_purchase, …). Idempotent.',
+        description: 'No Sanctum auth. Identify provider from the path. Flutterwave: verif-hash. PalmPay: RSA-SHA1 body.sign, plain text success response. PalmPesa: callback with order_id + payment_status (COMPLETED|FAILED|PENDING); pending payments are also polled via order-status after 4 minutes. Stub: X-Platform-Payment-Secret. Backend looks up the payment intent by reference or provider order id and routes by purpose. Idempotent.',
         parameters: [
-            new OA\Parameter(name: 'provider', in: 'path', required: true, schema: new OA\Schema(type: 'string', example: 'palmpay', enum: ['flutterwave', 'palmpay', 'stub'])),
+            new OA\Parameter(name: 'provider', in: 'path', required: true, schema: new OA\Schema(type: 'string', example: 'palmpesa', enum: ['flutterwave', 'palmpay', 'palmpesa', 'stub'])),
             new OA\Parameter(name: 'verif-hash', in: 'header', required: false, description: 'Flutterwave webhook secret hash', schema: new OA\Schema(type: 'string')),
-            new OA\Parameter(name: 'X-Platform-Payment-Secret', in: 'header', required: false, description: 'Stub provider webhook secret', schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'X-Platform-Payment-Secret', in: 'header', required: false, description: 'Stub / optional PalmPesa webhook secret', schema: new OA\Schema(type: 'string')),
         ],
         requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(ref: '#/components/schemas/FlutterwavePaymentWebhookRequest')),
         responses: [
@@ -149,7 +149,7 @@ class PaymentProviderDocumentation
         summary: 'Public provider payout webhook (signature-verified)',
         description: 'No Sanctum auth. Same signature rules as collection webhooks. Does not mix with collection payment intents.',
         parameters: [
-            new OA\Parameter(name: 'provider', in: 'path', required: true, schema: new OA\Schema(type: 'string', example: 'palmpay', enum: ['flutterwave', 'palmpay', 'stub'])),
+            new OA\Parameter(name: 'provider', in: 'path', required: true, schema: new OA\Schema(type: 'string', example: 'palmpesa', enum: ['flutterwave', 'palmpay', 'palmpesa', 'stub'])),
             new OA\Parameter(name: 'verif-hash', in: 'header', required: false, schema: new OA\Schema(type: 'string')),
         ],
         requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(ref: '#/components/schemas/FlutterwavePaymentWebhookRequest')),

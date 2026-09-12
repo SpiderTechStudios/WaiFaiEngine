@@ -9,3 +9,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('enrollments:expire')->everyMinute();
+Schedule::command('payments:reconcile-palmpesa')->everyMinute();

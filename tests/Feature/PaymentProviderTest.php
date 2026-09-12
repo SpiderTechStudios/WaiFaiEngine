@@ -20,6 +20,7 @@ class PaymentProviderTest extends TestCase
         $this->assertContains('stub', $slugs);
         $this->assertContains('flutterwave', $slugs);
         $this->assertContains('palmpay', $slugs);
+        $this->assertContains('palmpesa', $slugs);
 
         $this->withHeaders($this->authHeaders($superadmin))
             ->postJson('/api/v1/superadmin/payment-providers', [
@@ -149,5 +150,152 @@ class PaymentProviderTest extends TestCase
         $response->assertOk();
         $this->assertSame('success', $response->getContent());
         $this->assertSame('paid', $payment->fresh()->status);
+    }
+
+    public function test_palmpesa_initiates_mobile_money_and_handles_callback(): void
+    {
+        $palmpesa = PaymentProvider::query()->where('slug', PaymentProvider::SLUG_PALMPESA)->firstOrFail();
+        $palmpesa->forceFill([
+            'credentials' => [
+                'secret_key' => 'test-palmpesa-token',
+                'api_token' => 'test-palmpesa-token',
+                'user_id' => '25',
+                'api_base_url' => 'https://palmpesa.drmlelwa.co.tz',
+            ],
+            'is_active' => true,
+            'supports_payments' => true,
+        ])->save();
+
+        app(\App\Services\PaymentProviderService::class)->setDefaultForPayments($palmpesa->fresh());
+
+        \Illuminate\Support\Facades\Http::fake([
+            '*/api/palmpesa/initiate' => \Illuminate\Support\Facades\Http::response([
+                'message' => 'Payment initiated. Processing will continue asynchronously.',
+                'order_id' => 'PALMPESA17682869972044',
+            ], 200),
+            '*/api/order-status' => \Illuminate\Support\Facades\Http::response([
+                'reference' => '0927530628',
+                'resultcode' => '000',
+                'result' => 'SUCCESS',
+                'message' => 'Order fetch successful',
+                'data' => [[
+                    'order_id' => 'PALMPESA17682869972044',
+                    'amount' => '10000',
+                    'payment_status' => 'COMPLETED',
+                    'transid' => '805613901007',
+                    'channel' => 'AIRTELMONEY',
+                    'msisdn' => '255711987654',
+                ]],
+            ], 200),
+        ]);
+
+        $reference = $this->postJson('/api/v1/auth/register', $this->enrollmentPayload())
+            ->assertCreated()
+            ->assertJsonPath('data.payment.provider', 'palmpesa')
+            ->json('data.enrollment_reference');
+
+        $payment = \App\Models\Enrollment::query()->where('reference', $reference)->firstOrFail()
+            ->payments()->latest('id')->firstOrFail();
+
+        $this->assertSame('PALMPESA17682869972044', $payment->external_reference);
+
+        $this->postJson('/api/v1/webhooks/payments/palmpesa', [
+            'order_id' => 'PALMPESA17682869972044',
+            'payment_status' => 'COMPLETED',
+        ])->assertOk()
+            ->assertJsonPath('data.status', 'paid');
+
+        $this->assertSame('paid', $payment->fresh()->status);
+    }
+
+    public function test_palmpesa_reconciles_still_pending_after_four_minutes_via_order_status(): void
+    {
+        $palmpesa = PaymentProvider::query()->where('slug', PaymentProvider::SLUG_PALMPESA)->firstOrFail();
+        $palmpesa->forceFill([
+            'credentials' => [
+                'secret_key' => 'test-palmpesa-token',
+                'api_base_url' => 'https://palmpesa.drmlelwa.co.tz',
+            ],
+            'is_active' => true,
+            'supports_payments' => true,
+        ])->save();
+
+        app(\App\Services\PaymentProviderService::class)->setDefaultForPayments($palmpesa->fresh());
+
+        \Illuminate\Support\Facades\Http::fake([
+            '*/api/palmpesa/initiate' => \Illuminate\Support\Facades\Http::response([
+                'message' => 'Payment initiated. Processing will continue asynchronously.',
+                'order_id' => 'PALMPESA17683440586334',
+            ], 200),
+            '*/api/order-status' => \Illuminate\Support\Facades\Http::response([
+                'resultcode' => '000',
+                'result' => 'SUCCESS',
+                'data' => [[
+                    'order_id' => 'PALMPESA17683440586334',
+                    'amount' => '10000',
+                    'payment_status' => 'COMPLETED',
+                ]],
+            ], 200),
+        ]);
+
+        $reference = $this->postJson('/api/v1/auth/register', $this->enrollmentPayload())
+            ->assertCreated()
+            ->json('data.enrollment_reference');
+
+        $payment = \App\Models\Enrollment::query()->where('reference', $reference)->firstOrFail()
+            ->payments()->latest('id')->firstOrFail();
+
+        $this->assertSame('pending', $payment->status);
+
+        // Still pending after 4 minutes — scheduled reconcile polls Get Order Status.
+        $payment->forceFill(['initiated_at' => now()->subMinutes(5)])->save();
+
+        $this->artisan('payments:reconcile-palmpesa')
+            ->assertSuccessful();
+
+        $this->assertSame('paid', $payment->fresh()->status);
+    }
+
+    public function test_palmpesa_reconcile_marks_failed_when_order_status_failed(): void
+    {
+        $palmpesa = PaymentProvider::query()->where('slug', PaymentProvider::SLUG_PALMPESA)->firstOrFail();
+        $palmpesa->forceFill([
+            'credentials' => [
+                'secret_key' => 'test-palmpesa-token',
+                'api_base_url' => 'https://palmpesa.drmlelwa.co.tz',
+            ],
+            'is_active' => true,
+            'supports_payments' => true,
+        ])->save();
+
+        app(\App\Services\PaymentProviderService::class)->setDefaultForPayments($palmpesa->fresh());
+
+        \Illuminate\Support\Facades\Http::fake([
+            '*/api/palmpesa/initiate' => \Illuminate\Support\Facades\Http::response([
+                'message' => 'Payment initiated. Processing will continue asynchronously.',
+                'order_id' => 'PALMPESA-FAILED-001',
+            ], 200),
+            '*/api/order-status' => \Illuminate\Support\Facades\Http::response([
+                'resultcode' => '000',
+                'data' => [[
+                    'order_id' => 'PALMPESA-FAILED-001',
+                    'amount' => '10000',
+                    'payment_status' => 'FAILED',
+                ]],
+            ], 200),
+        ]);
+
+        $reference = $this->postJson('/api/v1/auth/register', $this->enrollmentPayload())
+            ->assertCreated()
+            ->json('data.enrollment_reference');
+
+        $payment = \App\Models\Enrollment::query()->where('reference', $reference)->firstOrFail()
+            ->payments()->latest('id')->firstOrFail();
+
+        $payment->forceFill(['initiated_at' => now()->subMinutes(5)])->save();
+
+        $this->artisan('payments:reconcile-palmpesa')->assertSuccessful();
+
+        $this->assertSame('failed', $payment->fresh()->status);
     }
 }

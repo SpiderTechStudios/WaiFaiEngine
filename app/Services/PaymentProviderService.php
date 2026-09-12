@@ -209,6 +209,8 @@ class PaymentProviderService
             'api_base_url' => $credentials['api_base_url'] ?? null,
             'app_id' => $credentials['app_id'] ?? null,
             'private_key' => $credentials['private_key'] ?? null,
+            'api_token' => $credentials['api_token'] ?? null,
+            'user_id' => $credentials['user_id'] ?? null,
         ], fn ($value) => $value !== null && $value !== '');
     }
 
@@ -227,6 +229,8 @@ class PaymentProviderService
             'api_base_url',
             'app_id',
             'private_key',
+            'api_token',
+            'user_id',
         ] as $key) {
             if (array_key_exists($key, $incoming) && filled($incoming[$key])) {
                 $existing[$key] = $incoming[$key];

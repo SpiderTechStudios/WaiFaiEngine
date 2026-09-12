@@ -73,8 +73,31 @@ class PaymentProviderSeeder extends Seeder
             ]
         );
 
+        PaymentProvider::query()->updateOrCreate(
+            ['slug' => PaymentProvider::SLUG_PALMPESA],
+            [
+                'name' => 'PalmPesa',
+                'description' => 'PalmPesa Tanzania mobile-money collections (USSD/push + webhook + order-status polling).',
+                'supports_payments' => true,
+                'supports_payouts' => false,
+                'is_active' => true,
+                'credentials' => array_filter([
+                    'secret_key' => config('services.palmpesa.api_token'),
+                    'api_token' => config('services.palmpesa.api_token'),
+                    'user_id' => config('services.palmpesa.user_id'),
+                    'api_base_url' => config('services.palmpesa.base_url'),
+                ], fn ($value) => filled($value)),
+                'settings' => [
+                    'vendor' => config('services.palmpesa.vendor', 'TILL61103867'),
+                    'status_check_minutes' => (int) config('services.palmpesa.status_check_minutes', 4),
+                    'default_address' => 'Dar es Salaam',
+                    'default_postcode' => '11111',
+                ],
+            ]
+        );
+
         // Prefer Flutterwave as platform default when a secret is configured; otherwise stub for local/tests.
-        // PalmPay is seeded active but must be set as default manually from the admin dashboard.
+        // PalmPay / PalmPesa are seeded active but must be set as default manually from the admin dashboard.
         if (filled(config('services.flutterwave.secret_key'))) {
             $service->setDefaultForPayments($flutterwave->fresh());
             $service->setDefaultForPayouts($flutterwave->fresh());
@@ -92,7 +115,7 @@ class PaymentProviderSeeder extends Seeder
         }
 
         PaymentProvider::query()
-            ->where('slug', PaymentProvider::SLUG_PALMPAY)
+            ->whereIn('slug', [PaymentProvider::SLUG_PALMPAY, PaymentProvider::SLUG_PALMPESA])
             ->update([
                 'is_default_for_payments' => false,
                 'is_default_for_payouts' => false,

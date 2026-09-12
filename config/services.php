@@ -57,4 +57,12 @@ return [
         'base_url' => env('PALMPAY_BASE_URL', 'https://open-gw-prod.palmpay-inc.com'),
     ],
 
+    'palmpesa' => [
+        'api_token' => env('PALMPESA_API_TOKEN'),
+        'user_id' => env('PALMPESA_USER_ID'),
+        'base_url' => env('PALMPESA_BASE_URL', 'https://palmpesa.drmlelwa.co.tz'),
+        'status_check_minutes' => (int) env('PALMPESA_STATUS_CHECK_MINUTES', 4),
+        'vendor' => env('PALMPESA_VENDOR', 'TILL61103867'),
+    ],
+
 ];
