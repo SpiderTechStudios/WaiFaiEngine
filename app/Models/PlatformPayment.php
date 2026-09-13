@@ -30,6 +30,10 @@ class PlatformPayment extends Model
 
     public const PURPOSE_VOUCHER_PURCHASE = 'voucher_purchase';
 
+    public const TYPE_HOTSPOT_PORTAL = 'hotspot_portal';
+
+    public const PURPOSE_HOTSPOT_PORTAL = 'hotspot_portal';
+
     public const DIRECTION_COLLECTION = 'collection';
 
     public const DIRECTION_PAYOUT = 'payout';

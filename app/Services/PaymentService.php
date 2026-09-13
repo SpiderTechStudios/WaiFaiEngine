@@ -6,11 +6,13 @@ use App\Models\Company;
 use App\Models\Customer;
 use App\Models\InternetPlan;
 use App\Models\PaymentTransaction;
+use App\Models\PlatformPayment;
 use App\Models\RevenueRecord;
 use App\Models\User;
 use App\Models\Wallet;
 use App\Models\WalletTransaction;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -57,11 +59,17 @@ class PaymentService
         });
     }
 
+    /**
+     * Captive portal checkout: create a company PaymentTransaction, then push USSD
+     * through the platform default payment provider (PlatformPayment + initiateCollection).
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function createForPortal(Company $company, array $data): PaymentTransaction
     {
         $plan = $this->resolveActivePlan($company, (int) $data['internet_plan_id']);
 
-        return DB::transaction(function () use ($company, $plan, $data) {
+        $payment = DB::transaction(function () use ($company, $plan, $data) {
             $customer = $this->findOrCreateCustomer($company, $data);
 
             $payment = PaymentTransaction::query()->create([
@@ -70,20 +78,180 @@ class PaymentService
                 'internet_plan_id' => $plan->id,
                 'reference' => 'PAY-'.strtoupper(Str::random(10)),
                 'amount' => $plan->price,
-                'currency' => 'TZS',
+                'currency' => config('platform.currency', 'TZS'),
                 'payment_method' => $data['payment_method'] ?? 'mobile_money',
                 'status' => 'pending',
                 'initiated_at' => now(),
                 'paid_at' => null,
-                'metadata' => [
+                'metadata' => array_filter([
                     'source' => 'portal',
-                ],
+                    'captive_session' => $data['captive_session'] ?? null,
+                ], fn ($value) => $value !== null && $value !== ''),
             ]);
 
             $this->auditLogger->log('payment_created', null, $company->id, PaymentTransaction::class, $payment->id);
 
-            return $payment->load(['internetPlan']);
+            return $payment->load(['customer', 'internetPlan']);
         });
+
+        try {
+            $platformPayment = app(PlatformPaymentService::class)->startHotspotPortalPayment($payment, $data);
+        } catch (\Throwable $e) {
+            $payment->forceFill([
+                'status' => 'failed',
+                'failed_at' => now(),
+                'metadata' => array_merge($payment->metadata ?? [], [
+                    'provider_error' => $e->getMessage(),
+                ]),
+            ])->save();
+
+            throw $e;
+        }
+
+        $metadata = $payment->metadata ?? [];
+        $metadata['platform_payment_id'] = $platformPayment->id;
+        $metadata['platform_payment_reference'] = $platformPayment->reference;
+        $metadata['provider'] = $platformPayment->provider_slug;
+        $metadata['provider_charge'] = data_get($platformPayment->metadata, 'provider_charge');
+
+        $payment->forceFill([
+            'external_reference' => $platformPayment->external_reference,
+            'metadata' => $metadata,
+            'status' => $platformPayment->status === PlatformPayment::STATUS_PAID ? 'paid' : $payment->status,
+            'paid_at' => $platformPayment->status === PlatformPayment::STATUS_PAID ? ($payment->paid_at ?: now()) : $payment->paid_at,
+        ])->save();
+
+        if ($platformPayment->status === PlatformPayment::STATUS_PAID && $payment->fresh()->status !== 'paid') {
+            $this->markPortalPaid($payment->id, $platformPayment);
+        }
+
+        return $payment->fresh(['customer', 'internetPlan']);
+    }
+
+    /**
+     * Mark a portal PaymentTransaction paid after the linked PlatformPayment succeeds.
+     */
+    public function markPortalPaid(int $paymentTransactionId, ?PlatformPayment $platformPayment = null): PaymentTransaction
+    {
+        return DB::transaction(function () use ($paymentTransactionId, $platformPayment) {
+            $payment = PaymentTransaction::query()
+                ->whereKey($paymentTransactionId)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($payment->status === 'paid') {
+                return $payment->load(['customer', 'internetPlan']);
+            }
+
+            $metadata = $payment->metadata ?? [];
+            if ($platformPayment) {
+                $metadata['platform_payment_id'] = $platformPayment->id;
+                $metadata['platform_payment_reference'] = $platformPayment->reference;
+                $metadata['provider'] = $platformPayment->provider_slug;
+                $metadata['provider_charge'] = data_get($platformPayment->metadata, 'provider_charge');
+            }
+
+            $payment->forceFill([
+                'status' => 'paid',
+                'paid_at' => now(),
+                'failed_at' => null,
+                'external_reference' => $platformPayment?->external_reference ?: $payment->external_reference,
+                'metadata' => $metadata,
+            ])->save();
+
+            $company = Company::query()->whereKey($payment->company_id)->firstOrFail();
+            $this->recognizePayment($company, $payment);
+
+            $this->auditLogger->log(
+                'portal_payment_paid',
+                null,
+                $payment->company_id,
+                PaymentTransaction::class,
+                $payment->id,
+            );
+
+            $this->authorizeCaptiveIfPresent($payment->fresh());
+
+            return $payment->fresh(['customer', 'internetPlan']);
+        });
+    }
+
+    /**
+     * On poll: reconcile linked platform payment if still pending (e.g. PalmPesa order-status).
+     */
+    public function refreshPortalPaymentStatus(PaymentTransaction $payment): PaymentTransaction
+    {
+        if ($payment->status !== 'pending') {
+            return $payment->loadMissing(['customer', 'internetPlan']);
+        }
+
+        $platformPaymentId = (int) data_get($payment->metadata, 'platform_payment_id');
+        if ($platformPaymentId <= 0) {
+            return $payment->loadMissing(['customer', 'internetPlan']);
+        }
+
+        $platformPayment = PlatformPayment::query()->whereKey($platformPaymentId)->first();
+        if (! $platformPayment) {
+            return $payment->loadMissing(['customer', 'internetPlan']);
+        }
+
+        if ($platformPayment->status === PlatformPayment::STATUS_PAID) {
+            return $this->markPortalPaid($payment->id, $platformPayment);
+        }
+
+        if ($platformPayment->status === PlatformPayment::STATUS_PENDING) {
+            try {
+                $platformPayment = app(PlatformPaymentService::class)->reconcileProviderPayment($platformPayment);
+            } catch (\Throwable $e) {
+                Log::debug('Portal payment reconcile skipped', [
+                    'payment_transaction_id' => $payment->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            if ($platformPayment->status === PlatformPayment::STATUS_PAID) {
+                return $this->markPortalPaid($payment->id, $platformPayment);
+            }
+
+            if ($platformPayment->status === PlatformPayment::STATUS_FAILED) {
+                $payment->forceFill([
+                    'status' => 'failed',
+                    'failed_at' => now(),
+                ])->save();
+            }
+        }
+
+        return $payment->fresh(['customer', 'internetPlan']);
+    }
+
+    private function authorizeCaptiveIfPresent(PaymentTransaction $payment): void
+    {
+        $token = (string) data_get($payment->metadata, 'captive_session', '');
+        if ($token === '') {
+            return;
+        }
+
+        try {
+            $captiveService = app(CaptiveSessionService::class);
+            $captive = $captiveService->findByToken($token);
+
+            if (! $captive || (int) $captive->company_id !== (int) $payment->company_id) {
+                return;
+            }
+
+            if ($captive->isAuthenticated()) {
+                return;
+            }
+
+            $captiveService->authenticate($captive, [
+                'payment_transaction_id' => $payment->id,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Portal captive auto-authorize failed', [
+                'payment_transaction_id' => $payment->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     private function resolveActivePlan(Company $company, int $planId): InternetPlan
@@ -122,6 +290,10 @@ class PaymentService
         if (! empty($data['customer_phone'])) {
             $existing = (clone $query)->where('phone', $data['customer_phone'])->first();
             if ($existing) {
+                if (! empty($data['customer_name']) && $existing->name !== $data['customer_name']) {
+                    $existing->forceFill(['name' => $data['customer_name']])->save();
+                }
+
                 return $existing;
             }
         }
@@ -137,6 +309,14 @@ class PaymentService
 
     private function recognizePayment(Company $company, PaymentTransaction $payment): void
     {
+        $alreadyRecognized = RevenueRecord::query()
+            ->where('payment_transaction_id', $payment->id)
+            ->exists();
+
+        if ($alreadyRecognized) {
+            return;
+        }
+
         $wallet = Wallet::query()->firstOrCreate(
             ['company_id' => $company->id, 'currency' => $payment->currency],
             ['balance' => 0, 'status' => 'active'],

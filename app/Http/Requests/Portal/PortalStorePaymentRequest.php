@@ -18,10 +18,11 @@ class PortalStorePaymentRequest extends FormRequest
     {
         return [
             'internet_plan_id' => ['required', 'integer'],
-            'customer_name' => ['required', 'string', 'max:255'],
+            'customer_name' => ['nullable', 'string', 'max:255'],
             'customer_phone' => ['required', 'string', 'max:50'],
             'customer_email' => ['nullable', 'email'],
             'payment_method' => ['nullable', 'string', 'max:50'],
+            'captive_session' => ['nullable', 'string', 'size:64'],
         ];
     }
 }

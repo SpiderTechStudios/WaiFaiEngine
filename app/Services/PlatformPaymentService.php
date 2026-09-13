@@ -525,6 +525,13 @@ class PlatformPaymentService
             }
         }
 
+        if ($purpose === PlatformPayment::PURPOSE_HOTSPOT_PORTAL) {
+            $transactionId = (int) data_get($payment->metadata, 'payment_transaction_id');
+            if ($transactionId > 0) {
+                app(PaymentService::class)->markPortalPaid($transactionId, $payment);
+            }
+        }
+
         // platform_subscription is completed after commit via EnrollmentCompletionService
     }
 
@@ -564,6 +571,44 @@ class PlatformPaymentService
     }
 
     /**
+     * Captive-portal plan purchase (USSD via default collection provider).
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function startHotspotPortalPayment(\App\Models\PaymentTransaction $transaction, array $data = []): PlatformPayment
+    {
+        $transaction->loadMissing(['customer', 'internetPlan']);
+
+        return $this->createPendingPayment([
+            'type' => PlatformPayment::TYPE_HOTSPOT_PORTAL,
+            'purpose' => PlatformPayment::PURPOSE_HOTSPOT_PORTAL,
+            'company_id' => $transaction->company_id,
+            'reference_prefix' => 'HOT',
+            'amount' => (float) $transaction->amount,
+            'currency' => $transaction->currency,
+            'payment_method' => $data['payment_method'] ?? $transaction->payment_method ?? 'mobile_money',
+            'phone' => $data['customer_phone'] ?? $transaction->customer?->phone,
+            'line_items' => [[
+                'code' => 'hotspot_portal',
+                'internet_plan_id' => $transaction->internet_plan_id,
+                'label' => $transaction->internetPlan?->name ?? 'Hotspot package',
+                'amount' => (float) $transaction->amount,
+            ]],
+            'metadata' => [
+                'source' => 'portal',
+                'payment_purpose' => PlatformPayment::PURPOSE_HOTSPOT_PORTAL,
+                'payment_transaction_id' => $transaction->id,
+                'payment_transaction_reference' => $transaction->reference,
+                'captive_session' => $data['captive_session'] ?? null,
+                'customer_name' => $data['customer_name'] ?? $transaction->customer?->name,
+                'customer_email' => $data['customer_email'] ?? $transaction->customer?->email,
+            ],
+            'existing_paid_query' => null,
+            'initiate' => true,
+        ]);
+    }
+
+    /**
      * @param  array<string, mixed>  $payload
      */
     private function createPendingPayment(array $payload): PlatformPayment
@@ -571,7 +616,7 @@ class PlatformPaymentService
         $provider = $this->providerManager->defaultForPayments();
 
         $payment = DB::transaction(function () use ($payload, $provider) {
-            if ($payload['existing_paid_query']) {
+            if (! empty($payload['existing_paid_query'])) {
                 $query = PlatformPayment::query()->where('status', PlatformPayment::STATUS_PAID)->lockForUpdate();
                 ($payload['existing_paid_query'])($query);
                 $existingPaid = $query->first();

@@ -60,6 +60,8 @@ class PortalController extends Controller
             ->where('company_id', $this->portalCompany()->id)
             ->findOrFail($payment);
 
+        $paymentModel = $this->paymentService->refreshPortalPaymentStatus($paymentModel);
+
         return $this->success(
             (new PortalPaymentResource($paymentModel))->resolve(),
             'Payment retrieved',

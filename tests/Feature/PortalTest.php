@@ -72,12 +72,90 @@ class PortalTest extends TestCase
         ])->assertCreated()
             ->assertJsonPath('data.status', 'pending')
             ->assertJsonPath('data.amount', '2500.00')
+            ->assertJsonPath('data.provider', 'stub')
+            ->assertJsonPath('data.next_action', 'poll_payment')
             ->json('data');
+
+        $this->assertNotEmpty($payment['provider_reference'] ?? null);
 
         $this->getJson('/api/v1/portal/pay-cafe/payments/'.$payment['id'])
             ->assertOk()
             ->assertJsonPath('data.status', 'pending')
             ->assertJsonPath('data.package.name', 'Daily');
+    }
+
+    public function test_portal_payment_triggers_default_provider_ussd(): void
+    {
+        config([
+            'services.palmpesa.api_token' => 'test-palmpesa-token',
+            'services.palmpesa.user_id' => '25',
+            'services.palmpesa.base_url' => 'https://palmpesa.drmlelwa.co.tz',
+        ]);
+
+        $palmpesa = \App\Models\PaymentProvider::query()
+            ->where('slug', \App\Models\PaymentProvider::SLUG_PALMPESA)
+            ->firstOrFail();
+        app(\App\Services\PaymentProviderService::class)->setDefaultForPayments($palmpesa->fresh());
+
+        \Illuminate\Support\Facades\Http::fake([
+            '*/api/palmpesa/initiate' => \Illuminate\Support\Facades\Http::response([
+                'message' => 'Payment initiated. Processing will continue asynchronously.',
+                'order_id' => 'PALMPESA-PORTAL-001',
+            ], 200),
+            '*/api/order-status' => \Illuminate\Support\Facades\Http::response([
+                'resultcode' => '000',
+                'result' => 'SUCCESS',
+                'data' => [[
+                    'order_id' => 'PALMPESA-PORTAL-001',
+                    'amount' => '1000',
+                    'payment_status' => 'COMPLETED',
+                    'currency' => 'TZS',
+                ]],
+            ], 200),
+        ]);
+
+        $owner = $this->createUser();
+        $this->createCompanyFor($owner, 'owner', ['subdomain' => 'ussd-cafe']);
+        $headers = $this->authHeaders($owner);
+
+        $packageId = $this->withHeaders($headers)->postJson('/api/v1/packages', [
+            'name' => '1 Hour',
+            'duration' => 1,
+            'duration_unit' => 'HOURS',
+            'price' => 1000,
+        ])->assertCreated()->json('data.id');
+
+        $payment = $this->postJson('/api/v1/portal/ussd-cafe/payments', [
+            'internet_plan_id' => $packageId,
+            'customer_phone' => '0711987654',
+            'captive_session' => str_repeat('a', 64),
+        ])->assertCreated()
+            ->assertJsonPath('data.status', 'pending')
+            ->assertJsonPath('data.provider', 'palmpesa')
+            ->assertJsonPath('data.provider_reference', 'PALMPESA-PORTAL-001')
+            ->json('data');
+
+        \Illuminate\Support\Facades\Http::assertSent(function ($request) {
+            return str_contains($request->url(), '/api/palmpesa/initiate')
+                && ($request['phone'] ?? null) === '0711987654'
+                && (int) ($request['amount'] ?? 0) === 1000;
+        });
+
+        $platform = \App\Models\PlatformPayment::query()
+            ->where('reference', $payment['platform_payment_reference'])
+            ->firstOrFail();
+
+        $this->postJson('/api/v1/webhooks/payments/palmpesa', [
+            'order_id' => 'PALMPESA-PORTAL-001',
+            'payment_status' => 'COMPLETED',
+            'amount' => 1000,
+            'currency' => 'TZS',
+        ])->assertOk();
+
+        $this->getJson('/api/v1/portal/ussd-cafe/payments/'.$payment['id'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'paid')
+            ->assertJsonPath('data.next_action', 'start_session');
     }
 
     public function test_portal_voucher_redeem_by_code(): void

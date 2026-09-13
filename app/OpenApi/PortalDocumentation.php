@@ -25,19 +25,21 @@ class PortalDocumentation
         path: '/portal/{subdomain}/payments',
         operationId: 'portalCreatePayment',
         tags: ['Portal'],
-        summary: 'Initiate a pending payment from the captive portal',
+        summary: 'Initiate captive-portal payment (USSD push via default provider)',
+        description: 'Creates a pending company payment and immediately initiates collection on the platform default payment provider (e.g. PalmPesa USSD). Poll GET /portal/{subdomain}/payments/{payment} until status=paid, then open gateway_auth_url (or POST /sessions with captive_session).',
         parameters: [
             new OA\Parameter(name: 'subdomain', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
         ],
-        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(required: ['internet_plan_id', 'customer_name', 'customer_phone'], properties: [
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(required: ['internet_plan_id', 'customer_phone'], properties: [
             new OA\Property(property: 'internet_plan_id', type: 'integer', example: 1),
-            new OA\Property(property: 'customer_name', type: 'string', example: 'Jane Guest'),
+            new OA\Property(property: 'customer_name', type: 'string', nullable: true, example: 'Jane Guest'),
             new OA\Property(property: 'customer_phone', type: 'string', example: '0712345678'),
             new OA\Property(property: 'customer_email', type: 'string', format: 'email', nullable: true),
             new OA\Property(property: 'payment_method', type: 'string', nullable: true, example: 'mobile_money'),
+            new OA\Property(property: 'captive_session', type: 'string', nullable: true, description: '64-char token from WiFiDog login redirect (?session=)'),
         ])),
         responses: [
-            new OA\Response(response: 201, description: 'Payment initiated', content: new OA\JsonContent(ref: '#/components/schemas/PortalPaymentCreatedResponse')),
+            new OA\Response(response: 201, description: 'Payment initiated (USSD pushed)', content: new OA\JsonContent(ref: '#/components/schemas/PortalPaymentCreatedResponse')),
             new OA\Response(response: 404, description: 'Portal not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
             new OA\Response(response: 422, description: 'Validation error', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
         ]
@@ -48,7 +50,8 @@ class PortalDocumentation
         path: '/portal/{subdomain}/payments/{payment}',
         operationId: 'portalShowPayment',
         tags: ['Portal'],
-        summary: 'Poll payment status after mobile-money checkout',
+        summary: 'Poll payment status after USSD / mobile-money checkout',
+        description: 'Poll until status is paid or failed. When paid and captive_session was supplied at create, gateway_auth_url is returned so the browser can complete Ruijie/WiFiDog auth.',
         parameters: [
             new OA\Parameter(name: 'subdomain', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
             new OA\Parameter(name: 'payment', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
@@ -89,6 +92,7 @@ class PortalDocumentation
         operationId: 'portalCreateSession',
         tags: ['Portal'],
         summary: 'Start a hotspot session after payment or voucher grant',
+        description: 'After payment is paid, call this with payment_transaction_id + captive_session (and mac if needed). Response includes captive.gateway_auth_url — open it in the browser to finish WiFiDog/Ruijie auth so the client gets internet.',
         parameters: [
             new OA\Parameter(name: 'subdomain', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
         ],
