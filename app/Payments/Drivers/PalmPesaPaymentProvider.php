@@ -274,18 +274,10 @@ class PalmPesaPaymentProvider implements PaymentProviderDriver
 
     private function resolveCustomerName(PlatformPayment $payment): string
     {
-        // Captive-portal guests always use a PalmPesa-safe two-word name.
-        if (
-            data_get($payment->metadata, 'source') === 'portal'
-            || $payment->purpose === PlatformPayment::PURPOSE_HOTSPOT_PORTAL
-        ) {
-            return 'WiFi Customer';
-        }
-
         $name = trim((string) preg_replace('/\s+/', ' ', (string) data_get($payment->metadata, 'customer_name', '')));
         $words = $name === '' ? [] : preg_split('/\s+/', $name, -1, PREG_SPLIT_NO_EMPTY);
 
-        // PalmPesa: "Name must contain at-least 2 words".
+        // PalmPesa requires at least two words; single/empty names fall back.
         if (is_array($words) && count($words) >= 2) {
             return implode(' ', $words);
         }
