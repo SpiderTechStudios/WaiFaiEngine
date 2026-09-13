@@ -140,6 +140,7 @@ class PortalTest extends TestCase
 
             return str_contains($request->url(), '/api/palmpesa/initiate')
                 && ($request['phone'] ?? null) === '0711987654'
+                && ($request['name'] ?? null) === 'WiFi Customer'
                 && (int) ($request['amount'] ?? 0) === 1000
                 && $email !== ''
                 && ! str_ends_with($email, '.local');
