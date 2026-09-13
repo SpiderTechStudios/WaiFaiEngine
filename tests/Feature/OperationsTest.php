@@ -102,9 +102,10 @@ class OperationsTest extends TestCase
         $paymentId = $this->withHeaders($headers)->postJson('/api/v1/payments', [
             'internet_plan_id' => $packageId,
             'customer_name' => 'Walk in',
-            'customer_phone' => '0700555666',
+            'customer_phone' => '0754123456',
             'payment_method' => 'mpesa',
         ])->assertCreated()->assertJsonPath('data.status', 'paid')
+            ->assertJsonPath('data.payment_method', 'Mpesa')
             ->json('data.id');
 
         $this->withHeaders($headers)->postJson('/api/v1/sessions', [
@@ -142,7 +143,7 @@ class OperationsTest extends TestCase
         $this->withHeaders($headers)->getJson('/api/v1/payments')->assertOk();
         $this->withHeaders($headers)->getJson('/api/v1/customers')->assertOk()
             ->assertJsonPath('data.meta.total', 1)
-            ->assertJsonPath('data.items.0.phone', '0700555666')
+            ->assertJsonPath('data.items.0.phone', '0754123456')
             ->assertJsonPath('data.items.0.mac_address', 'AA:BB:CC:DD:EE:FF')
             ->assertJsonPath('data.items.0.package.id', $packageId)
             ->assertJsonPath('data.items.0.package.name', '1 Hour')

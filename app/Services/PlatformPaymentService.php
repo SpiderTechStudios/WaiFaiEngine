@@ -586,7 +586,7 @@ class PlatformPaymentService
             'reference_prefix' => 'HOT',
             'amount' => (float) $transaction->amount,
             'currency' => $transaction->currency,
-            'payment_method' => $data['payment_method'] ?? $transaction->payment_method ?? 'mobile_money',
+            'payment_method' => $transaction->payment_method ?: ($data['payment_method'] ?? 'mobile_money'),
             'phone' => $data['customer_phone'] ?? $transaction->customer?->phone,
             'line_items' => [[
                 'code' => 'hotspot_portal',
@@ -602,6 +602,7 @@ class PlatformPaymentService
                 'captive_session' => $data['captive_session'] ?? null,
                 'customer_name' => $data['customer_name'] ?? $transaction->customer?->name,
                 'customer_email' => $data['customer_email'] ?? $transaction->customer?->email,
+                'network' => $transaction->payment_method,
             ],
             'existing_paid_query' => null,
             'initiate' => true,

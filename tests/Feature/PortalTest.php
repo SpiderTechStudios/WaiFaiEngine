@@ -133,6 +133,7 @@ class PortalTest extends TestCase
         ])->assertCreated()
             ->assertJsonPath('data.status', 'pending')
             ->assertJsonPath('data.provider', 'palmpesa')
+            ->assertJsonPath('data.payment_method', 'MixxByYas')
             ->assertJsonPath('data.provider_reference', 'PALMPESA-PORTAL-001')
             ->json('data');
 

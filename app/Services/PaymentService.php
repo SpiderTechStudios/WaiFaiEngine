@@ -11,6 +11,7 @@ use App\Models\RevenueRecord;
 use App\Models\User;
 use App\Models\Wallet;
 use App\Models\WalletTransaction;
+use App\Support\NetworkDetector;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -40,7 +41,7 @@ class PaymentService
                 'reference' => 'PAY-'.strtoupper(Str::random(10)),
                 'amount' => $amount,
                 'currency' => $currency,
-                'payment_method' => $data['payment_method'] ?? 'mobile_money',
+                'payment_method' => $this->resolveNetworkPaymentMethod($data),
                 'status' => $status,
                 'initiated_at' => now(),
                 'paid_at' => $status === 'paid' ? now() : null,
@@ -79,13 +80,14 @@ class PaymentService
                 'reference' => 'PAY-'.strtoupper(Str::random(10)),
                 'amount' => $plan->price,
                 'currency' => config('platform.currency', 'TZS'),
-                'payment_method' => $data['payment_method'] ?? 'mobile_money',
+                'payment_method' => $this->resolveNetworkPaymentMethod($data),
                 'status' => 'pending',
                 'initiated_at' => now(),
                 'paid_at' => null,
                 'metadata' => array_filter([
                     'source' => 'portal',
                     'captive_session' => $data['captive_session'] ?? null,
+                    'network' => NetworkDetector::detect($data['customer_phone'] ?? null),
                 ], fn ($value) => $value !== null && $value !== ''),
             ]);
 
@@ -278,6 +280,27 @@ class PaymentService
                     : 'Package not found or is not available.',
             ],
         ]);
+    }
+
+    /**
+     * Prefer MSISDN network wallet over a client-supplied "mpesa" label.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function resolveNetworkPaymentMethod(array $data): string
+    {
+        $requested = (string) ($data['payment_method'] ?? '');
+
+        if ($requested === 'voucher') {
+            return 'voucher';
+        }
+
+        $detected = NetworkDetector::detect($data['customer_phone'] ?? null);
+        if ($detected !== null) {
+            return $detected;
+        }
+
+        return $requested !== '' ? $requested : 'mobile_money';
     }
 
     private function findOrCreateCustomer(Company $company, array $data): Customer
