@@ -136,9 +136,13 @@ class PortalTest extends TestCase
             ->json('data');
 
         \Illuminate\Support\Facades\Http::assertSent(function ($request) {
+            $email = (string) ($request['email'] ?? '');
+
             return str_contains($request->url(), '/api/palmpesa/initiate')
                 && ($request['phone'] ?? null) === '0711987654'
-                && (int) ($request['amount'] ?? 0) === 1000;
+                && (int) ($request['amount'] ?? 0) === 1000
+                && $email !== ''
+                && ! str_ends_with($email, '.local');
         });
 
         $platform = \App\Models\PlatformPayment::query()

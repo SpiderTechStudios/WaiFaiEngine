@@ -260,7 +260,7 @@ class PaymentProviderService
             'status' => PlatformPayment::STATUS_PENDING,
             'metadata' => [
                 'customer_name' => $data['name'] ?? 'Test Customer',
-                'customer_email' => $data['email'] ?? 'test@waifai.local',
+                'customer_email' => $data['email'] ?? 'test@example.com',
                 'customer_address' => $data['address'] ?? 'Dar es Salaam',
                 'customer_postcode' => $data['postcode'] ?? '11111',
                 'provider_test' => true,

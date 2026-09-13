@@ -39,8 +39,8 @@ class PalmPesaPaymentProvider implements PaymentProviderDriver
         $token = $this->apiToken();
         $baseUrl = $this->baseUrl();
         $body = [
-            'name' => (string) data_get($payment->metadata, 'customer_name', 'WaiFai Customer'),
-            'email' => (string) data_get($payment->metadata, 'customer_email', 'payments@waifai.local'),
+            'name' => $this->resolveCustomerName($payment),
+            'email' => $this->resolveCustomerEmail($payment),
             'phone' => $this->normalizePhone((string) $payment->phone),
             'amount' => (int) round((float) $payment->amount),
             'transaction_id' => $payment->reference,
@@ -66,9 +66,19 @@ class PalmPesaPaymentProvider implements PaymentProviderDriver
             ->post($baseUrl.'/api/palmpesa/initiate', $body);
 
         if (! $response->successful()) {
+            $providerMessage = $this->extractProviderError($response);
+
+            \Illuminate\Support\Facades\Log::warning('PalmPesa initiate failed', [
+                'status' => $response->status(),
+                'body' => $response->json() ?? $response->body(),
+                'request' => array_merge($body, ['phone' => $body['phone']]),
+                'platform_payment_id' => $payment->id,
+                'reference' => $payment->reference,
+            ]);
+
             throw ValidationException::withMessages([
                 'payment' => [
-                    'Unable to initiate PalmPesa payment: '.($response->json('message') ?? $response->body()),
+                    'Unable to initiate PalmPesa payment: '.$providerMessage,
                 ],
             ]);
         }
@@ -260,6 +270,65 @@ class PalmPesaPaymentProvider implements PaymentProviderDriver
         }
 
         return $digits;
+    }
+
+    private function resolveCustomerName(PlatformPayment $payment): string
+    {
+        $name = trim((string) data_get($payment->metadata, 'customer_name', ''));
+
+        return $name !== '' ? $name : 'WiFi Guest';
+    }
+
+    private function resolveCustomerEmail(PlatformPayment $payment): string
+    {
+        $email = trim((string) data_get($payment->metadata, 'customer_email', ''));
+
+        // PalmPesa rejects invalid / non-routable domains (e.g. *.local).
+        if (
+            $email !== ''
+            && filter_var($email, FILTER_VALIDATE_EMAIL)
+            && ! str_ends_with(strtolower($email), '.local')
+        ) {
+            return $email;
+        }
+
+        $phone = $this->normalizePhone((string) $payment->phone) ?: 'guest';
+        $host = strtolower((string) (parse_url((string) config('app.url'), PHP_URL_HOST) ?: 'example.com'));
+
+        if (
+            in_array($host, ['localhost', '127.0.0.1', '::1'], true)
+            || str_ends_with($host, '.local')
+            || ! str_contains($host, '.')
+        ) {
+            $host = 'example.com';
+        }
+
+        return $phone.'@guest.'.$host;
+    }
+
+    private function extractProviderError(\Illuminate\Http\Client\Response $response): string
+    {
+        $json = $response->json();
+        if (! is_array($json)) {
+            $body = trim((string) $response->body());
+
+            return $body !== '' ? $body : 'HTTP '.$response->status();
+        }
+
+        foreach (['message', 'respMsg', 'error', 'error_message'] as $key) {
+            if (filled($json[$key] ?? null)) {
+                return (string) $json[$key];
+            }
+        }
+
+        if (isset($json['errors']) && is_array($json['errors'])) {
+            $flat = collect($json['errors'])->flatten()->filter()->implode('; ');
+            if ($flat !== '') {
+                return $flat;
+            }
+        }
+
+        return 'HTTP '.$response->status().': '.json_encode($json);
     }
 
     /**
