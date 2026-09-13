@@ -6195,6 +6195,53 @@
                 }
             }
         },
+        "/admin/dashboard": {
+            "get": {
+                "tags": [
+                    "Platform Admin"
+                ],
+                "summary": "Platform-wide admin dashboard KPIs",
+                "description": "Aggregates today/total revenue, payments, active sessions, router online/offline counts, recent sessions, top plans by recent usage, and last-14-days revenue for the admin home screen.",
+                "operationId": "adminDashboard",
+                "responses": {
+                    "200": {
+                        "description": "Admin dashboard",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminDashboardResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/admin/routers": {
             "get": {
                 "tags": [
@@ -6830,7 +6877,8 @@
                 "tags": [
                     "Portal"
                 ],
-                "summary": "Initiate a pending payment from the captive portal",
+                "summary": "Initiate captive-portal payment (USSD push via default provider)",
+                "description": "Creates a pending company payment and immediately initiates collection on the platform default payment provider (e.g. PalmPesa USSD). Poll GET /portal/{subdomain}/payments/{payment} until status=paid, then open gateway_auth_url (or POST /sessions with captive_session).",
                 "operationId": "portalCreatePayment",
                 "parameters": [
                     {
@@ -6849,7 +6897,6 @@
                             "schema": {
                                 "required": [
                                     "internet_plan_id",
-                                    "customer_name",
                                     "customer_phone"
                                 ],
                                 "properties": {
@@ -6859,7 +6906,8 @@
                                     },
                                     "customer_name": {
                                         "type": "string",
-                                        "example": "Jane Guest"
+                                        "example": "Jane Guest",
+                                        "nullable": true
                                     },
                                     "customer_phone": {
                                         "type": "string",
@@ -6874,6 +6922,11 @@
                                         "type": "string",
                                         "example": "mobile_money",
                                         "nullable": true
+                                    },
+                                    "captive_session": {
+                                        "description": "64-char token from WiFiDog login redirect (?session=)",
+                                        "type": "string",
+                                        "nullable": true
                                     }
                                 },
                                 "type": "object"
@@ -6883,7 +6936,7 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Payment initiated",
+                        "description": "Payment initiated (USSD pushed)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -6920,7 +6973,8 @@
                 "tags": [
                     "Portal"
                 ],
-                "summary": "Poll payment status after mobile-money checkout",
+                "summary": "Poll payment status after USSD / mobile-money checkout",
+                "description": "Poll until status is paid or failed. When paid and captive_session was supplied at create, gateway_auth_url is returned so the browser can complete Ruijie/WiFiDog auth.",
                 "operationId": "portalShowPayment",
                 "parameters": [
                     {
@@ -7065,6 +7119,7 @@
                     "Portal"
                 ],
                 "summary": "Start a hotspot session after payment or voucher grant",
+                "description": "After payment is paid, call this with payment_transaction_id + captive_session (and mac if needed). Response includes captive.gateway_auth_url — open it in the browser to finish WiFiDog/Ruijie auth so the client gets internet.",
                 "operationId": "portalCreateSession",
                 "parameters": [
                     {
@@ -10007,6 +10062,152 @@
                 },
                 "type": "object"
             },
+            "AdminDashboardData": {
+                "properties": {
+                    "currency": {
+                        "type": "string",
+                        "example": "TZS"
+                    },
+                    "today_revenue": {
+                        "type": "number",
+                        "example": 15000
+                    },
+                    "today_payments": {
+                        "type": "integer",
+                        "example": 12
+                    },
+                    "total_revenue": {
+                        "type": "number",
+                        "example": 250000
+                    },
+                    "active_sessions": {
+                        "type": "integer",
+                        "example": 8
+                    },
+                    "routers_online": {
+                        "type": "integer",
+                        "example": 3
+                    },
+                    "routers_offline": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "routers_total": {
+                        "type": "integer",
+                        "example": 4
+                    },
+                    "recent_sessions": {
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "id": {
+                                    "type": "integer",
+                                    "example": 1
+                                },
+                                "mac_address": {
+                                    "type": "string",
+                                    "example": "AA:BB:CC:DD:EE:FF"
+                                },
+                                "status": {
+                                    "type": "string",
+                                    "example": "active"
+                                },
+                                "company_id": {
+                                    "type": "integer",
+                                    "example": 1
+                                },
+                                "company_name": {
+                                    "type": "string",
+                                    "example": "ABC Internet"
+                                },
+                                "plan_name": {
+                                    "type": "string",
+                                    "example": "1 Hour",
+                                    "nullable": true
+                                },
+                                "customer_name": {
+                                    "type": "string",
+                                    "example": "Walk in",
+                                    "nullable": true
+                                },
+                                "description": {
+                                    "type": "string",
+                                    "example": "Walk in · 1 Hour · ABC Internet"
+                                },
+                                "started_at": {
+                                    "type": "string",
+                                    "format": "date-time",
+                                    "nullable": true
+                                }
+                            },
+                            "type": "object"
+                        }
+                    },
+                    "top_plans": {
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "id": {
+                                    "type": "integer",
+                                    "example": 3
+                                },
+                                "name": {
+                                    "type": "string",
+                                    "example": "Daily"
+                                },
+                                "company_id": {
+                                    "type": "integer",
+                                    "example": 1
+                                },
+                                "company_name": {
+                                    "type": "string",
+                                    "example": "ABC Internet"
+                                },
+                                "usage_count": {
+                                    "type": "integer",
+                                    "example": 42
+                                },
+                                "price": {
+                                    "type": "number",
+                                    "example": 1000,
+                                    "nullable": true
+                                }
+                            },
+                            "type": "object"
+                        }
+                    },
+                    "revenue_statistics": {
+                        "properties": {
+                            "period_days": {
+                                "type": "integer",
+                                "example": 14
+                            },
+                            "total": {
+                                "type": "number",
+                                "example": 85000
+                            },
+                            "last_14_days": {
+                                "type": "array",
+                                "items": {
+                                    "properties": {
+                                        "date": {
+                                            "type": "string",
+                                            "example": "2026-09-01"
+                                        },
+                                        "total": {
+                                            "type": "number",
+                                            "example": 5000
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
             "IncomeData": {
                 "properties": {
                     "currency": {
@@ -11318,6 +11519,26 @@
                     },
                     "data": {
                         "$ref": "#/components/schemas/DashboardData"
+                    }
+                },
+                "type": "object"
+            },
+            "AdminDashboardResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Admin dashboard retrieved"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/AdminDashboardData"
                     }
                 },
                 "type": "object"
@@ -13435,7 +13656,7 @@
         },
         {
             "name": "Platform Admin",
-            "description": "Cross-tenant router management for platform admins"
+            "description": "Cross-tenant dashboard and router management for platform admins"
         }
     ]
 }

@@ -7,6 +7,21 @@ use OpenApi\Attributes as OA;
 class PlatformAdminDocumentation
 {
     #[OA\Get(
+        path: '/admin/dashboard',
+        operationId: 'adminDashboard',
+        tags: ['Platform Admin'],
+        summary: 'Platform-wide admin dashboard KPIs',
+        description: 'Aggregates today/total revenue, payments, active sessions, router online/offline counts, recent sessions, top plans by recent usage, and last-14-days revenue for the admin home screen.',
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Admin dashboard', content: new OA\JsonContent(ref: '#/components/schemas/AdminDashboardResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+        ]
+    )]
+    public function dashboard(): void {}
+
+    #[OA\Get(
         path: '/admin/routers',
         operationId: 'adminListRouters',
         tags: ['Platform Admin'],

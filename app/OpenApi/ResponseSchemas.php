@@ -14,6 +14,15 @@ use OpenApi\Attributes as OA;
     ]
 )]
 #[OA\Schema(
+    schema: 'AdminDashboardResponse',
+    properties: [
+        new OA\Property(property: 'status', type: 'boolean', example: true),
+        new OA\Property(property: 'code', type: 'integer', example: 200),
+        new OA\Property(property: 'message', type: 'string', example: 'Admin dashboard retrieved'),
+        new OA\Property(property: 'data', ref: '#/components/schemas/AdminDashboardData'),
+    ]
+)]
+#[OA\Schema(
     schema: 'IncomeResponse',
     properties: [
         new OA\Property(property: 'status', type: 'boolean', example: true),

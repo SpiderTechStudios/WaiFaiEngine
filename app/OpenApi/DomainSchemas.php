@@ -241,6 +241,62 @@ use OpenApi\Attributes as OA;
     ]
 )]
 #[OA\Schema(
+    schema: 'AdminDashboardData',
+    properties: [
+        new OA\Property(property: 'currency', type: 'string', example: 'TZS'),
+        new OA\Property(property: 'today_revenue', type: 'number', example: 15000),
+        new OA\Property(property: 'today_payments', type: 'integer', example: 12),
+        new OA\Property(property: 'total_revenue', type: 'number', example: 250000),
+        new OA\Property(property: 'active_sessions', type: 'integer', example: 8),
+        new OA\Property(property: 'routers_online', type: 'integer', example: 3),
+        new OA\Property(property: 'routers_offline', type: 'integer', example: 1),
+        new OA\Property(property: 'routers_total', type: 'integer', example: 4),
+        new OA\Property(
+            property: 'recent_sessions',
+            type: 'array',
+            items: new OA\Items(properties: [
+                new OA\Property(property: 'id', type: 'integer', example: 1),
+                new OA\Property(property: 'mac_address', type: 'string', example: 'AA:BB:CC:DD:EE:FF'),
+                new OA\Property(property: 'status', type: 'string', example: 'active'),
+                new OA\Property(property: 'company_id', type: 'integer', example: 1),
+                new OA\Property(property: 'company_name', type: 'string', example: 'ABC Internet'),
+                new OA\Property(property: 'plan_name', type: 'string', nullable: true, example: '1 Hour'),
+                new OA\Property(property: 'customer_name', type: 'string', nullable: true, example: 'Walk in'),
+                new OA\Property(property: 'description', type: 'string', example: 'Walk in · 1 Hour · ABC Internet'),
+                new OA\Property(property: 'started_at', type: 'string', format: 'date-time', nullable: true),
+            ], type: 'object')
+        ),
+        new OA\Property(
+            property: 'top_plans',
+            type: 'array',
+            items: new OA\Items(properties: [
+                new OA\Property(property: 'id', type: 'integer', example: 3),
+                new OA\Property(property: 'name', type: 'string', example: 'Daily'),
+                new OA\Property(property: 'company_id', type: 'integer', example: 1),
+                new OA\Property(property: 'company_name', type: 'string', example: 'ABC Internet'),
+                new OA\Property(property: 'usage_count', type: 'integer', example: 42),
+                new OA\Property(property: 'price', type: 'number', nullable: true, example: 1000),
+            ], type: 'object')
+        ),
+        new OA\Property(
+            property: 'revenue_statistics',
+            type: 'object',
+            properties: [
+                new OA\Property(property: 'period_days', type: 'integer', example: 14),
+                new OA\Property(property: 'total', type: 'number', example: 85000),
+                new OA\Property(
+                    property: 'last_14_days',
+                    type: 'array',
+                    items: new OA\Items(properties: [
+                        new OA\Property(property: 'date', type: 'string', example: '2026-09-01'),
+                        new OA\Property(property: 'total', type: 'number', example: 5000),
+                    ], type: 'object')
+                ),
+            ]
+        ),
+    ]
+)]
+#[OA\Schema(
     schema: 'IncomeData',
     properties: [
         new OA\Property(property: 'currency', type: 'string', example: 'TZS'),

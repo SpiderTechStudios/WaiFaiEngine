@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\AdminDashboardController;
 use App\Http\Controllers\Api\V1\Admin\AdminInstallationRequestController;
 use App\Http\Controllers\Api\V1\Admin\AdminRouterController;
 use App\Http\Controllers\Api\V1\Operations\PaymentController;
@@ -10,6 +11,8 @@ use App\Http\Controllers\Api\V1\SuperAdmin\UserController as SuperAdminUserContr
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('admin')->middleware(['auth:sanctum', 'active.user', 'platform.admin'])->group(function () {
+    Route::get('/dashboard', [AdminDashboardController::class, 'show']);
+
     Route::get('/routers', [AdminRouterController::class, 'index']);
     Route::post('/routers', [AdminRouterController::class, 'store']);
     Route::get('/routers/{router}', [AdminRouterController::class, 'show']);

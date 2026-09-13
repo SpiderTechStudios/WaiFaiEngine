@@ -42,5 +42,5 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: 'Superadmin', description: 'Platform administration')]
 #[OA\Tag(name: 'Device Catalog', description: 'Superadmin catalog for brands, device categories, and devices')]
 #[OA\Tag(name: 'Marketplace', description: 'Company cart and device purchases. Payment purpose is device_purchase, separate from subscription and installation.')]
-#[OA\Tag(name: 'Platform Admin', description: 'Cross-tenant router management for platform admins')]
+#[OA\Tag(name: 'Platform Admin', description: 'Cross-tenant dashboard and router management for platform admins')]
 class OpenApiDefinition {}

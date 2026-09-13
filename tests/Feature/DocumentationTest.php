@@ -45,6 +45,7 @@ class DocumentationTest extends TestCase
         $this->assertContains('/auth/me', $paths);
         $this->assertContains('/auth/forgot-password', $paths);
         $this->assertContains('/dashboard', $paths);
+        $this->assertContains('/admin/dashboard', $paths);
         $this->assertContains('/routers', $paths);
         $this->assertContains('/packages', $paths);
         $this->assertContains('/cart', $paths);
