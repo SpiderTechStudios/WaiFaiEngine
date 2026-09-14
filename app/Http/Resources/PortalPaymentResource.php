@@ -47,14 +47,18 @@ class PortalPaymentResource extends JsonResource
             ] : null),
             'captive_status' => $captiveStatus,
             'gateway_auth_url' => $gatewayAuthUrl,
-            'next_action' => $this->resolveNextAction($gatewayAuthUrl),
+            'next_action' => $this->resolveNextAction($gatewayAuthUrl, $captiveStatus),
         ];
     }
 
-    private function resolveNextAction(?string $gatewayAuthUrl): string
+    private function resolveNextAction(?string $gatewayAuthUrl, ?string $captiveStatus): string
     {
         if ($this->status === 'paid' && filled($gatewayAuthUrl)) {
             return 'open_gateway_auth_url';
+        }
+
+        if ($this->status === 'paid' && $captiveStatus === CaptiveSession::STATUS_AUTHENTICATED) {
+            return 'gateway_auth_unavailable';
         }
 
         if ($this->status === 'paid') {

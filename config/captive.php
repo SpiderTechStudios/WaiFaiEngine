@@ -4,7 +4,7 @@ return [
     /*
     | Pending captive portal session lifetime in minutes.
     */
-    'session_ttl_minutes' => (int) env('CAPTIVE_SESSION_TTL', 10),
+    'session_ttl_minutes' => (int) env('CAPTIVE_SESSION_TTL', 30),
 
     /*
     | Absolute customer-facing captive portal URL (no query string).

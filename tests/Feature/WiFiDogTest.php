@@ -373,6 +373,37 @@ class WiFiDogTest extends TestCase
         $this->assertDatabaseCount('captive_sessions', 1);
     }
 
+    public function test_gateway_auth_url_falls_back_to_router_lan_ip_when_gw_address_missing(): void
+    {
+        config(['captive.portal_url' => 'https://portal.example.test/connect']);
+
+        $owner = $this->createUser();
+        $company = $this->createCompanyFor($owner, 'owner', [
+            'subdomain' => 'lan-fallback',
+            'status' => 'active',
+        ]);
+        $this->createRuijieRouter($company, '324');
+
+        $location = $this->get('/api/wifidog/login?gw_id=324&ip=192.168.0.40&mac=AA:BB:CC:DD:EE:11')
+            ->assertRedirect()
+            ->headers->get('Location');
+
+        $token = $this->sessionTokenFromLocation($location);
+        $this->assertNotSame('', $token);
+
+        $session = CaptiveSession::query()->where('token', $token)->firstOrFail();
+        $this->assertSame('192.168.0.1', $session->gw_address);
+
+        $session->forceFill([
+            'status' => CaptiveSession::STATUS_AUTHENTICATED,
+            'authenticated_at' => now(),
+            'expires_at' => now()->addHour(),
+        ])->save();
+
+        $url = app(\App\Services\CaptiveSessionService::class)->gatewayAuthRedirectUrl($session->fresh());
+        $this->assertSame('http://192.168.0.1:2060/wifidog/auth?token='.$token, $url);
+    }
+
     private function createRuijieRouter(Company $company, string $gwId, string $status = 'active'): NetworkDevice
     {
         $owner = $company->creator ?? $this->createUser();

@@ -32,15 +32,20 @@ class CaptiveSessionService
         return DB::transaction(function () use ($gateway, $client, $mac, $ip) {
             $existing = $this->findReusableSession($gateway, $mac, $ip);
 
+            $gwAddress = filled($client['gw_address'] ?? null)
+                ? (string) $client['gw_address']
+                : ($gateway->lan_ip ?: null);
+            $gwPort = isset($client['gw_port']) && filled($client['gw_port'])
+                ? (int) $client['gw_port']
+                : ($gateway->wifidog_port ?: 2060);
+
             if ($existing) {
                 $existing->forceFill([
                     'client_ip' => $ip ?? $existing->client_ip,
                     'client_mac' => $mac ?? $existing->client_mac,
                     'ssid' => $client['ssid'] ?? $existing->ssid,
-                    'gw_address' => $client['gw_address'] ?? $existing->gw_address,
-                    'gw_port' => isset($client['gw_port']) && filled($client['gw_port'])
-                        ? (int) $client['gw_port']
-                        : $existing->gw_port,
+                    'gw_address' => $gwAddress ?? $existing->gw_address,
+                    'gw_port' => $gwPort ?: $existing->gw_port,
                     'requested_url' => $client['url'] ?? $existing->requested_url,
                     'last_seen_at' => now(),
                     'expires_at' => $existing->isAuthenticated()
@@ -54,6 +59,7 @@ class CaptiveSessionService
                     'network_id' => $gateway->network_station_id,
                     'client_mac' => $existing->client_mac,
                     'client_ip' => $existing->client_ip,
+                    'gw_address' => $existing->gw_address,
                     'session_token_hash' => hash('sha256', $existing->token),
                     'status' => $existing->status,
                 ]);
@@ -69,10 +75,8 @@ class CaptiveSessionService
                 'client_mac' => $mac,
                 'client_ip' => $ip,
                 'ssid' => $client['ssid'] ?? null,
-                'gw_address' => $client['gw_address'] ?? null,
-                'gw_port' => isset($client['gw_port']) && filled($client['gw_port'])
-                    ? (int) $client['gw_port']
-                    : ($gateway->wifidog_port ?: null),
+                'gw_address' => $gwAddress,
+                'gw_port' => $gwPort,
                 'requested_url' => $client['url'] ?? null,
                 'token' => $this->generateToken(),
                 'status' => CaptiveSession::STATUS_PENDING,
@@ -86,6 +90,7 @@ class CaptiveSessionService
                 'network_id' => $gateway->network_station_id,
                 'client_mac' => $session->client_mac,
                 'client_ip' => $session->client_ip,
+                'gw_address' => $session->gw_address,
                 'session_token_hash' => hash('sha256', $session->token),
                 'status' => $session->status,
             ]);
@@ -361,11 +366,29 @@ class CaptiveSessionService
 
     public function gatewayAuthRedirectUrl(CaptiveSession $session): ?string
     {
-        $address = $session->gw_address;
-        $port = $session->gw_port ?: 2060;
+        $session->loadMissing('networkDevice');
+
+        $address = $session->gw_address ?: $session->networkDevice?->lan_ip;
+        $port = $session->gw_port
+            ?: $session->networkDevice?->wifidog_port
+            ?: 2060;
 
         if (blank($address)) {
+            Log::warning('wifidog.gateway_auth_url_missing_address', [
+                'captive_session_id' => $session->id,
+                'gateway_id' => $session->network_device_id,
+                'status' => $session->status,
+            ]);
+
             return null;
+        }
+
+        // Persist fallback so later polls / auth redirects stay consistent.
+        if (blank($session->gw_address) || blank($session->gw_port)) {
+            $session->forceFill([
+                'gw_address' => $session->gw_address ?: $address,
+                'gw_port' => $session->gw_port ?: $port,
+            ])->save();
         }
 
         $query = http_build_query([
