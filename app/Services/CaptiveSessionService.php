@@ -427,9 +427,7 @@ class CaptiveSessionService
                 'mac' => $session->client_mac,
                 'ssid' => $session->ssid,
             ],
-            'gateway_auth_url' => $session->isAuthenticated()
-                ? $this->gatewayAuthRedirectUrl($session)
-                : null,
+            'gateway_auth_url' => $this->gatewayAuthRedirectUrl($session),
         ];
     }
 

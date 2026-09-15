@@ -338,6 +338,31 @@ class WiFiDogTest extends TestCase
             ->assertJsonMissingPath('data.network_device_id');
     }
 
+    public function test_captive_session_api_returns_gateway_auth_url_before_authentication(): void
+    {
+        config([
+            'captive.portal_url' => 'https://waifai.test/connect',
+            'captive.portal_base_url' => 'https://waifai.test',
+        ]);
+
+        $owner = $this->createUser();
+        $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'spider']);
+        $this->createRuijieRouter($company, '323');
+
+        $location = $this->get('/api/wifidog/login?gw_id=323&ip=192.168.0.35&mac=AA:BB:CC:DD:EE:FF')
+            ->assertRedirect()
+            ->headers->get('Location');
+        $token = $this->sessionTokenFromLocation($location);
+
+        $this->getJson('/api/v1/captive/sessions/'.$token)
+            ->assertOk()
+            ->assertJsonPath('data.status', 'pending')
+            ->assertJsonPath(
+                'data.gateway_auth_url',
+                'http://192.168.0.1:2060/wifidog/auth?token='.$token,
+            );
+    }
+
     public function test_authenticated_login_redirects_to_gateway_auth(): void
     {
         config([
