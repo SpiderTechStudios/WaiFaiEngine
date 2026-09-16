@@ -55,12 +55,15 @@ Log::info('request from mobile', $request->all());
             $gatewayAuthUrl = $this->captiveSessionService->gatewayAuthRedirectUrl($session);
             if ($gatewayAuthUrl) {
                 Log::info('wifidog.login_redirect_gateway_auth', [
+                    'reason' => 'session_already_authenticated',
                     'gw_id' => $gateway->gateway_id,
                     'gateway_id' => $gateway->id,
                     'network_id' => $gateway->network_station_id,
                     'client_mac' => $session->client_mac,
                     'client_ip' => $session->client_ip,
                     'session_token_hash' => hash('sha256', $session->token),
+                    'redirect_to' => preg_replace('/([?&]token=)[a-f0-9]+/i', '$1***', $gatewayAuthUrl),
+                    'user_agent' => $request->userAgent(),
                     'response_status' => 302,
                 ]);
 
@@ -105,7 +108,22 @@ Log::info('request from mobile', $request->all());
         $ip = $request->query('ip');
         $gwId = $request->query('gw_id') ?: $request->query('dev_id');
 
+        $context = [
+            'gw_id' => $gwId,
+            'stage' => $stage,
+            'ip' => $ip,
+            'mac' => $mac,
+            'session_token_hash' => $token !== '' ? hash('sha256', $token) : null,
+            'incoming' => $request->query('incoming'),
+            'outgoing' => $request->query('outgoing'),
+            'user_agent' => $request->userAgent(),
+        ];
+
+        Log::info('wifidog.auth_request', $context);
+
         if ($token === '') {
+            Log::info('wifidog.auth_decision', $context + ['auth_code' => 0, 'reason' => 'empty_token']);
+
             return $this->authResponse(0);
         }
 
@@ -116,27 +134,21 @@ Log::info('request from mobile', $request->all());
 
                 $session = $this->captiveSessionService->findByToken($token);
                 if ($session && (int) $session->network_device_id !== (int) $gateway->id) {
-                    Log::info('wifidog.auth_denied', [
+                    Log::info('wifidog.auth_decision', $context + [
+                        'auth_code' => 0,
                         'reason' => 'gateway_token_mismatch',
-                        'gw_id' => $gwId,
                         'gateway_id' => $gateway->id,
-                        'session_token_hash' => hash('sha256', $token),
                     ]);
 
                     return $this->authResponse(0);
                 }
             } catch (HttpException) {
+                Log::info('wifidog.auth_decision', $context + ['auth_code' => 0, 'reason' => 'unknown_gateway']);
+
                 return $this->authResponse(0);
             }
         }
 
-        $allowed = $this->captiveSessionService->authorizeToken(
-            $token,
-            filled($mac) ? (string) $mac : null,
-            filled($ip) ? (string) $ip : null,
-        );
-
-        // counters stage still requires a valid authenticated session
         if ($stage === 'logout') {
             if ($session = $this->captiveSessionService->findByToken($token)) {
                 $session->forceFill([
@@ -145,8 +157,21 @@ Log::info('request from mobile', $request->all());
                 ])->save();
             }
 
+            Log::info('wifidog.auth_decision', $context + ['auth_code' => 0, 'reason' => 'logout']);
+
             return $this->authResponse(0);
         }
+
+        $allowed = $this->captiveSessionService->authorizeToken(
+            $token,
+            filled($mac) ? (string) $mac : null,
+            filled($ip) ? (string) $ip : null,
+        );
+
+        Log::info('wifidog.auth_decision', $context + [
+            'auth_code' => $allowed ? 1 : 0,
+            'decision' => $allowed ? 'authorized' : 'denied',
+        ]);
 
         return $this->authResponse($allowed ? 1 : 0);
     }

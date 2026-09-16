@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\WiFiDog\WiFiDogController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -32,4 +34,17 @@ Route::prefix('wifidog')
         Route::get('/auth', [WiFiDogController::class, 'auth']);
         Route::get('/portal', [WiFiDogController::class, 'portal']);
         Route::get('/ping', [WiFiDogController::class, 'ping']);
+
+        // Diagnostics: log any path the Ruijie AP calls that we don't handle,
+        // so a wrong AuthServer Path / script fragment shows up in the log.
+        Route::any('/{path}', function (Request $request, string $path) {
+            Log::warning('wifidog.unhandled_route', [
+                'path' => $path,
+                'method' => $request->method(),
+                'query' => $request->query(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            return response('Auth: 0', 200)->header('Content-Type', 'text/plain');
+        })->where('path', '.*');
     });
