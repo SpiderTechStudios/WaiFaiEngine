@@ -363,7 +363,7 @@ class WiFiDogTest extends TestCase
             );
     }
 
-    public function test_portal_redirects_browser_to_original_requested_url(): void
+    public function test_portal_redirects_denied_client_to_captive_portal(): void
     {
         config([
             'captive.portal_url' => 'https://waifai.test/connect',
@@ -374,16 +374,54 @@ class WiFiDogTest extends TestCase
         $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'spider']);
         $this->createRuijieRouter($company, '323');
 
-        $location = $this->get('/api/wifidog/login?gw_id=323&ip=192.168.0.35&mac=AA:BB:CC:DD:EE:FF&url=http://www.google.com')
+        $location = $this->get('/api/wifidog/portal?gw_id=323&ip=192.168.0.35&mac=AA:BB:CC:DD:EE:FF&url=https://www.google.com/')
             ->assertRedirect()
             ->headers->get('Location');
-        $token = $this->sessionTokenFromLocation($location);
 
-        $this->get('/api/wifidog/portal?gw_id=323&token='.$token)
-            ->assertRedirect('http://www.google.com');
+        $this->assertStringStartsWith('https://waifai.test/connect?', $location);
+        $this->assertStringContainsString('subdomain=spider', $location);
+        $this->assertMatchesRegularExpression('/session=[a-f0-9]{64}/', $location);
+        $this->assertStringNotContainsString('google.com', $location);
+        $this->assertDatabaseCount('captive_sessions', 1);
+        $this->assertDatabaseHas('captive_sessions', [
+            'gateway_id' => '323',
+            'status' => CaptiveSession::STATUS_PENDING,
+        ]);
     }
 
-    public function test_portal_falls_back_to_configured_success_url(): void
+    public function test_portal_redirects_authenticated_client_to_original_url(): void
+    {
+        config([
+            'captive.portal_url' => 'https://waifai.test/connect',
+            'captive.portal_base_url' => 'https://waifai.test',
+        ]);
+
+        $owner = $this->createUser();
+        $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'spider']);
+        $router = $this->createRuijieRouter($company, '323');
+
+        $token = str_repeat('e', 64);
+        CaptiveSession::query()->create([
+            'company_id' => $company->id,
+            'network_device_id' => $router->id,
+            'network_station_id' => $router->network_station_id,
+            'gateway_id' => '323',
+            'client_mac' => 'AA:BB:CC:DD:EE:FF',
+            'client_ip' => '192.168.0.35',
+            'gw_address' => '192.168.0.1',
+            'gw_port' => 2060,
+            'requested_url' => 'https://www.google.com/',
+            'token' => $token,
+            'status' => CaptiveSession::STATUS_AUTHENTICATED,
+            'authenticated_at' => now(),
+            'expires_at' => now()->addHour(),
+        ]);
+
+        $this->get('/api/wifidog/portal?gw_id=323&token='.$token)
+            ->assertRedirect('https://www.google.com/');
+    }
+
+    public function test_portal_authenticated_client_falls_back_to_configured_success_url(): void
     {
         config([
             'captive.portal_url' => 'https://waifai.test/connect',
@@ -393,63 +431,24 @@ class WiFiDogTest extends TestCase
 
         $owner = $this->createUser();
         $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'spider']);
-        $this->createRuijieRouter($company, '323');
+        $router = $this->createRuijieRouter($company, '323');
 
-        $location = $this->get('/api/wifidog/login?gw_id=323&ip=192.168.0.35&mac=AA:BB:CC:DD:EE:FF')
-            ->assertRedirect()
-            ->headers->get('Location');
-        $token = $this->sessionTokenFromLocation($location);
-
-        $this->get('/api/wifidog/portal?gw_id=323&token='.$token)
-            ->assertRedirect('http://www.google.com');
-    }
-
-    public function test_portal_never_redirects_back_to_the_captive_portal(): void
-    {
-        config([
-            'captive.portal_url' => 'https://waifai.test/connect',
-            'captive.portal_base_url' => 'https://waifai.test',
-            'captive.portal_success_url' => 'http://www.google.com',
+        $token = str_repeat('f', 64);
+        CaptiveSession::query()->create([
+            'company_id' => $company->id,
+            'network_device_id' => $router->id,
+            'network_station_id' => $router->network_station_id,
+            'gateway_id' => '323',
+            'client_mac' => 'AA:BB:CC:DD:EE:FF',
+            'client_ip' => '192.168.0.35',
+            'gw_address' => '192.168.0.1',
+            'gw_port' => 2060,
+            'requested_url' => null,
+            'token' => $token,
+            'status' => CaptiveSession::STATUS_AUTHENTICATED,
+            'authenticated_at' => now(),
+            'expires_at' => now()->addHour(),
         ]);
-
-        $owner = $this->createUser();
-        $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'spider']);
-        $this->createRuijieRouter($company, '323');
-
-        $location = $this->get('/api/wifidog/login?gw_id=323&ip=192.168.0.35&mac=AA:BB:CC:DD:EE:FF&url=https://waifai.test/connect?session=abc')
-            ->assertRedirect()
-            ->headers->get('Location');
-        $token = $this->sessionTokenFromLocation($location);
-
-        $this->assertNull(CaptiveSession::query()->where('token', $token)->value('requested_url'));
-
-        $this->get('/api/wifidog/portal?gw_id=323&token='.$token)
-            ->assertRedirect('http://www.google.com');
-    }
-
-    public function test_real_requested_url_survives_later_portal_requests(): void
-    {
-        config([
-            'captive.portal_url' => 'https://waifai.test/connect',
-            'captive.portal_base_url' => 'https://waifai.test',
-        ]);
-
-        $owner = $this->createUser();
-        $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'spider']);
-        $this->createRuijieRouter($company, '323');
-
-        $location = $this->get('/api/wifidog/login?gw_id=323&ip=192.168.0.35&mac=AA:BB:CC:DD:EE:FF&url=http://www.google.com')
-            ->assertRedirect()
-            ->headers->get('Location');
-        $token = $this->sessionTokenFromLocation($location);
-
-        $this->get('/api/wifidog/login?gw_id=323&ip=192.168.0.35&mac=AA:BB:CC:DD:EE:FF&url=https://waifai.test/connect?session=abc')
-            ->assertRedirect();
-
-        $this->assertSame(
-            'http://www.google.com',
-            CaptiveSession::query()->where('token', $token)->value('requested_url'),
-        );
 
         $this->get('/api/wifidog/portal?gw_id=323&token='.$token)
             ->assertRedirect('http://www.google.com');

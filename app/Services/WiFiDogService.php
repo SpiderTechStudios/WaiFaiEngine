@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\CaptiveSession;
 use App\Models\NetworkDevice;
-use App\Support\CaptiveUrl;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -155,38 +154,116 @@ Log::info('request from mobile', $request->all());
     /**
      * WiFiDog PortalScriptPathFragment (portal/).
      *
-     * The gateway redirects the browser here after the auth server returns
-     * "Auth: 1". Respond with a 302 back to the originally requested URL so the
-     * customer lands on their destination (e.g. www.google.com) instead of a 404.
+     * On Ruijie/Reyee APs the configured Portal Server URL is this endpoint, so
+     * it receives BOTH the initial redirect for denied clients and the
+     * post-auth redirect after the gateway returns "Auth: 1".
+     *
+     * - Fresh / denied client -> 302 to the frontend connect page (pay here).
+     * - Authenticated client  -> 302 to the original url param (e.g. google.com).
+     *
+     * Redirecting a denied client straight to google.com makes the AP intercept
+     * it again, producing an endless "too many redirects" loop.
      */
     public function portal(Request $request): RedirectResponse
     {
+        $gwId = $this->extractGatewayId($request);
         $token = (string) $request->query('token', '');
-        $target = $this->resolvePortalTargetUrl($token, $request->query('url'));
 
-        Log::info('wifidog.portal_redirect', [
-            'gw_id' => $request->query('gw_id') ?: $request->query('dev_id'),
-            'session_token_hash' => $token !== '' ? hash('sha256', $token) : null,
-            'target_host' => parse_url($target, PHP_URL_HOST),
+        Log::info('wifidog.portal_request', [
+            'received_gw_id' => $gwId,
+            'query' => [
+                'gw_id' => $request->query('gw_id'),
+                'dev_id' => $request->query('dev_id'),
+                'ip' => $request->query('ip'),
+                'mac' => $request->query('mac'),
+                'gw_address' => $request->query('gw_address'),
+                'gw_port' => $request->query('gw_port'),
+                'ssid' => $request->query('ssid'),
+                'url' => $request->query('url'),
+            ],
+        ]);
+
+        $gateway = $this->gatewayResolver->resolveActive($gwId);
+
+        $this->touchGateway($gateway, $request);
+
+        $session = $token !== '' ? $this->captiveSessionService->findByToken($token) : null;
+
+        if ($session && (int) $session->network_device_id !== (int) $gateway->id) {
+            $session = null;
+        }
+
+        if (! $session) {
+            $session = $this->captiveSessionService->resolveOrCreate($gateway, [
+                'ip' => $request->query('ip'),
+                'mac' => $request->query('mac'),
+                'ssid' => $request->query('ssid'),
+                'gw_address' => $request->query('gw_address'),
+                'gw_port' => $request->query('gw_port'),
+                'url' => $request->query('url'),
+            ]);
+        }
+
+        if ($session->isAuthenticated()) {
+            $target = $this->resolvePortalTargetUrl($session, $request->query('url'));
+
+            Log::info('wifidog.portal_redirect_authenticated', [
+                'gw_id' => $gateway->gateway_id,
+                'gateway_id' => $gateway->id,
+                'network_id' => $gateway->network_station_id,
+                'client_mac' => $session->client_mac,
+                'client_ip' => $session->client_ip,
+                'session_token_hash' => hash('sha256', $session->token),
+                'target_host' => parse_url($target, PHP_URL_HOST),
+                'response_status' => 302,
+            ]);
+
+            return redirect()->away($target);
+        }
+
+        try {
+            $portalUrl = $this->captiveSessionService->portalRedirectUrl($session, [
+                'mac' => $session->client_mac,
+                'ip' => $session->client_ip,
+                'gw_address' => $session->gw_address,
+                'gw_port' => $session->gw_port,
+            ]);
+        } catch (\RuntimeException $e) {
+            Log::error('wifidog.portal_url_misconfigured', [
+                'gw_id' => $gateway->gateway_id,
+                'gateway_id' => $gateway->id,
+                'message' => $e->getMessage(),
+            ]);
+
+            throw new HttpException(500, $e->getMessage());
+        }
+
+        Log::info('wifidog.portal_redirect_captive', [
+            'gw_id' => $gateway->gateway_id,
+            'gateway_id' => $gateway->id,
+            'network_id' => $gateway->network_station_id,
+            'company_id' => $gateway->company_id,
+            'client_mac' => $session->client_mac,
+            'client_ip' => $session->client_ip,
+            'captive_session_id' => $session->id,
+            'session_token_hash' => hash('sha256', $session->token),
+            'generated_portal_url' => preg_replace('/([?&]session=)[a-f0-9]+/i', '$1***', $portalUrl),
             'response_status' => 302,
         ]);
 
-        return redirect()->away($target);
+        return redirect()->away($portalUrl);
     }
 
     /**
-     * Prefer the original URL captured at login, then the gateway-supplied url,
-     * finally the configured success URL.
+     * Prefer the original URL captured for the session, then the gateway-supplied
+     * url param, finally the configured success URL.
      */
-    private function resolvePortalTargetUrl(string $token, mixed $requestedUrl = null): string
+    private function resolvePortalTargetUrl(CaptiveSession $session, mixed $requestedUrl = null): string
     {
         $candidates = [];
 
-        if ($token !== '') {
-            $session = $this->captiveSessionService->findByToken($token);
-            if ($session && filled($session->requested_url)) {
-                $candidates[] = (string) $session->requested_url;
-            }
+        if (filled($session->requested_url)) {
+            $candidates[] = (string) $session->requested_url;
         }
 
         if (is_string($requestedUrl) && filled($requestedUrl)) {
@@ -194,12 +271,25 @@ Log::info('request from mobile', $request->all());
         }
 
         foreach ($candidates as $candidate) {
-            if (CaptiveUrl::isExternalRedirect($candidate)) {
+            if ($this->isSafeRedirectUrl($candidate)) {
                 return $candidate;
             }
         }
 
-        return CaptiveUrl::successRedirectUrl();
+        $fallback = (string) config('captive.portal_success_url', 'http://www.google.com');
+
+        return $this->isSafeRedirectUrl($fallback) ? $fallback : 'http://www.google.com';
+    }
+
+    private function isSafeRedirectUrl(string $url): bool
+    {
+        $parts = parse_url($url);
+
+        if (! isset($parts['scheme'], $parts['host'])) {
+            return false;
+        }
+
+        return in_array(strtolower($parts['scheme']), ['http', 'https'], true);
     }
 
     public function ping(Request $request): Response

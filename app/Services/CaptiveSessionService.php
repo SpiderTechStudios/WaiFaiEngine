@@ -6,7 +6,6 @@ use App\Models\AccessGrant;
 use App\Models\CaptiveSession;
 use App\Models\NetworkDevice;
 use App\Models\NetworkSession;
-use App\Support\CaptiveUrl;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -41,21 +40,13 @@ class CaptiveSessionService
                 : ($gateway->wifidog_port ?: 2060);
 
             if ($existing) {
-                $requestedUrl = CaptiveUrl::isExternalRedirect($client['url'] ?? null)
-                    ? $client['url']
-                    : $existing->requested_url;
-
-                if (! CaptiveUrl::isExternalRedirect($requestedUrl)) {
-                    $requestedUrl = null;
-                }
-
                 $existing->forceFill([
                     'client_ip' => $ip ?? $existing->client_ip,
                     'client_mac' => $mac ?? $existing->client_mac,
                     'ssid' => $client['ssid'] ?? $existing->ssid,
                     'gw_address' => $gwAddress ?? $existing->gw_address,
                     'gw_port' => $gwPort ?: $existing->gw_port,
-                    'requested_url' => $requestedUrl,
+                    'requested_url' => $client['url'] ?? $existing->requested_url,
                     'last_seen_at' => now(),
                     'expires_at' => $existing->isAuthenticated()
                         ? $existing->expires_at
@@ -86,7 +77,7 @@ class CaptiveSessionService
                 'ssid' => $client['ssid'] ?? null,
                 'gw_address' => $gwAddress,
                 'gw_port' => $gwPort,
-                'requested_url' => CaptiveUrl::isExternalRedirect($client['url'] ?? null) ? $client['url'] : null,
+                'requested_url' => $client['url'] ?? null,
                 'token' => $this->generateToken(),
                 'status' => CaptiveSession::STATUS_PENDING,
                 'expires_at' => now()->addMinutes($this->ttlMinutes()),
@@ -301,16 +292,27 @@ class CaptiveSessionService
         return true;
     }
 
-    public function portalRedirectUrl(CaptiveSession $session): string
+    /**
+     * @param  array<string, mixed>  $extra  Additional query params (e.g. mac, ip, gw_address, gw_port).
+     */
+    public function portalRedirectUrl(CaptiveSession $session, array $extra = []): string
     {
         $session->loadMissing('company');
 
         $portalPage = $this->resolvePortalPageUrl();
 
-        $url = $portalPage.'?'.http_build_query([
+        $query = [
             'subdomain' => $session->company->subdomain,
             'session' => $session->token,
-        ]);
+        ];
+
+        foreach ($extra as $key => $value) {
+            if (filled($value)) {
+                $query[$key] = $value;
+            }
+        }
+
+        $url = $portalPage.'?'.http_build_query($query);
 
         $this->assertSafePortalRedirectUrl($url);
 
