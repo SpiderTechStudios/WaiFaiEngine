@@ -1,32 +1,22 @@
-these are the logs ffrom the server
-
-[2026-09-16 06:21:56] local.INFO: request from mobile {"gw_id":"58b4bb192d35","gw_sn":"G1UQ5C8006474","gw_address":"192.168.1.23","gw_port":"2060","ip":"192.168.1.31","mac":"46:a7:0e:ed:15:46","slot_num":"0","nasip":"192.168.1.23","ssid":"Tsh 500Masaa24Gift","ustate":"0","mac_req":"0","url":"https://www.google.com/"} 
-[2026-09-16 06:21:56] local.INFO: wifidog.login_request {"received_gw_id":"58b4bb192d35","query":{"gw_id":"58b4bb192d35","dev_id":null,"ip":"192.168.1.31","mac":"46:a7:0e:ed:15:46","gw_address":"192.168.1.23","gw_port":"2060","ssid":"Tsh 500Masaa24Gift"}} 
-[2026-09-16 06:21:56] local.INFO: wifidog.captive_session_reused 
+[2026-09-16 07:14:42] local.INFO: request from mobile {"gw_id":"58b4bb192d35","gw_sn":"G1UQ5C8006474","gw_address":"192.168.1.23","gw_port":"2060","ip":"192.168.1.31","mac":"46:a7:0e:ed:15:46","slot_num":"0","nasip":"192.168.1.23","ssid":"Tsh 500Masaa24Gift","ustate":"0","mac_req":"0","url":"http://captive.apple.com/hotspot-detect.html"} 
+[2026-09-16 07:14:42] local.INFO: wifidog.login_request {"received_gw_id":"58b4bb192d35","query":{"gw_id":"58b4bb192d35","dev_id":null,"ip":"192.168.1.31","mac":"46:a7:0e:ed:15:46","gw_address":"192.168.1.23","gw_port":"2060","ssid":"Tsh 500Masaa24Gift"}} 
+[2026-09-16 07:14:42] local.INFO: wifidog.captive_session_reused 
 {"gw_id":"58b4bb192d35",
 "gateway_id":1,
 "network_id":1,
 "client_mac":"46:A7:0E:ED:15:46",
 "client_ip":"192.168.1.31",
 "gw_address":"192.168.1.23",
-"session_token_hash":"85f3203b1eb6c72877a233e17df9ea975a400fc5240ee473734d8a4a24296ad4",
-"status":"authenticated"} 
-[2026-09-16 06:21:56] local.INFO: 
+"session_token_hash":"85f3203b1eb6c72877a233e17df9ea975a400fc5240ee473734d8a4a24296ad4","status":"authenticated"} 
+[2026-09-16 07:14:42] local.INFO: wifidog.login_redirect_gateway_auth {
 
-wifidog.login_redirect_gateway_auth 
-{"gw_id":"58b4bb192d35",
+"reason":"session_already_authenticated",
+"gw_id":"58b4bb192d35",
 "gateway_id":1,
 "network_id":1,
 "client_mac":"46:A7:0E:ED:15:46",
 "client_ip":"192.168.1.31",
 "session_token_hash":"85f3203b1eb6c72877a233e17df9ea975a400fc5240ee473734d8a4a24296ad4",
+"redirect_to":"http://192.168.1.23:2060/wifidog/auth?token=***&url=http%3A%2F%2Fcaptive.apple.com%2Fhotspot-detect.html",
+"user_agent":"Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148",
 "response_status":302} 
-
-
-The AP is configured with portal URL https://waifai.shereheyangu.com/public/api/wifidog/portal?.... This route 302-redirects to http://www.google.com instead of the captive portal, causing a redirect loop (AP intercepts the Google request again since the client is still unauthorized → "too many redirects").
-
-Fix: /public/api/wifidog/portal (the alias used by the AP) must behave exactly like /api/wifidog/login — resolve the gateway by gw_id, create/return the captive session, and 302 to:
-https://waifai.cloud.shereheyangu.com/connect?subdomain={slug}&session={64-char-token} (+ forward mac, ip, gw_address, gw_port if available).
-
-Redirect to Google (or the original url param) only when the captive session is already authenticated — never on a fresh denied client.
-Once the backend redirects the denied client to the /connect page (instead of Google), the loop disappears: portal loads → customer pays → frontend navigates to http://{gw_address}:2060/wifidog/auth?token=... → AP returns Auth: 1 → internet.

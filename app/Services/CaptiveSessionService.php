@@ -402,13 +402,12 @@ class CaptiveSessionService
             ])->save();
         }
 
+        // WiFiDog protocol: the login redirect carries only the token. The AP
+        // (Ruijie) ignores/ mishandles an extra url= here and re-intercepts it,
+        // so the original URL is recovered server-side in WiFiDogService::portal().
         $query = http_build_query([
             'token' => $session->token,
         ]);
-
-        if (filled($session->requested_url)) {
-            $query .= '&url='.rawurlencode($session->requested_url);
-        }
 
         return "http://{$address}:{$port}/wifidog/auth?{$query}";
     }
