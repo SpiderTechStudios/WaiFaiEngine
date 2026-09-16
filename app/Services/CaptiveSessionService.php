@@ -6,6 +6,7 @@ use App\Models\AccessGrant;
 use App\Models\CaptiveSession;
 use App\Models\NetworkDevice;
 use App\Models\NetworkSession;
+use App\Support\CaptiveUrl;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -40,13 +41,21 @@ class CaptiveSessionService
                 : ($gateway->wifidog_port ?: 2060);
 
             if ($existing) {
+                $requestedUrl = CaptiveUrl::isExternalRedirect($client['url'] ?? null)
+                    ? $client['url']
+                    : $existing->requested_url;
+
+                if (! CaptiveUrl::isExternalRedirect($requestedUrl)) {
+                    $requestedUrl = null;
+                }
+
                 $existing->forceFill([
                     'client_ip' => $ip ?? $existing->client_ip,
                     'client_mac' => $mac ?? $existing->client_mac,
                     'ssid' => $client['ssid'] ?? $existing->ssid,
                     'gw_address' => $gwAddress ?? $existing->gw_address,
                     'gw_port' => $gwPort ?: $existing->gw_port,
-                    'requested_url' => $client['url'] ?? $existing->requested_url,
+                    'requested_url' => $requestedUrl,
                     'last_seen_at' => now(),
                     'expires_at' => $existing->isAuthenticated()
                         ? $existing->expires_at
@@ -77,7 +86,7 @@ class CaptiveSessionService
                 'ssid' => $client['ssid'] ?? null,
                 'gw_address' => $gwAddress,
                 'gw_port' => $gwPort,
-                'requested_url' => $client['url'] ?? null,
+                'requested_url' => CaptiveUrl::isExternalRedirect($client['url'] ?? null) ? $client['url'] : null,
                 'token' => $this->generateToken(),
                 'status' => CaptiveSession::STATUS_PENDING,
                 'expires_at' => now()->addMinutes($this->ttlMinutes()),

@@ -404,6 +404,57 @@ class WiFiDogTest extends TestCase
             ->assertRedirect('http://www.google.com');
     }
 
+    public function test_portal_never_redirects_back_to_the_captive_portal(): void
+    {
+        config([
+            'captive.portal_url' => 'https://waifai.test/connect',
+            'captive.portal_base_url' => 'https://waifai.test',
+            'captive.portal_success_url' => 'http://www.google.com',
+        ]);
+
+        $owner = $this->createUser();
+        $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'spider']);
+        $this->createRuijieRouter($company, '323');
+
+        $location = $this->get('/api/wifidog/login?gw_id=323&ip=192.168.0.35&mac=AA:BB:CC:DD:EE:FF&url=https://waifai.test/connect?session=abc')
+            ->assertRedirect()
+            ->headers->get('Location');
+        $token = $this->sessionTokenFromLocation($location);
+
+        $this->assertNull(CaptiveSession::query()->where('token', $token)->value('requested_url'));
+
+        $this->get('/api/wifidog/portal?gw_id=323&token='.$token)
+            ->assertRedirect('http://www.google.com');
+    }
+
+    public function test_real_requested_url_survives_later_portal_requests(): void
+    {
+        config([
+            'captive.portal_url' => 'https://waifai.test/connect',
+            'captive.portal_base_url' => 'https://waifai.test',
+        ]);
+
+        $owner = $this->createUser();
+        $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'spider']);
+        $this->createRuijieRouter($company, '323');
+
+        $location = $this->get('/api/wifidog/login?gw_id=323&ip=192.168.0.35&mac=AA:BB:CC:DD:EE:FF&url=http://www.google.com')
+            ->assertRedirect()
+            ->headers->get('Location');
+        $token = $this->sessionTokenFromLocation($location);
+
+        $this->get('/api/wifidog/login?gw_id=323&ip=192.168.0.35&mac=AA:BB:CC:DD:EE:FF&url=https://waifai.test/connect?session=abc')
+            ->assertRedirect();
+
+        $this->assertSame(
+            'http://www.google.com',
+            CaptiveSession::query()->where('token', $token)->value('requested_url'),
+        );
+
+        $this->get('/api/wifidog/portal?gw_id=323&token='.$token)
+            ->assertRedirect('http://www.google.com');
+    }
+
     public function test_authenticated_login_redirects_to_gateway_auth(): void
     {
         config([

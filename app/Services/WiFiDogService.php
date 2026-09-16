@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\CaptiveSession;
 use App\Models\NetworkDevice;
+use App\Support\CaptiveUrl;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -193,25 +194,12 @@ Log::info('request from mobile', $request->all());
         }
 
         foreach ($candidates as $candidate) {
-            if ($this->isSafeRedirectUrl($candidate)) {
+            if (CaptiveUrl::isExternalRedirect($candidate)) {
                 return $candidate;
             }
         }
 
-        $fallback = (string) config('captive.portal_success_url', 'http://www.google.com');
-
-        return $this->isSafeRedirectUrl($fallback) ? $fallback : 'http://www.google.com';
-    }
-
-    private function isSafeRedirectUrl(string $url): bool
-    {
-        $parts = parse_url($url);
-
-        if (! isset($parts['scheme'], $parts['host'])) {
-            return false;
-        }
-
-        return in_array(strtolower($parts['scheme']), ['http', 'https'], true);
+        return CaptiveUrl::successRedirectUrl();
     }
 
     public function ping(Request $request): Response
