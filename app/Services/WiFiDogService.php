@@ -151,6 +151,69 @@ Log::info('request from mobile', $request->all());
         return $this->authResponse($allowed ? 1 : 0);
     }
 
+    /**
+     * WiFiDog PortalScriptPathFragment (portal/).
+     *
+     * The gateway redirects the browser here after the auth server returns
+     * "Auth: 1". Respond with a 302 back to the originally requested URL so the
+     * customer lands on their destination (e.g. www.google.com) instead of a 404.
+     */
+    public function portal(Request $request): RedirectResponse
+    {
+        $token = (string) $request->query('token', '');
+        $target = $this->resolvePortalTargetUrl($token, $request->query('url'));
+
+        Log::info('wifidog.portal_redirect', [
+            'gw_id' => $request->query('gw_id') ?: $request->query('dev_id'),
+            'session_token_hash' => $token !== '' ? hash('sha256', $token) : null,
+            'target_host' => parse_url($target, PHP_URL_HOST),
+            'response_status' => 302,
+        ]);
+
+        return redirect()->away($target);
+    }
+
+    /**
+     * Prefer the original URL captured at login, then the gateway-supplied url,
+     * finally the configured success URL.
+     */
+    private function resolvePortalTargetUrl(string $token, mixed $requestedUrl = null): string
+    {
+        $candidates = [];
+
+        if ($token !== '') {
+            $session = $this->captiveSessionService->findByToken($token);
+            if ($session && filled($session->requested_url)) {
+                $candidates[] = (string) $session->requested_url;
+            }
+        }
+
+        if (is_string($requestedUrl) && filled($requestedUrl)) {
+            $candidates[] = $requestedUrl;
+        }
+
+        foreach ($candidates as $candidate) {
+            if ($this->isSafeRedirectUrl($candidate)) {
+                return $candidate;
+            }
+        }
+
+        $fallback = (string) config('captive.portal_success_url', 'http://www.google.com');
+
+        return $this->isSafeRedirectUrl($fallback) ? $fallback : 'http://www.google.com';
+    }
+
+    private function isSafeRedirectUrl(string $url): bool
+    {
+        $parts = parse_url($url);
+
+        if (! isset($parts['scheme'], $parts['host'])) {
+            return false;
+        }
+
+        return in_array(strtolower($parts['scheme']), ['http', 'https'], true);
+    }
+
     public function ping(Request $request): Response
     {
         $gwId = $this->extractGatewayId($request);

@@ -1,19 +1,16 @@
-3. Frontend calls GET /api/v1/captive/sessions/{token} to recover the client context. Current response:
+//after we make the gateway_auth_url changes. 
+
+when the customer payment is approved, the browser successfull redirects. 
+
+
+//but when the redirection is done, it says
+
 {
-  "status": "pending",
-  "expires_at": "2026-09-15T06:14:18+00:00",
-  "authenticated_at": null,
-  "network": { "name": "SpiderTechStudios hotspot", "subdomain": "spider" },
-  "gateway": { "name": "Gomz" },
-  "client": { "ip": "192.168.1.13", "mac": "F8:63:3F:EE:85:BD", "ssid": null },
-  "gateway_auth_url": null
+  "status":false,
+  "code":404,
+  "message":"The route api\/wifidog\/portal could not be found."
 }
 
-the front end is supposed to return gateway auth url, 
-and the gateway auth url is not returned but it is supposed to 
+instead of showing a www.google.com page and there is no interent connection still. 
 
-gateway_auth_url = http://{gw_address}:{gw_port}/wifidog/auth?token=... 
-(CaptiveSessionService::gatewayAuthRedirectUrl, 
-app/Services/CaptiveSessionService.php:367)
-
-please fix this. 
+please let's fix this

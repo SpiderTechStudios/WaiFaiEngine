@@ -27,6 +27,14 @@ return [
     'portal_url' => env('CAPTIVE_PORTAL_URL', 'https://waifai.cloud.shereheyangu.com/connect'),
 
     /*
+    | Where the WiFiDog gateway sends the browser after a successful auth
+    | (protocol: AuthServer portal/ script). We redirect to the originally
+    | requested URL, falling back to this absolute http(s) URL when the
+    | captive session has no usable requested_url.
+    */
+    'portal_success_url' => env('CAPTIVE_PORTAL_SUCCESS_URL', 'http://www.google.com'),
+
+    /*
     | Origin fallback when CAPTIVE_PORTAL_URL is empty / origin-only.
     */
     'portal_origin' => rtrim((string) env('FRONTEND_URL', 'https://waifai.cloud.shereheyangu.com'), '/'),

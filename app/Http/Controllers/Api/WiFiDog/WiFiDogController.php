@@ -22,6 +22,11 @@ class WiFiDogController extends Controller
         return $this->wiFiDogService->auth($request);
     }
 
+    public function portal(Request $request): RedirectResponse
+    {
+        return $this->wiFiDogService->portal($request);
+    }
+
     public function ping(Request $request): Response
     {
         return $this->wiFiDogService->ping($request);
