@@ -32,20 +32,30 @@ class CaptiveSessionService
         return DB::transaction(function () use ($gateway, $client, $mac, $ip) {
             $existing = $this->findReusableSession($gateway, $mac, $ip);
 
-            $gwAddress = filled($client['gw_address'] ?? null)
+            // Only the gateway-reported gw_address/gw_port are authoritative.
+            // The router's lan_ip is a last-resort fallback and must never
+            // overwrite an address the AP already gave us (e.g. when the portal
+            // request has no gw_address, the AP still expects its own gw_address).
+            $requestGwAddress = filled($client['gw_address'] ?? null)
                 ? (string) $client['gw_address']
-                : ($gateway->lan_ip ?: null);
-            $gwPort = isset($client['gw_port']) && filled($client['gw_port'])
+                : null;
+            $requestGwPort = isset($client['gw_port']) && filled($client['gw_port'])
                 ? (int) $client['gw_port']
-                : ($gateway->wifidog_port ?: 2060);
+                : null;
+            $fallbackGwAddress = $gateway->lan_ip ?: null;
+            $fallbackGwPort = $gateway->wifidog_port ?: 2060;
 
             if ($existing) {
+                $previousGwAddress = $existing->gw_address;
+                $gwAddress = $requestGwAddress ?: ($previousGwAddress ?: $fallbackGwAddress);
+                $gwPort = $requestGwPort ?: ($existing->gw_port ?: $fallbackGwPort);
+
                 $existing->forceFill([
                     'client_ip' => $ip ?? $existing->client_ip,
                     'client_mac' => $mac ?? $existing->client_mac,
                     'ssid' => $client['ssid'] ?? $existing->ssid,
-                    'gw_address' => $gwAddress ?? $existing->gw_address,
-                    'gw_port' => $gwPort ?: $existing->gw_port,
+                    'gw_address' => $gwAddress,
+                    'gw_port' => $gwPort,
                     'requested_url' => $client['url'] ?? $existing->requested_url,
                     'last_seen_at' => now(),
                     'expires_at' => $existing->isAuthenticated()
@@ -59,7 +69,11 @@ class CaptiveSessionService
                     'network_id' => $gateway->network_station_id,
                     'client_mac' => $existing->client_mac,
                     'client_ip' => $existing->client_ip,
+                    'request_gw_address' => $requestGwAddress,
+                    'previous_gw_address' => $previousGwAddress,
                     'gw_address' => $existing->gw_address,
+                    'gw_address_source' => $requestGwAddress ? 'request' : ($previousGwAddress ? 'kept' : 'lan_ip_fallback'),
+                    'gw_port' => $existing->gw_port,
                     'session_token_hash' => hash('sha256', $existing->token),
                     'status' => $existing->status,
                 ]);
@@ -75,8 +89,8 @@ class CaptiveSessionService
                 'client_mac' => $mac,
                 'client_ip' => $ip,
                 'ssid' => $client['ssid'] ?? null,
-                'gw_address' => $gwAddress,
-                'gw_port' => $gwPort,
+                'gw_address' => $requestGwAddress ?: $fallbackGwAddress,
+                'gw_port' => $requestGwPort ?: $fallbackGwPort,
                 'requested_url' => $client['url'] ?? null,
                 'token' => $this->generateToken(),
                 'status' => CaptiveSession::STATUS_PENDING,
@@ -90,7 +104,10 @@ class CaptiveSessionService
                 'network_id' => $gateway->network_station_id,
                 'client_mac' => $session->client_mac,
                 'client_ip' => $session->client_ip,
+                'request_gw_address' => $requestGwAddress,
                 'gw_address' => $session->gw_address,
+                'gw_address_source' => $requestGwAddress ? 'request' : 'lan_ip_fallback',
+                'gw_port' => $session->gw_port,
                 'session_token_hash' => hash('sha256', $session->token),
                 'status' => $session->status,
             ]);

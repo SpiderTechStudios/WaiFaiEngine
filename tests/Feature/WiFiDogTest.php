@@ -520,6 +520,33 @@ class WiFiDogTest extends TestCase
         $this->assertSame('http://192.168.0.1:2060/wifidog/auth?token='.$token, $url);
     }
 
+    public function test_gateway_reported_address_is_not_overwritten_by_router_lan_ip(): void
+    {
+        config([
+            'captive.portal_url' => 'https://waifai.test/connect',
+            'captive.portal_base_url' => 'https://waifai.test',
+        ]);
+
+        $owner = $this->createUser();
+        $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'spider']);
+        $this->createRuijieRouter($company, '323');
+
+        $location = $this->get('/api/wifidog/login?gw_id=323&ip=192.168.0.35&mac=AA:BB:CC:DD:EE:FF&gw_address=192.168.0.22&gw_port=2060')
+            ->assertRedirect()
+            ->headers->get('Location');
+
+        $token = $this->sessionTokenFromLocation($location);
+        $session = CaptiveSession::query()->where('token', $token)->firstOrFail();
+        $this->assertSame('192.168.0.22', $session->gw_address);
+
+        // Portal request carries no gw_address: must keep the AP-reported one,
+        // not replace it with the router's lan_ip (192.168.0.1).
+        $this->get('/api/wifidog/portal?gw_id=323&ip=192.168.0.35&mac=AA:BB:CC:DD:EE:FF')
+            ->assertRedirect();
+
+        $this->assertSame('192.168.0.22', $session->fresh()->gw_address);
+    }
+
     private function createRuijieRouter(Company $company, string $gwId, string $status = 'active'): NetworkDevice
     {
         $owner = $company->creator ?? $this->createUser();

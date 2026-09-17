@@ -1,22 +1,98 @@
-[2026-09-16 07:14:42] local.INFO: request from mobile {"gw_id":"58b4bb192d35","gw_sn":"G1UQ5C8006474","gw_address":"192.168.1.23","gw_port":"2060","ip":"192.168.1.31","mac":"46:a7:0e:ed:15:46","slot_num":"0","nasip":"192.168.1.23","ssid":"Tsh 500Masaa24Gift","ustate":"0","mac_req":"0","url":"http://captive.apple.com/hotspot-detect.html"} 
-[2026-09-16 07:14:42] local.INFO: wifidog.login_request {"received_gw_id":"58b4bb192d35","query":{"gw_id":"58b4bb192d35","dev_id":null,"ip":"192.168.1.31","mac":"46:a7:0e:ed:15:46","gw_address":"192.168.1.23","gw_port":"2060","ssid":"Tsh 500Masaa24Gift"}} 
-[2026-09-16 07:14:42] local.INFO: wifidog.captive_session_reused 
+[2026-09-17 10:03:36] local.INFO: 
+wifidog.login.in {
+    "flow":"login",
+    "direction":"mobile->api",
+    "caller":"mobile",
+    "trace_key":"mac:AEADE9D23428",
+    "method":"GET",
+    "path":"/api/wifidog/login",
+    "query":
+    {
+        "gw_id":"58b4bb192d35",
+        "gw_sn":"G1UQ5C8006474",
+        "gw_address":"192.168.1.22",
+        "gw_port":"2060",
+        "ip":"192.168.1.23",
+        "mac":"ae:ad:e9:d2:34:28",
+        "slot_num":"0",
+        "nasip":"192.168.1.22",
+        "ssid":"Tsh 500Masaa24Gift",
+        "ustate":"0",
+        "mac_req":"0",
+        "url":"http://connectivitycheck.gstatic.com/generate_204"
+    },
+    "client_ip":"192.168.1.23",
+    "client_mac":"ae:ad:e9:d2:34:28",
+    "gw_id":"58b4bb192d35",
+    "token_present":false,
+    "session_token_hash":null,
+    "user_agent":"Mozilla/5.0 (Linux; Android 16; SM-A155F Build/BP4A.251205.006; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/152.0.7977.88 Mobile Safari/537.36"
+} 
+[2026-09-17 10:03:38] local.INFO: wifidog.login.gateway 
 {"gw_id":"58b4bb192d35",
 "gateway_id":1,
-"network_id":1,
-"client_mac":"46:A7:0E:ED:15:46",
-"client_ip":"192.168.1.31",
-"gw_address":"192.168.1.23",
-"session_token_hash":"85f3203b1eb6c72877a233e17df9ea975a400fc5240ee473734d8a4a24296ad4","status":"authenticated"} 
-[2026-09-16 07:14:42] local.INFO: wifidog.login_redirect_gateway_auth {
-
-"reason":"session_already_authenticated",
-"gw_id":"58b4bb192d35",
-"gateway_id":1,
-"network_id":1,
-"client_mac":"46:A7:0E:ED:15:46",
-"client_ip":"192.168.1.31",
-"session_token_hash":"85f3203b1eb6c72877a233e17df9ea975a400fc5240ee473734d8a4a24296ad4",
-"redirect_to":"http://192.168.1.23:2060/wifidog/auth?token=***&url=http%3A%2F%2Fcaptive.apple.com%2Fhotspot-detect.html",
-"user_agent":"Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148",
-"response_status":302} 
+"network_id":1,"company_id":1,"lan_ip":"192.168.1.59","wifidog_port":2060,"status":"active"} 
+[2026-09-17 10:03:38] local.INFO: wifidog.captive_session_reused {
+    "gw_id":"58b4bb192d35","gateway_id":1,"network_id":1,"client_mac":"AE:AD:E9:D2:34:28","client_ip":"192.168.1.23","gw_address":"192.168.1.22","session_token_hash":"7a47eedc7753bf48fe1b8fcab7b01f86a157cb43868fc812eb5b2f7f6043b543","status":"authenticated"} 
+[2026-09-17 10:03:38] local.INFO: wifidog.login.session {
+    "captive_session_id":30,"session_status":"authenticated","session_authenticated_at":"2026-09-17T08:42:50+00:00","session_expires_at":"2026-09-17T14:42:47+00:00","session_is_authenticated":true,"session_client_mac":"AE:AD:E9:D2:34:28","session_client_ip":"192.168.1.23","session_gateway_address":"192.168.1.22","session_gateway_port":2060,"session_network_device_id":1,"session_access_grant_id":8,"session_network_session_id":8,"session_requested_url":"http://connectivitycheck.gstatic.com/generate_204","session_token_hash":"7a47eedc7753bf48fe1b8fcab7b01f86a157cb43868fc812eb5b2f7f6043b543"} 
+[2026-09-17 10:03:38] local.INFO: wifidog.login.out 
+{"direction":"api->ap",
+"reason":"session_authenticated",
+"result":"redirect_gateway_auth",
+"captive_session_id":30,
+"client_mac":"AE:AD:E9:D2:34:28","client_ip":"192.168.1.23",
+"session_token_hash":"7a47eedc7753bf48fe1b8fcab7b01f86a157cb43868fc812eb5b2f7f6043b543",
+"redirect_to":"http://192.168.1.22:2060/wifidog/auth?token=***","response_status":302} 
+[2026-09-17 10:03:42] local.INFO: wifidog.portal.in 
+{"flow":"portal",
+"direction":"mobile->api","caller":"mobile","trace_key":"mac:AEADE9D23428",
+"method":"GET","path":"/api/wifidog/portal",
+"query":{"gw_id":"58b4bb192d35","gw_sn":"G1UQ5C8006474","ip":"192.168.1.23","mac":"ae:ad:e9:d2:34:28","message":"denied"},"client_ip":"192.168.1.23","client_mac":"ae:ad:e9:d2:34:28","gw_id":"58b4bb192d35","token_present":false,"session_token_hash":null,"user_agent":"Mozilla/5.0 (Linux; Android 16; SM-A155F Build/BP4A.251205.006; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/152.0.7977.88 Mobile Safari/537.36"} 
+[2026-09-17 10:03:42] local.INFO: wifidog.portal.gateway 
+{"gw_id":"58b4bb192d35","gateway_id":1,"network_id":1,"company_id":1,"lan_ip":"192.168.1.59","wifidog_port":2060,"status":"active"} 
+[2026-09-17 10:03:42] local.INFO: wifidog.portal.token_lookup 
+{
+    "direction":"ap->api",
+    "table":"captive_sessions",
+    "column":"token",
+    "token_present":false,
+    "session_token_hash":null,
+    "session_found":false,
+    "captive_session_id":null,
+    "session_status":null} 
+[2026-09-17 10:03:42] local.INFO: wifidog.captive_session_reused {
+    "gw_id":"58b4bb192d35",
+    "gateway_id":1,
+    "network_id":1,
+    "client_mac":"AE:AD:E9:D2:34:28",
+    "client_ip":"192.168.1.23",
+    "gw_address":"192.168.1.59",
+    "session_token_hash":"7a47eedc7753bf48fe1b8fcab7b01f86a157cb43868fc812eb5b2f7f6043b543",
+    "status":"authenticated"} 
+[2026-09-17 10:03:42] local.INFO: wifidog.portal.session_resolved {
+    "captive_session_id":30,
+    "session_status":"authenticated",
+    "session_authenticated_at":"2026-09-17T08:42:50+00:00",
+    "session_expires_at":"2026-09-17T14:42:47+00:00",
+    "session_is_authenticated":true,
+    "session_client_mac":"AE:AD:E9:D2:34:28",
+    "session_client_ip":"192.168.1.23",
+    "session_gateway_address":"192.168.1.59",
+    "session_gateway_port":2060,
+    "session_network_device_id":1,
+    "session_access_grant_id":8,
+    "session_network_session_id":8,
+    "session_requested_url":"http://connectivitycheck.gstatic.com/generate_204",
+    "session_token_hash":"7a47eedc7753bf48fe1b8fcab7b01f86a157cb43868fc812eb5b2f7f6043b543"} 
+[2026-09-17 10:03:42] local.INFO: wifidog.portal.out 
+{"direction":"api->mobile",
+"reason":"gateway_message",
+"result":"redirect_captive_portal",
+"gateway_message":"denied",
+"captive_session_id":30,
+"session_status":"authenticated",
+"client_mac":"AE:AD:E9:D2:34:28",
+"client_ip":"192.168.1.23",
+"session_token_hash":"7a47eedc7753bf48fe1b8fcab7b01f86a157cb43868fc812eb5b2f7f6043b543",
+"redirect_to":"https://waifai.cloud.shereheyangu.com/connect?subdomain=spider&session=***&mac=AE%3AAD%3AE9%3AD2%3A34%3A28&ip=192.168.1.23&gw_address=192.168.1.59&gw_port=2060","response_status":302} 
