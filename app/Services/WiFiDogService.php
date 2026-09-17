@@ -229,7 +229,9 @@ Log::info('request from mobile', $request->all());
             ]);
         }
 
-        if ($session->isAuthenticated()) {
+        $hasGatewayMessage = $request->filled('message');
+
+        if ($session->isAuthenticated() && ! $hasGatewayMessage) {
             $target = $this->resolvePortalTargetUrl($session, $request->query('url'));
 
             Log::info('wifidog.portal_redirect_authenticated', [

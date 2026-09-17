@@ -369,7 +369,7 @@ class CaptiveSessionService
             );
         }
 
-        // Relative Location headers resolve against /api/wifidog/login and produce /api/wifidog/login/login.
+        // Relative Location headers resolve against / and produce /api/wifidog/login/login.
         if (! str_starts_with($url, 'http://') && ! str_starts_with($url, 'https://')) {
             throw new \RuntimeException('Captive portal redirect must be absolute to avoid /api/wifidog/login/login.');
         }
@@ -402,12 +402,13 @@ class CaptiveSessionService
             ])->save();
         }
 
-        // WiFiDog protocol: the login redirect carries only the token. The AP
-        // (Ruijie) ignores/ mishandles an extra url= here and re-intercepts it,
-        // so the original URL is recovered server-side in WiFiDogService::portal().
         $query = http_build_query([
             'token' => $session->token,
         ]);
+
+        if (filled($session->requested_url)) {
+            $query .= '&url='.rawurlencode($session->requested_url);
+        }
 
         return "http://{$address}:{$port}/wifidog/auth?{$query}";
     }
