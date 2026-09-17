@@ -1,59 +1,22 @@
-I now tried to access the wifi using an android mobile phone, 
-
-this  is what i got 
-
-The web page at https://waifai.shereheyangu.com/api/wifidog/portal/?gw_id=58b4bb192d35&gw_sn=G1UQ5C8006474&ip=192.168.1.23&mac=ae:ad:e9:d2:34:28&message=denied could not be loaded because:
-
-net::ERR_TOO_MANY_REDIRECTS
-
-
-
-i then closed the tasks on the phoen, and reconnected the wifi, again. 
-i then got .
-
-
-Web page not available
-The web page at https://waifai.shereheyangu.com/public/api/wifidog/login?gw_id=58b4bb192d35&gw_sn=G1UQ5C8006474&gw_address=192.168.1.22&gw_port=2060&ip=192.168.1.23&mac=ae:ad:e9:d2:34:28&slot_num=0&nasip=192.168.1.22&ssid=Tsh%20500Masaa24Gift&ustate=0&mac_req=0&url=http%3A%2F%2Fconnectivitycheck%2Egstatic%2Ecom%2Fgenerate%5F204 could not be loaded because:
-
-net::ERR_TOO_MANY_REDIRECTS
-
-
-and these are the logs from the server 
-
-[2026-09-17 08:45:11] local.INFO: request from mobile {"gw_id":"58b4bb192d35","gw_sn":"G1UQ5C8006474","gw_address":"192.168.1.22","gw_port":"2060","ip":"192.168.1.23","mac":"ae:ad:e9:d2:34:28","slot_num":"0","nasip":"192.168.1.22","ssid":"Tsh 500Masaa24Gift","ustate":"0","mac_req":"0","url":"http://connectivitycheck.gstatic.com/generate_204"} 
-[2026-09-17 08:45:11] local.INFO: wifidog.login_request {"received_gw_id":"58b4bb192d35","query":{"gw_id":"58b4bb192d35","dev_id":null,"ip":"192.168.1.23","mac":"ae:ad:e9:d2:34:28","gw_address":"192.168.1.22","gw_port":"2060","ssid":"Tsh 500Masaa24Gift"}} 
-[2026-09-17 08:45:12] local.INFO: wifidog.captive_session_reused 
+[2026-09-16 07:14:42] local.INFO: request from mobile {"gw_id":"58b4bb192d35","gw_sn":"G1UQ5C8006474","gw_address":"192.168.1.23","gw_port":"2060","ip":"192.168.1.31","mac":"46:a7:0e:ed:15:46","slot_num":"0","nasip":"192.168.1.23","ssid":"Tsh 500Masaa24Gift","ustate":"0","mac_req":"0","url":"http://captive.apple.com/hotspot-detect.html"} 
+[2026-09-16 07:14:42] local.INFO: wifidog.login_request {"received_gw_id":"58b4bb192d35","query":{"gw_id":"58b4bb192d35","dev_id":null,"ip":"192.168.1.31","mac":"46:a7:0e:ed:15:46","gw_address":"192.168.1.23","gw_port":"2060","ssid":"Tsh 500Masaa24Gift"}} 
+[2026-09-16 07:14:42] local.INFO: wifidog.captive_session_reused 
 {"gw_id":"58b4bb192d35",
-"gateway_id":1,"network_id":1,
-"client_mac":"AE:AD:E9:D2:34:28",
-"client_ip":"192.168.1.23",
-"gw_address":"192.168.1.22",
-"session_token_hash":"7a47eedc7753bf48fe1b8fcab7b01f86a157cb43868fc812eb5b2f7f6043b543",
-"status":"authenticated"} 
-[2026-09-17 08:45:12] local.INFO: wifidog.login_redirect_gateway_auth 
-{
-    "reason":"session_already_authenticated",
-    "gw_id":"58b4bb192d35",
-    "gateway_id":1,
-    "network_id":1,
-    "client_mac":"AE:AD:E9:D2:34:28",
-    "client_ip":"192.168.1.23",
-    "session_token_hash":"7a47eedc7753bf48fe1b8fcab7b01f86a157cb43868fc812eb5b2f7f6043b543",
-    "redirect_to":"http://192.168.1.22:2060/wifidog/auth?token=***",
-    "user_agent":"WhatsApp/2.23.20.0",
-    "response_status":302
-    } 
-[2026-09-17 08:45:13] local.INFO: request from mobile {"gw_id":"58b4bb192d35","gw_sn":"G1UQ5C8006474","gw_address":"192.168.1.22","gw_port":"2060","ip":"192.168.1.23","mac":"ae:ad:e9:d2:34:28","slot_num":"0","nasip":"192.168.1.22","ssid":"Tsh 500Masaa24Gift","ustate":"0","mac_req":"0","url":"http://connectivitycheck.gstatic.com/generate_204"} 
-[2026-09-17 08:45:13] local.INFO: wifidog.login_request {"received_gw_id":"58b4bb192d35","query":{"gw_id":"58b4bb192d35","dev_id":null,"ip":"192.168.1.23","mac":"ae:ad:e9:d2:34:28","gw_address":"192.168.1.22","gw_port":"2060","ssid":"Tsh 500Masaa24Gift"}} 
-[2026-09-17 08:45:13] local.INFO: wifidog.captive_session_reused {"gw_id":"58b4bb192d35","gateway_id":1,"network_id":1,"client_mac":"AE:AD:E9:D2:34:28","client_ip":"192.168.1.23","gw_address":"192.168.1.22","session_token_hash":"7a47eedc7753bf48fe1b8fcab7b01f86a157cb43868fc812eb5b2f7f6043b543","status":"authenticated"} 
-[2026-09-17 08:45:13] local.INFO: wifidog.login_redirect_gateway_auth 
-{
-    "reason":"session_already_authenticated",
-    "gw_id":"58b4bb192d35",
-    "gateway_id":1,
-    "network_id":1,
-    "client_mac":"AE:AD:E9:D2:34:28",
-    "client_ip":"192.168.1.23",
-    "session_token_hash":"7a47eedc7753bf48fe1b8fcab7b01f86a157cb43868fc812eb5b2f7f6043b543",
-    "redirect_to":"http://192.168.1.22:2060/wifidog/auth?token=***",
-    "user_agent":"WhatsApp/2.23.20.0","response_status":302} 
+"gateway_id":1,
+"network_id":1,
+"client_mac":"46:A7:0E:ED:15:46",
+"client_ip":"192.168.1.31",
+"gw_address":"192.168.1.23",
+"session_token_hash":"85f3203b1eb6c72877a233e17df9ea975a400fc5240ee473734d8a4a24296ad4","status":"authenticated"} 
+[2026-09-16 07:14:42] local.INFO: wifidog.login_redirect_gateway_auth {
+
+"reason":"session_already_authenticated",
+"gw_id":"58b4bb192d35",
+"gateway_id":1,
+"network_id":1,
+"client_mac":"46:A7:0E:ED:15:46",
+"client_ip":"192.168.1.31",
+"session_token_hash":"85f3203b1eb6c72877a233e17df9ea975a400fc5240ee473734d8a4a24296ad4",
+"redirect_to":"http://192.168.1.23:2060/wifidog/auth?token=***&url=http%3A%2F%2Fcaptive.apple.com%2Fhotspot-detect.html",
+"user_agent":"Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148",
+"response_status":302} 

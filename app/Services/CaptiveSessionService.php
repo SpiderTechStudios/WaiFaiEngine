@@ -53,7 +53,7 @@ class CaptiveSessionService
                         : now()->addMinutes($this->ttlMinutes()),
                 ])->save();
 
-                Log::info('wifidog.captive_session_reused', [
+                Log::channel('wifidog')->info('wifidog.captive_session_reused', [
                     'gw_id' => $gateway->gateway_id,
                     'gateway_id' => $gateway->id,
                     'network_id' => $gateway->network_station_id,
@@ -84,7 +84,7 @@ class CaptiveSessionService
                 'last_seen_at' => now(),
             ]);
 
-            Log::info('wifidog.captive_session_created', [
+            Log::channel('wifidog')->info('wifidog.captive_session_created', [
                 'gw_id' => $gateway->gateway_id,
                 'gateway_id' => $gateway->id,
                 'network_id' => $gateway->network_station_id,
@@ -200,7 +200,7 @@ class CaptiveSessionService
             'expires_at' => $this->extendAuthenticatedExpiry($hotspotSession),
         ])->save();
 
-        Log::info('wifidog.captive_session_authenticated', [
+        Log::channel('wifidog')->info('wifidog.captive_session_authenticated', [
             'gw_id' => $session->gateway_id,
             'gateway_id' => $session->network_device_id,
             'network_id' => $session->network_station_id,
@@ -219,7 +219,7 @@ class CaptiveSessionService
         $session = $this->findByToken($token);
 
         if (! $session) {
-            Log::info('wifidog.auth_denied', [
+            Log::channel('wifidog')->info('wifidog.auth_denied', [
                 'reason' => 'unknown_token',
                 'session_token_hash' => hash('sha256', $token),
             ]);
@@ -228,7 +228,7 @@ class CaptiveSessionService
         }
 
         if ($session->markExpiredIfNeeded() || ! $session->isAuthenticated()) {
-            Log::info('wifidog.auth_denied', [
+            Log::channel('wifidog')->info('wifidog.auth_denied', [
                 'reason' => 'not_authenticated_or_expired',
                 'gw_id' => $session->gateway_id,
                 'gateway_id' => $session->network_device_id,
@@ -243,7 +243,7 @@ class CaptiveSessionService
         if ($mac) {
             $normalized = $this->normalizeMacOptional($mac);
             if ($session->client_mac && $normalized && strcasecmp($session->client_mac, $normalized) !== 0) {
-                Log::info('wifidog.auth_denied', [
+                Log::channel('wifidog')->info('wifidog.auth_denied', [
                     'reason' => 'mac_mismatch',
                     'gw_id' => $session->gateway_id,
                     'gateway_id' => $session->network_device_id,
@@ -268,7 +268,7 @@ class CaptiveSessionService
                 ->first();
 
             if (! $grant || $grant->status !== 'active' || ($grant->expires_at && $grant->expires_at->isPast())) {
-                Log::info('wifidog.auth_denied', [
+                Log::channel('wifidog')->info('wifidog.auth_denied', [
                     'reason' => 'access_grant_invalid',
                     'gw_id' => $session->gateway_id,
                     'gateway_id' => $session->network_device_id,
@@ -279,7 +279,7 @@ class CaptiveSessionService
             }
         }
 
-        Log::info('wifidog.auth_allowed', [
+        Log::channel('wifidog')->info('wifidog.auth_allowed', [
             'gw_id' => $session->gateway_id,
             'gateway_id' => $session->network_device_id,
             'network_id' => $session->network_station_id,
@@ -369,7 +369,7 @@ class CaptiveSessionService
             );
         }
 
-        // Relative Location headers resolve against / and produce /api/wifidog/login/login.
+        // Relative Location headers resolve against /api/wifidog/login and produce /api/wifidog/login/login.
         if (! str_starts_with($url, 'http://') && ! str_starts_with($url, 'https://')) {
             throw new \RuntimeException('Captive portal redirect must be absolute to avoid /api/wifidog/login/login.');
         }
@@ -385,7 +385,7 @@ class CaptiveSessionService
             ?: 2060;
 
         if (blank($address)) {
-            Log::warning('wifidog.gateway_auth_url_missing_address', [
+            Log::channel('wifidog')->warning('wifidog.gateway_auth_url_missing_address', [
                 'captive_session_id' => $session->id,
                 'gateway_id' => $session->network_device_id,
                 'status' => $session->status,
@@ -402,13 +402,12 @@ class CaptiveSessionService
             ])->save();
         }
 
+        // WiFiDog protocol: the login redirect carries only the token. The AP
+        // (Ruijie) ignores/ mishandles an extra url= here and re-intercepts it,
+        // so the original URL is recovered server-side in WiFiDogService::portal().
         $query = http_build_query([
             'token' => $session->token,
         ]);
-
-        if (filled($session->requested_url)) {
-            $query .= '&url='.rawurlencode($session->requested_url);
-        }
 
         return "http://{$address}:{$port}/wifidog/auth?{$query}";
     }

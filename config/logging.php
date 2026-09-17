@@ -127,6 +127,17 @@ return [
             'path' => storage_path('logs/laravel.log'),
         ],
 
+        /*
+        | End-to-end WiFiDog / Ruijie captive portal flow trace.
+        | Tail it with: tail -f storage/logs/wifidog.log
+        */
+        'wifidog' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/wifidog.log'),
+            'level' => env('WIFIDOG_LOG_LEVEL', 'debug'),
+            'replace_placeholders' => true,
+        ],
+
     ],
 
 ];
