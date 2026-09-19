@@ -35,6 +35,15 @@ Route::prefix('wifidog')
         Route::get('/portal', [WiFiDogController::class, 'portal']);
         Route::get('/ping', [WiFiDogController::class, 'ping']);
 
+        // Compatibility: gateways whose AuthServer Path mistakenly includes
+        // "login" (e.g. Path=/api/wifidog/login/) call /login/auth, /login/ping,
+        // etc. Route those to the correct handlers so the client can still be
+        // authorized even while the AP config is wrong.
+        Route::get('/login/login', [WiFiDogController::class, 'login']);
+        Route::get('/login/auth', [WiFiDogController::class, 'auth']);
+        Route::get('/login/portal', [WiFiDogController::class, 'portal']);
+        Route::get('/login/ping', [WiFiDogController::class, 'ping']);
+
         // Diagnostics: log any path the Ruijie AP calls that we don't handle,
         // so a wrong AuthServer Path / script fragment shows up in the log.
         Route::any('/{path}', function (Request $request, string $path) {
