@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\WiFiDog\WiFiDogController;
+use App\Http\Controllers\TestWifiDogController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
@@ -58,3 +59,11 @@ use Illuminate\Support\Facades\Route;
 //             return response('Auth: 0', 200)->header('Content-Type', 'text/plain');
 //         })->where('path', '.*');
 //     });
+
+
+Route::prefix('wifidog')->group(function () {
+    Route::get('/login', [TestWifiDogController::class, 'login']);
+    Route::get('/auth', [TestWiFiDogController::class, 'auth']);
+    Route::get('/portal', [TestWiFiDogController::class, 'portal']);
+    Route::get('/ping', [TestWiFiDogController::class, 'ping']);
+});
