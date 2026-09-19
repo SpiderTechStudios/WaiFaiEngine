@@ -6,8 +6,8 @@ use App\Models\CaptiveSession;
 use App\Models\NetworkDevice;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class WiFiDogService
@@ -538,6 +538,6 @@ class WiFiDogService
 
     private function authResponse(int $code): Response
     {
-        return response('Auth: '.$code, 200)->header('Content-Type', 'text/plain');
+        return response()->json(['auth' => $code]);
     }
 }

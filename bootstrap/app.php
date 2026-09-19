@@ -30,9 +30,6 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Global HTTP request tracer (every request, including 404s).
-        $middleware->prepend(\App\Http\Middleware\LogHttpRequests::class);
-
         $middleware->append(\App\Http\Middleware\LogWiFiDogRequests::class);
 
         $middleware->alias([

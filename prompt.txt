@@ -1,100 +1,12 @@
-Implement a global HTTP request logging system for the WaiFai Laravel backend specifically for debugging integrations such as Ruijie WiFiDog/captive portal.
+This is what i return from the /api/wifidog/auth
 
-I need a way to see EVERY HTTP request that actually reaches the Laravel application, regardless of which endpoint or route was called.
+Auth: 0
 
-Requirements:
 
-1. Create a global middleware that runs for all HTTP requests entering Laravel.
+i don't want that. I want to return 
 
-2. Log at minimum:
+{
+    "auth": 0
+}
 
-   * timestamp
-   * HTTP method
-   * request URI/path
-   * full query parameters
-   * client IP address
-   * user agent
-   * request headers
-   * request body/input parameters
-   * Laravel route name if available
-   * controller/action if available
-   * response HTTP status
-   * request processing time in milliseconds
-
-3. The middleware must run globally, so it should also log requests to:
-
-   * valid routes
-   * invalid/non-existent routes
-   * API routes
-   * WiFiDog routes
-   * authentication routes
-   * webhook/callback routes
-   * any other Laravel endpoint
-
-4. Make sure 404 requests are also logged. I specifically want to know if a device such as a Ruijie AP attempts to call something like:
-   /api/wifidog/auth
-   even if that route does not currently exist.
-
-5. Do NOT rely only on Laravel's normal application logs. Create a dedicated log channel/file for HTTP request tracing so these requests are easy to inspect.
-
-For example, I want a dedicated log such as:
-
-storage/logs/http-requests.log
-
-with entries conceptually similar to:
-
-[2026-09-19 14:32:10] GET /api/wifidog/login
-IP: xxx.xxx.xxx.xxx
-User-Agent: ...
-Query: {...}
-Status: 200
-Duration: 42ms
-
-[2026-09-19 14:32:11] GET /api/wifidog/auth
-IP: xxx.xxx.xxx.xxx
-User-Agent: ...
-Query: {...}
-Status: 404
-Duration: 8ms
-
-6. For request bodies and headers, implement sensible redaction for sensitive information. Never log:
-
-   * passwords
-   * password_confirmation
-   * API secrets
-   * authorization bearer tokens
-   * cookies/session secrets
-   * payment secrets
-   * other credentials
-
-7. Make the logging configurable through environment/configuration so I can enable or disable detailed request logging without changing application code.
-
-For example:
-
-HTTP_REQUEST_LOGGING=true
-
-When disabled, the middleware should not produce detailed request logs.
-
-8. Do not break or modify the behavior of existing API endpoints. The middleware should observe requests and responses, not interfere with them.
-
-9. Make sure exceptions are handled safely so logging itself can never cause the API request to fail.
-
-10. Include enough information to distinguish requests from different devices. If possible, include a generated request ID/correlation ID in every log entry and return it as an X-Request-ID response header.
-
-11. Pay special attention to WiFiDog debugging. I need to be able to determine whether Ruijie actually sends requests to:
-    /api/wifidog/login
-    /api/wifidog/auth
-    /api/wifidog/ping
-    /api/wifidog/portal
-
-12. After implementing it:
-
-* show me which files were created/modified
-* show me how the middleware is registered globally
-* show me where the log file is located
-* show me the command I can use to watch the requests live, for example:
-  tail -f storage/logs/http-requests.log
-* explain how to enable/disable the logging
-* provide a simple test request that proves an arbitrary route, including a 404 route, is logged
-
-Do not redesign any existing API or authentication logic. This task is only to add comprehensive global HTTP request tracing/debug logging.
+as json

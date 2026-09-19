@@ -50,18 +50,6 @@ return [
     |
     */
 
-    /*
-    |--------------------------------------------------------------------------
-    | Global HTTP Request Logging
-    |--------------------------------------------------------------------------
-    |
-    | Toggle the "every request that reaches Laravel" trace (LogHttpRequests
-    | middleware). Set HTTP_REQUEST_LOGGING=false to disable it entirely.
-    |
-    */
-
-    'http_request_logging' => (bool) env('HTTP_REQUEST_LOGGING', true),
-
     'channels' => [
 
         'stack' => [
@@ -148,18 +136,6 @@ return [
             'path' => storage_path('logs/wifidog.log'),
             'level' => env('WIFIDOG_LOG_LEVEL', 'debug'),
             'replace_placeholders' => true,
-        ],
-
-        /*
-        | Global HTTP request trace (every request that reaches Laravel,
-        | including 404s). Tail it with:
-        |   tail -f storage/logs/http-requests.log
-        */
-        'http_requests' => [
-            'driver' => 'single',
-            'path' => env('HTTP_REQUEST_LOG_PATH', storage_path('logs/http-requests.log')),
-            'level' => env('HTTP_REQUEST_LOG_LEVEL', 'debug'),
-            'replace_placeholders' => false,
         ],
 
     ],

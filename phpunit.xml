@@ -39,6 +39,5 @@
         <env name="PLATFORM_ROUTER_AND_INSTALLATION" value="150000"/>
         <env name="PLATFORM_ENROLLMENT_TTL_MINUTES" value="4"/>
         <env name="PLATFORM_ENROLLMENT_MAX_FAILED_ATTEMPTS" value="3"/>
-        <env name="HTTP_REQUEST_LOGGING" value="false"/>
     </php>
 </phpunit>
