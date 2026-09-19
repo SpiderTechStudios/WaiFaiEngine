@@ -361,7 +361,7 @@ class CaptiveSessionService
 
         if ($configured === '' || ! preg_match('#^https?://#i', $configured)) {
             throw new \RuntimeException(
-                'CAPTIVE_PORTAL_URL must be an absolute http(s) URL to the customer captive portal (e.g. https://waifai.cloud.shereheyangu.com/connect).'
+                'CAPTIVE_PORTAL_URL must be an absolute http(s) URL to the customer captive portal (e.g. https://waifai.shereheyangu.com/connect).'
             );
         }
 
@@ -388,7 +388,7 @@ class CaptiveSessionService
 
         if (str_contains($path, '/api/wifidog') || str_contains($path, '/api/v1/wifidog')) {
             throw new \RuntimeException(
-                'Captive portal URL must not point at the WiFiDog API. Set CAPTIVE_PORTAL_URL to the frontend connect page (e.g. https://waifai.cloud.shereheyangu.com/connect), not /api/wifidog/login. On the Ruijie/WiFiDog gateway, AuthServer Path must be /api/wifidog/ (not /api/wifidog/login/).'
+                'Captive portal URL must not point at the WiFiDog API. Set CAPTIVE_PORTAL_URL to the captive portal page (e.g. https://waifai.shereheyangu.com/connect), not /api/wifidog/login. On the Ruijie/WiFiDog gateway, AuthServer Path must be /api/wifidog/ (not /api/wifidog/login/).'
             );
         }
 
