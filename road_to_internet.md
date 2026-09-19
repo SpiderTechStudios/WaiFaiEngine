@@ -17,14 +17,17 @@ Base URLs used below (replace with your deployment):
 > frontend SPA. The device is redirected to
 > `{CONNECT}?subdomain={slug}&router={router}&session={captive-token}`. Packages are scoped to
 > the router's station when `station_plans` rows exist for it, otherwise all active company
-> plans are shown. The routes are:
+> plans are shown. The page is a **single-page UI** with four JavaScript-switched
+> states (`initial` / `subscribe` / `voucher` / `redeem`). It calls the existing
+> JSON API directly — no separate portal pages/routes:
 >
-> | Method | Path | Purpose |
-> |---|---|---|
-> | GET | `{CONNECT}` | Render branding + packages (router-scoped) |
-> | POST | `{CONNECT}/pay` | Initiate mobile-money payment |
-> | GET | `{CONNECT}/payment/{payment}` | Poll status and hand off to `gateway_auth_url` |
-> | POST | `{CONNECT}/voucher` | Redeem a voucher |
+> | Action | Endpoint used by the page |
+> |---|---|
+> | Load page | `GET {CONNECT}` (renders all states + embedded packages) |
+> | Subscribe / pay | `POST {API}/api/v1/portal/{subdomain}/payments`, then poll `GET …/payments/{id}` |
+> | Voucher | `POST {API}/api/v1/portal/{subdomain}/vouchers/redeem` |
+> | Redeem / continue | `POST {API}/api/v1/portal/{subdomain}/restore`, then `POST {API}/api/v1/captive/sessions/{token}/authorize` |
+> | Finish | navigate the browser to `gateway_auth_url` from the API response |
 >
 > The rest of this document still describes the underlying API/protocol the portal uses.
 
@@ -37,7 +40,7 @@ Base URLs used below (replace with your deployment):
 | **Device** | Customer phone / laptop browser |
 | **AP / Gateway (Ruijie)** | Runs the WiFiDog client (NAS). Intercepts HTTP, redirects to the portal, and opens/closes the client's internet (`fw_allow`/`fw_deny`) |
 | **API backend** | Laravel app `{API}`. Owns captive sessions, payments, grants, sessions, and the WiFiDog protocol endpoints |
-| **Frontend portal** | SPA `{PORTAL}/connect`. Branding, package selection, payment UX, and the final hand‑off to the AP auth URL |
+| **Captive portal** | Backend-rendered single page `{CONNECT}`. Branding, package selection, payment/voucher UX, and the final hand‑off to the AP auth URL (via the API) |
 | **Payment provider** | PalmPesa / PalmPay / Flutterwave etc. (USSD push + webhook) |
 | **Ruijie Cloud** | Management plane for the AP. Not on the auth data path, but it holds the Captive Portal / External WiFiDog configuration |
 

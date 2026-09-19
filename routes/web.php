@@ -8,15 +8,12 @@ Route::get('/', function () {
 });
 
 /*
-| Backend-hosted captive portal.
+| Backend-hosted captive portal (single page).
 |
 | The WiFiDog login redirect sends the browser here with:
 |   /connect?subdomain={company}&router={router}&session={captive-token}
 |
-| Kept on the backend (same host as the API) so the whole
-| device → AP → portal → payment → auth flow can be traced in one place.
+| All UI states (initial / subscribe / voucher / redeem) are switched with
+| JavaScript on this one page; no separate routes or pages.
 */
 Route::get('/connect', [CaptivePortalController::class, 'show'])->name('captive.connect');
-Route::post('/connect/pay', [CaptivePortalController::class, 'pay'])->name('captive.pay');
-Route::get('/connect/payment/{payment}', [CaptivePortalController::class, 'payment'])->name('captive.payment');
-Route::post('/connect/voucher', [CaptivePortalController::class, 'voucher'])->name('captive.voucher');

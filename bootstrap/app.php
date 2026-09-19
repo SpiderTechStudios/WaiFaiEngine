@@ -32,13 +32,6 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(\App\Http\Middleware\LogWiFiDogRequests::class);
 
-        // Captive portal is reached from an AP redirect (unknown client / flaky
-        // captive webviews) and is unauthenticated, so skip CSRF for its POSTs.
-        $middleware->validateCsrfTokens(except: [
-            'connect/pay',
-            'connect/voucher',
-        ]);
-
         $middleware->alias([
             'active.user' => EnsureUserIsActive::class,
             'company.context' => SetCompanyContext::class,

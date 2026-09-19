@@ -70,7 +70,7 @@ class CaptivePortalTest extends TestCase
         $this->get('/connect?subdomain=missing')->assertNotFound();
     }
 
-    public function test_connect_page_shows_gateway_auth_url_for_authenticated_session(): void
+    public function test_connect_page_embeds_captive_session_for_authenticated_client(): void
     {
         $owner = $this->createUser();
         $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'juku']);
@@ -94,7 +94,8 @@ class CaptivePortalTest extends TestCase
 
         $this->get('/connect?subdomain=juku&session='.$token)
             ->assertOk()
-            ->assertSee('http://192.168.0.144:2060/wifidog/auth?token='.$token);
+            ->assertSee($token)
+            ->assertSee('juku');
     }
 
     private function createPlan(Company $company, string $name, int $price, string $status): InternetPlan
