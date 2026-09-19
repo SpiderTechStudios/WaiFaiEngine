@@ -9,22 +9,20 @@ return [
     /*
     | Absolute customer-facing captive portal URL (no query string).
     |
-    | API backend:     https://waifai.shereheyangu.com
-    | Frontend portal: https://waifai.cloud.shereheyangu.com/connect
+    | The captive portal is rendered by this same backend app (see
+    | routes/web.php -> CaptivePortalController), so it defaults to
+    | {APP_URL}/connect. Override with CAPTIVE_PORTAL_URL when the portal
+    | lives elsewhere.
     |
-    | Preferred (full connect page):
-    |   CAPTIVE_PORTAL_URL=https://waifai.cloud.shereheyangu.com/connect
-    |
-    | Also accepted (origin only — connect path is appended):
-    |   CAPTIVE_PORTAL_URL=https://waifai.cloud.shereheyangu.com
-    |   CAPTIVE_PORTAL_CONNECT_PATH=/connect
-    |
-    | Redirect becomes:
-    |   {CAPTIVE_PORTAL_URL}?subdomain={company.subdomain}&session={token}
+    | The WiFiDog login redirect becomes:
+    |   {CAPTIVE_PORTAL_URL}?subdomain={company.subdomain}&router={router}&session={token}
     |
     | NEVER set this to the WiFiDog API endpoint (/api/wifidog/login).
     */
-    'portal_url' => env('CAPTIVE_PORTAL_URL', 'https://waifai.cloud.shereheyangu.com/connect'),
+    'portal_url' => env(
+        'CAPTIVE_PORTAL_URL',
+        rtrim((string) env('APP_URL', 'http://localhost'), '/').'/connect'
+    ),
 
     /*
     | Where the WiFiDog gateway sends the browser after a successful auth
@@ -37,7 +35,7 @@ return [
     /*
     | Origin fallback when CAPTIVE_PORTAL_URL is empty / origin-only.
     */
-    'portal_origin' => rtrim((string) env('FRONTEND_URL', 'https://waifai.cloud.shereheyangu.com'), '/'),
+    'portal_origin' => rtrim((string) env('FRONTEND_URL', env('APP_URL', 'http://localhost')), '/'),
 
     /*
     | Path appended when portal_url / origin does not already end with it.
@@ -49,6 +47,6 @@ return [
     */
     'portal_base_url' => rtrim((string) env(
         'CAPTIVE_PORTAL_URL',
-        env('FRONTEND_URL', 'https://waifai.cloud.shereheyangu.com/connect')
+        rtrim((string) env('APP_URL', 'http://localhost'), '/').'/connect'
     ), '/'),
 ];

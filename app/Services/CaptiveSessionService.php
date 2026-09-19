@@ -323,6 +323,12 @@ class CaptiveSessionService
             'session' => $session->token,
         ];
 
+        // Let the backend captive portal scope packages to the router the
+        // client is connected to.
+        if ($session->network_device_id) {
+            $query['router'] = $session->network_device_id;
+        }
+
         foreach ($extra as $key => $value) {
             if (filled($value)) {
                 $query[$key] = $value;
