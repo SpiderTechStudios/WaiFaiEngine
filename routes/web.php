@@ -20,15 +20,22 @@ Route::get('/', function () {
 Route::get('/connect', [CaptivePortalController::class, 'show'])->name('captive.connect');
 
 /*
-| WiFiDog gateway compatibility aliases.
+| WiFiDog auth-server HTTP interface (exactly per the WiFiDog protocol spec):
 |
-| Gateways derive the auth/ping URL from their "Portal Server IP" + Path config.
-| If the AP is configured with the wrong base path (e.g. / or /wifidog/), these
-| aliases still let it reach the handler so the client can be authorized.
+|   GET /login   browser  -> 302 to http://{gw_address}:{gw_port}/wifidog/auth?token=...&url=...
+|   GET /auth    AP (s2s) -> "Auth: 1" / "Auth: 0" (text/plain)
+|   GET /ping    AP (s2s) -> "Pong"
+|   GET /portal  browser  -> 302 (post-auth / message landing)
+|
+| Also exposed under /api/wifidog/* and /wifidog/* so any gateway base-path
+| configuration reaches the same handlers.
 */
 Route::middleware('throttle:120,1')->group(function () {
+    Route::get('/login', [WiFiDogController::class, 'login']);
     Route::get('/auth', [WiFiDogController::class, 'auth']);
     Route::get('/ping', [WiFiDogController::class, 'ping']);
+    Route::get('/portal', [WiFiDogController::class, 'portal']);
+
     Route::get('/wifidog', [WiFiDogController::class, 'login']);
     Route::get('/wifidog/login', [WiFiDogController::class, 'login']);
     Route::get('/wifidog/auth', [WiFiDogController::class, 'auth']);

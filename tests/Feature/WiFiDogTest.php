@@ -235,7 +235,7 @@ class WiFiDogTest extends TestCase
 
         $this->get('/api/wifidog/auth?stage=login&token='.$pending->token.'&mac=AA:BB:CC:DD:EE:FF&gw_id=323')
             ->assertOk()
-            ->assertJson(['auth' => 0]);
+            ->assertSee('Auth: 0', false);
 
         $plan = InternetPlan::query()->create([
             'company_id' => $company->id,
@@ -281,7 +281,7 @@ class WiFiDogTest extends TestCase
 
         $this->get('/api/wifidog/auth?stage=login&token='.$authToken.'&mac=AA:BB:CC:DD:EE:FF&gw_id=323')
             ->assertOk()
-            ->assertJson(['auth' => 1]);
+            ->assertSee('Auth: 1', false);
     }
 
     public function test_expired_session_is_not_authorized(): void
@@ -305,7 +305,7 @@ class WiFiDogTest extends TestCase
 
         $this->get('/api/wifidog/auth?stage=login&token='.$token)
             ->assertOk()
-            ->assertJson(['auth' => 0]);
+            ->assertSee('Auth: 0', false);
 
         $this->assertDatabaseHas('captive_sessions', [
             'token' => $token,

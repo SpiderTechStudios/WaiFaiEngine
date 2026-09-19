@@ -136,7 +136,7 @@ class WiFiDogService
         $session = $this->captiveSessionService->findByToken($token);
 
         $this->trace('auth.token_lookup', [
-            'direction' => 'ap->api',
+            'direction' => $this->caller($request).'->api',
             'table' => 'captive_sessions',
             'column' => 'token',
             'token_present' => true,
@@ -256,7 +256,7 @@ class WiFiDogService
         $session = $token !== '' ? $this->captiveSessionService->findByToken($token) : null;
 
         $this->trace('portal.token_lookup', [
-            'direction' => 'ap->api',
+            'direction' => $this->caller($request).'->api',
             'table' => 'captive_sessions',
             'column' => 'token',
             'token_present' => $token !== '',
@@ -538,6 +538,7 @@ class WiFiDogService
 
     private function authResponse(int $code): Response
     {
-        return response()->json(['auth' => $code]);
+        // WiFiDog protocol: plain text "Auth: 1" (login) / "Auth: 0".
+        return response('Auth: '.$code, 200)->header('Content-Type', 'text/plain');
     }
 }

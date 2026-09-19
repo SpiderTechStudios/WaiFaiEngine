@@ -1,12 +1,8 @@
-This is what i return from the /api/wifidog/auth
-
-Auth: 0
-
-
-i don't want that. I want to return 
-
-{
-    "auth": 0
-}
-
-as json
+[2026-09-19 16:24:52] local.INFO: wifidog.hit {"direction":"mobile->api","caller":"mobile","method":"GET","path":"/api/wifidog/login","query":{"gw_id":"58b4bb192d35","gw_sn":"G1UQ5C8006474","gw_address":"192.168.0.144","gw_port":"2060","ip":"192.168.0.93","mac":"9e:5d:2f:af:fc:88","slot_num":"0","nasip":"192.168.0.144","ssid":"500KwaMasaa24Gift","ustate":"0","mac_req":"0","url":"http://captive.apple.com/hotspot-detect.html"},"remote_ip":"154.74.191.46","host":"waifai.shereheyangu.com","scheme":"https","is_secure":true,"matched_route":"api/wifidog/login","response_status":302,"user_agent":"Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"} 
+[2026-09-19 16:24:56] local.INFO: wifidog.portal.in {"flow":"portal","direction":"mobile->api","caller":"mobile","trace_key":"mac:9E5D2FAFFC88","method":"GET","path":"/api/wifidog/portal","query":{"gw_id":"58b4bb192d35","gw_sn":"G1UQ5C8006474","ip":"192.168.0.93","mac":"9e:5d:2f:af:fc:88","message":"denied"},"client_ip":"192.168.0.93","client_mac":"9e:5d:2f:af:fc:88","gw_id":"58b4bb192d35","token_present":false,"session_token_hash":null,"user_agent":"Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"} 
+[2026-09-19 16:24:56] local.INFO: wifidog.portal.gateway {"gw_id":"58b4bb192d35","gateway_id":1,"network_id":1,"company_id":1,"lan_ip":"192.168.0.1","wifidog_port":2060,"status":"active"} 
+[2026-09-19 16:24:56] local.INFO: wifidog.portal.token_lookup {"direction":"ap->api","table":"captive_sessions","column":"token","token_present":false,"session_token_hash":null,"session_found":false,"captive_session_id":null,"session_status":null} 
+[2026-09-19 16:24:56] local.INFO: wifidog.captive_session_reused {"gw_id":"58b4bb192d35","gateway_id":1,"network_id":1,"client_mac":"9E:5D:2F:AF:FC:88","client_ip":"192.168.0.93","request_gw_address":null,"previous_gw_address":"192.168.0.144","gw_address":"192.168.0.144","gw_address_source":"kept","gw_port":2060,"session_token_hash":"73b3718fc04670601fd2e9991076b57e87e31be4763c69e5aa58c2f03d2dc543","status":"authenticated"} 
+[2026-09-19 16:24:56] local.INFO: wifidog.portal.session_resolved {"captive_session_id":43,"session_status":"authenticated","session_authenticated_at":"2026-09-19T16:22:50+00:00","session_expires_at":"2026-09-19T22:22:50+00:00","session_is_authenticated":true,"session_client_mac":"9E:5D:2F:AF:FC:88","session_client_ip":"192.168.0.93","session_gateway_address":"192.168.0.144","session_gateway_port":2060,"session_network_device_id":1,"session_access_grant_id":11,"session_network_session_id":11,"session_requested_url":"http://captive.apple.com/hotspot-detect.html","session_token_hash":"73b3718fc04670601fd2e9991076b57e87e31be4763c69e5aa58c2f03d2dc543"} 
+[2026-09-19 16:24:56] local.INFO: wifidog.portal.out {"direction":"api->mobile","reason":"gateway_message","result":"redirect_captive_portal","gateway_message":"denied","captive_session_id":43,"session_status":"authenticated","client_mac":"9E:5D:2F:AF:FC:88","client_ip":"192.168.0.93","session_token_hash":"73b3718fc04670601fd2e9991076b57e87e31be4763c69e5aa58c2f03d2dc543","redirect_to":"https://waifai.shereheyangu.com/connect?subdomain=spider&session=***&router=1&mac=9E%3A5D%3A2F%3AAF%3AFC%3A88&ip=192.168.0.93&gw_address=192.168.0.144&gw_port=2060","response_status":302} 
+[2026-09-19 16:24:56] local.INFO: wifidog.hit {"direction":"mobile->api","caller":"mobile","method":"GET","path":"/api/wifidog/portal","query":{"gw_id":"58b4bb192d35","gw_sn":"G1UQ5C8006474","ip":"192.168.0.93","mac":"9e:5d:2f:af:fc:88","message":"denied"},"remote_ip":"154.74.191.46","host":"waifai.shereheyangu.com","scheme":"https","is_secure":true,"matched_route":"api/wifidog/portal","response_status":302,"user_agent":"Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"} 
