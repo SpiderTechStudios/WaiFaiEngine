@@ -29,6 +29,7 @@ Route::get('/connect', [CaptivePortalController::class, 'show'])->name('captive.
 Route::middleware('throttle:120,1')->group(function () {
     Route::get('/auth', [WiFiDogController::class, 'auth']);
     Route::get('/ping', [WiFiDogController::class, 'ping']);
+    Route::get('/wifidog', [WiFiDogController::class, 'login']);
     Route::get('/wifidog/login', [WiFiDogController::class, 'login']);
     Route::get('/wifidog/auth', [WiFiDogController::class, 'auth']);
     Route::get('/wifidog/portal', [WiFiDogController::class, 'portal']);

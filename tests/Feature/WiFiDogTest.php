@@ -547,6 +547,26 @@ class WiFiDogTest extends TestCase
         $this->assertSame('192.168.0.22', $session->fresh()->gw_address);
     }
 
+    public function test_bare_wifidog_routes_behave_like_login(): void
+    {
+        config([
+            'captive.portal_url' => 'https://waifai.test/connect',
+            'captive.portal_base_url' => 'https://waifai.test',
+        ]);
+
+        $owner = $this->createUser();
+        $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'spider']);
+        $this->createRuijieRouter($company, '323');
+
+        foreach (['/wifidog', '/api/wifidog', '/wifidog/login', '/api/wifidog/login'] as $path) {
+            $location = $this->get($path.'?gw_id=323&ip=192.168.0.35&mac=AA:BB:CC:DD:EE:FF')
+                ->assertRedirect()
+                ->headers->get('Location');
+
+            $this->assertStringStartsWith('https://waifai.test/connect?', $location, "Failed for {$path}");
+        }
+    }
+
     private function createRuijieRouter(Company $company, string $gwId, string $status = 'active'): NetworkDevice
     {
         $owner = $company->creator ?? $this->createUser();

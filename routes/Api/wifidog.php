@@ -30,6 +30,7 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('wifidog')
     ->middleware('throttle:120,1')
     ->group(function () {
+        Route::get('/', [WiFiDogController::class, 'login']);
         Route::get('/login', [WiFiDogController::class, 'login']);
         Route::get('/auth', [WiFiDogController::class, 'auth']);
         Route::get('/portal', [WiFiDogController::class, 'portal']);
