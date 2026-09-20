@@ -242,8 +242,16 @@ HTML;
         <h1>WaiFai Test Portal</h1>
         <p>Gateway message: <span class="msg">{$messageHtml}</span></p>
         <p>The Ruijie gateway redirected the browser here without a session token,
-           which means it did not authorize the client (it never reached our
-           <code>/api/wifidog/auth</code>). Check the AP AuthServer path/URL.</p>
+           which means it did not authorize the client &mdash; our
+           <code>/api/wifidog/auth</code> was never called (no <code>call from Auth</code>
+           in the server log).</p>
+        <p>Most common causes:</p>
+        <ul>
+            <li>The AP's server&#8209;to&#8209;server <strong>AuthServer / Portal&nbsp;IP</strong> is not
+                our public host, or the path is missing <code>/public</code>.</li>
+            <li>The AP calls <code>/api/wifidog/auth</code> over <strong>HTTP (port 80)</strong> and the
+                web server 301&#8209;redirects to HTTPS, which the WiFiDog client does not follow.</li>
+        </ul>
         <ul>
             <li>Gateway ID: {$gwIdHtml}</li>
             <li>Client IP: {$clientIpHtml}</li>
