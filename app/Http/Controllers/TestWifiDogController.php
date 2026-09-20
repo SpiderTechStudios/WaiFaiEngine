@@ -53,7 +53,9 @@ class TestWifiDogController extends Controller
             $query .= '&url='.rawurlencode($url);
         }
         
+        
         $gatewayAuthUrl = "http://{$gwAddress}:{$gwPort}/wifidog/auth?{$query}";
+
 
         Log::info('WIFIDOG LOGIN -> GATEWAY AUTH', [
             'gw_id' => $gwId,
