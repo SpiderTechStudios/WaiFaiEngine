@@ -105,8 +105,7 @@ class TestWifiDogController extends Controller
     {
         Log::info('call from Auth', ['request' => $request->all()]);
 
-        // return 'Auth: 1';
-        return ['Auth' => 1];
+        return 'Auth: 1';
     }
 
     /**
@@ -117,25 +116,17 @@ class TestWifiDogController extends Controller
      */
     public function portal(Request $request)
     {
-        Log::info('call from Portal', ['request' => $request->all()]);
+        Log::info('call from Portal', [
+            'request' => $request->all(),
+        ]);
 
-        $target = trim((string) $request->query('url', ''));
-
-        $token = trim((string) $request->query('token', ''));
-        if ($token !== '') {
-            $session = $this->captiveSessionService->findByToken($token);
-            if ($session && filled($session->requested_url)) {
-                $target = (string) $session->requested_url;
-            }
-        }
-
-        if ($target === '' || !preg_match('#^https?://#i', $target)) {
-            $target = (string) config('captive.portal_success_url', 'http://www.google.com');
-        }
-
-        Log::info('simulator.portal_redirect', ['target' => $target]);
-
-        return redirect()->away($target);
+        $data = [
+            'ok' => true,
+            'message' => 'PORTAL REACHED',
+            'request' => $request->all(),
+        ];
+        Log::info('simulator.portal_reached', $data);
+        return response()->json($data);
     }
 
     public function ping(Request $request)
