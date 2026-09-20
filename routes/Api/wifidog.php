@@ -63,7 +63,10 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('wifidog')->group(function () {
     Route::get('/login', [TestWifiDogController::class, 'login']);
-    Route::get('/auth', [TestWiFiDogController::class, 'auth']);
-    Route::get('/portal', [TestWiFiDogController::class, 'portal']);
-    Route::get('/ping', [TestWiFiDogController::class, 'ping']);
+    Route::get('/auth', [TestWifiDogController::class, 'auth']);
+    Route::get('/portal', [TestWifiDogController::class, 'portal']);
+    Route::get('/ping', [TestWifiDogController::class, 'ping']);
+
+    // End-to-end guarantee test (legacy/flow.png): login -> granted -> verify -> portal.
+    Route::get('/test', [TestWifiDogController::class, 'test']);
 });

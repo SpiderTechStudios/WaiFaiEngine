@@ -2,8 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AccessGrant;
+use App\Models\Customer;
+use App\Models\InternetPlan;
+use App\Models\NetworkDevice;
 use App\Services\CaptiveSessionService;
 use App\Services\GatewayResolver;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -134,5 +139,137 @@ class TestWifiDogController extends Controller
         Log::info('call from ping', ['request' => $request->all()]);
 
         return 'Pong';
+    }
+
+    /**
+     * End-to-end guarantee test, following legacy/flow.png.
+     *
+     * Assumes payment is done and the user is meant to get internet. Walks:
+     *   1) portal login      -> create/reuse the captive session
+     *   2) payment (assumed) -> active access grant + authenticated session
+     *   3) verify token (AP) -> CaptiveSessionService::authorizeToken() == Auth: 1
+     *   4) portal result     -> redirect to the original URL
+     *
+     * internet_granted=true means the AP would run fw_allow() and the client
+     * would show as online in Ruijie Cloud.
+     */
+    public function test(Request $request): JsonResponse
+    {
+        $steps = [];
+
+        try {
+            $gwId = trim((string) ($request->query('gw_id') ?: NetworkDevice::query()
+                ->where('type', 'router')
+                ->where('gateway_type', NetworkDevice::GATEWAY_RUIJIE)
+                ->where('status', 'active')
+                ->value('gateway_id')));
+
+            $gateway = $this->gatewayResolver->resolveActive($gwId);
+
+            $steps['1_gateway'] = [
+                'gw_id' => $gateway->gateway_id,
+                'gateway_id' => $gateway->id,
+                'company_id' => $gateway->company_id,
+                'lan_ip' => $gateway->lan_ip,
+                'wifidog_port' => $gateway->wifidog_port,
+            ];
+
+            $mac = trim((string) ($request->query('mac') ?: 'AA:BB:CC:DD:EE:FF'));
+            $ip = trim((string) ($request->query('ip') ?: '192.168.0.99'));
+            $url = trim((string) ($request->query('url') ?: 'http://connectivitycheck.gstatic.com/generate_204'));
+
+            // Diagram steps 3-5: portal login -> create/reuse the session.
+            $session = $this->captiveSessionService->resolveOrCreate($gateway, [
+                'mac' => $mac,
+                'ip' => $ip,
+                'ssid' => 'SIMULATOR',
+                'gw_address' => $gateway->lan_ip,
+                'gw_port' => $gateway->wifidog_port ?: 2060,
+                'url' => $url,
+            ]);
+
+            $steps['2_login'] = [
+                'captive_session_id' => $session->id,
+                'status' => $session->status,
+                'token' => $session->token,
+                'client_mac' => $session->client_mac,
+                'client_ip' => $session->client_ip,
+            ];
+
+            // Diagram step 6: payment success -> active grant + authenticated session.
+            if (! $session->isAuthenticated()) {
+                $plan = InternetPlan::query()
+                    ->where('company_id', $gateway->company_id)
+                    ->where('status', 'active')
+                    ->orderBy('price')
+                    ->firstOrFail();
+
+                $customer = Customer::query()->firstOrCreate(
+                    ['company_id' => $gateway->company_id, 'phone' => 'SIM-'.preg_replace('/[^A-Fa-f0-9]/', '', $mac)],
+                    ['name' => 'Simulator User', 'status' => 'active'],
+                );
+
+                $grant = AccessGrant::query()->create([
+                    'company_id' => $gateway->company_id,
+                    'customer_id' => $customer->id,
+                    'internet_plan_id' => $plan->id,
+                    'source' => 'simulator',
+                    'starts_at' => now(),
+                    'expires_at' => now()->addHour(),
+                    'status' => 'active',
+                ]);
+
+                $session = $this->captiveSessionService->authenticate($session, [
+                    'access_grant_id' => $grant->id,
+                    'mac_address' => $mac,
+                    'ip_address' => $ip,
+                ]);
+
+                $steps['3_payment_assumed'] = [
+                    'internet_plan_id' => $plan->id,
+                    'plan' => $plan->name,
+                    'access_grant_id' => $grant->id,
+                    'network_session_id' => $session->network_session_id,
+                    'session_status' => $session->status,
+                ];
+            } else {
+                $steps['3_payment_assumed'] = ['skipped' => 'already authenticated'];
+            }
+
+            // Diagram steps 8-9: AP asks the portal to verify the token.
+            $verified = $this->captiveSessionService->authorizeToken($session->token, $mac, $ip);
+
+            $steps['4_verify_token'] = [
+                'request' => '/api/wifidog/auth?stage=login&token=***&mac='.$mac.'&ip='.$ip,
+                'response' => $verified ? 'Auth: 1' : 'Auth: 0',
+            ];
+
+            // Diagram steps 10-12: gateway lets the client online and redirects
+            // it to the portal result page.
+            $gatewayAuthUrl = $this->captiveSessionService->gatewayAuthRedirectUrl($session);
+            $portalTarget = filled($session->requested_url)
+                ? $session->requested_url
+                : (string) config('captive.portal_success_url', 'http://www.google.com');
+
+            $steps['5_gateway_auth_url'] = $gatewayAuthUrl;
+            $steps['6_portal_result'] = $portalTarget;
+
+            $internetGranted = $verified && $session->fresh()->isAuthenticated();
+
+            return response()->json([
+                'ok' => $internetGranted,
+                'internet_granted' => $internetGranted,
+                'online' => $internetGranted,
+                'steps' => $steps,
+            ]);
+        } catch (Throwable $e) {
+            return response()->json([
+                'ok' => false,
+                'internet_granted' => false,
+                'online' => false,
+                'error' => $e->getMessage(),
+                'steps' => $steps,
+            ], 422);
+        }
     }
 }

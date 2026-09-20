@@ -1,0 +1,9 @@
+I have an image in /legacy/flow.png, the image shows the flow of the wifi authentication of wifidog ruijie.
+
+now i want to analyse it and get exactly what needs to be done to fix our problem. 
+
+use the testing wifidogcontroller to test this. i want to have a test that can guarantee user to be given access to tthe internet
+the user should be available on the online clients list inside the ruijie cloud 
+
+
+follow the structure of the testing wifidog controller. assume payment is done, assume user is supposed to get internet and follow the instructions on the image to add modify and remove routes in the wifidog.php just to make this work. then later we will shift to the actual wifidog routes. 
