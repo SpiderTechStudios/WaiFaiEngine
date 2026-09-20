@@ -650,6 +650,68 @@ class WiFiDogTest extends TestCase
         $this->assertSame('Auth:0', $this->get('/api/wifidog/auth?stage=query&gw_id=323&mac=11:22:33:44:55:66')->getContent());
     }
 
+    public function test_auth_trailing_slash_and_gw_sn_fallback_return_auth_one(): void
+    {
+        $owner = $this->createUser();
+        $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'spider']);
+        $router = $this->createRuijieRouter($company, '58b4bb192d35');
+        $router->forceFill(['serial_number' => 'G1UQ5C8006474'])->save();
+
+        $token = str_repeat('a', 32);
+        CaptiveSession::query()->create([
+            'company_id' => $company->id,
+            'network_device_id' => $router->id,
+            'network_station_id' => $router->network_station_id,
+            'gateway_id' => '58b4bb192d35',
+            'client_mac' => '9E:5D:2F:AF:FC:88',
+            'client_ip' => '192.168.0.93',
+            'gw_address' => '192.168.0.144',
+            'gw_port' => 2060,
+            'token' => $token,
+            'status' => CaptiveSession::STATUS_AUTHENTICATED,
+            'authenticated_at' => now(),
+            'expires_at' => now()->addHour(),
+        ]);
+
+        $response = $this->withHeaders(['User-Agent' => 'AP 1.0.0'])->get(
+            '/api/wifidog/auth/?stage=login&gw_id=unknown-mac&gw_sn=G1UQ5C8006474&ip=192.168.0.93&mac=9E:5D:2F:AF:FC:88&token='.$token.'&incoming=0&outgoing=0'
+        );
+
+        $response->assertOk();
+        $this->assertSame('Auth:1', $response->getContent());
+    }
+
+    public function test_portal_success_redirect_finds_authenticated_session_by_mac_without_token(): void
+    {
+        config([
+            'captive.portal_url' => 'https://waifai.test/connect',
+            'captive.portal_success_url' => 'http://www.google.com',
+        ]);
+
+        $owner = $this->createUser();
+        $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'spider']);
+        $router = $this->createRuijieRouter($company, '323');
+
+        CaptiveSession::query()->create([
+            'company_id' => $company->id,
+            'network_device_id' => $router->id,
+            'network_station_id' => $router->network_station_id,
+            'gateway_id' => '323',
+            'client_mac' => 'AA:BB:CC:DD:EE:FF',
+            'client_ip' => '192.168.0.93',
+            'requested_url' => 'http://captive.apple.com/hotspot-detect.html',
+            'token' => str_repeat('b', 32),
+            'status' => CaptiveSession::STATUS_AUTHENTICATED,
+            'authenticated_at' => now(),
+            'expires_at' => now()->addHour(),
+        ]);
+
+        $this->get('/api/wifidog/portal/?gw_id=323&gw_sn=123&mac=AA:BB:CC:DD:EE:FF')
+            ->assertRedirect('http://captive.apple.com/hotspot-detect.html');
+
+        $this->assertDatabaseCount('captive_sessions', 1);
+    }
+
     public function test_portal_with_message_denied_renders_failure_page_and_not_auth_one(): void
     {
         $owner = $this->createUser();

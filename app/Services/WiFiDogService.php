@@ -49,11 +49,9 @@ class WiFiDogService
      */
     public function login(Request $request): RedirectResponse
     {
-        $gwId = $this->extractGatewayId($request);
-
         $this->trace('login', $this->requestContext($request, 'login'));
 
-        $gateway = $this->gatewayResolver->resolveActive($gwId);
+        $gateway = $this->resolveGatewayFromRequest($request);
         $this->touchGateway($gateway, $request);
 
         $this->trace('login.gateway', $this->gatewayContext($gateway));
@@ -111,7 +109,6 @@ class WiFiDogService
         $token = trim((string) $this->param($request, 'token', ''));
         $mac = filled($this->param($request, 'mac')) ? (string) $this->param($request, 'mac') : null;
         $ip = filled($this->param($request, 'ip')) ? (string) $this->param($request, 'ip') : null;
-        $gwId = $this->extractGatewayId($request);
 
         $this->trace('auth', $this->requestContext($request, 'auth') + [
             'stage' => $stage,
@@ -120,18 +117,19 @@ class WiFiDogService
         ]);
 
         $gateway = null;
-        if (filled($gwId)) {
-            try {
-                $gateway = $this->gatewayResolver->resolveActive((string) $gwId);
+        try {
+            $gateway = $this->resolveGatewayFromRequest($request, required: false);
+            if ($gateway) {
                 $this->touchGateway($gateway, $request);
-            } catch (HttpException $e) {
-                return $this->deny($stage, [
-                    'reason' => 'unknown_gateway',
-                    'request_gw_id' => $gwId,
-                    'message' => $e->getMessage(),
-                    'session_token_hash' => $token !== '' ? hash('sha256', $token) : null,
-                ]);
             }
+        } catch (HttpException $e) {
+            return $this->deny($stage, [
+                'reason' => 'unknown_gateway',
+                'request_gw_id' => $this->extractGatewayId($request),
+                'request_gw_sn' => $this->param($request, 'gw_sn'),
+                'message' => $e->getMessage(),
+                'session_token_hash' => $token !== '' ? hash('sha256', $token) : null,
+            ]);
         }
 
         // stage=query: Ruijie MAB / roaming status probe. Never trust the request
@@ -176,7 +174,7 @@ class WiFiDogService
         if ($gateway && (int) $session->network_device_id !== (int) $gateway->id) {
             return $this->deny($stage, [
                 'reason' => 'gateway_token_mismatch',
-                'request_gw_id' => $gwId,
+                'request_gw_id' => $this->extractGatewayId($request),
                 'session_gateway_id' => $session->network_device_id,
                 'gateway_id' => $gateway->id,
                 'session_token_hash' => $tokenHash,
@@ -254,25 +252,26 @@ class WiFiDogService
      */
     public function portal(Request $request): Response
     {
-        $gwId = $this->extractGatewayId($request);
         $token = trim((string) $this->param($request, 'token', ''));
         $message = (string) $this->param($request, 'message', '');
+        $mac = filled($this->param($request, 'mac')) ? (string) $this->param($request, 'mac') : null;
 
         $this->trace('portal', $this->requestContext($request, 'portal') + [
             'gateway_message' => $message !== '' ? $message : null,
         ]);
 
         $gateway = null;
-        if (filled($gwId)) {
-            try {
-                $gateway = $this->gatewayResolver->resolveActive((string) $gwId);
+        try {
+            $gateway = $this->resolveGatewayFromRequest($request, required: false);
+            if ($gateway) {
                 $this->touchGateway($gateway, $request);
-            } catch (HttpException $e) {
-                $this->trace('portal.gateway_unknown', [
-                    'request_gw_id' => $gwId,
-                    'message' => $e->getMessage(),
-                ]);
             }
+        } catch (HttpException $e) {
+            $this->trace('portal.gateway_unknown', [
+                'request_gw_id' => $this->extractGatewayId($request),
+                'request_gw_sn' => $this->param($request, 'gw_sn'),
+                'message' => $e->getMessage(),
+            ]);
         }
 
         $session = $token !== '' ? $this->captiveSessionService->findByToken($token) : null;
@@ -295,17 +294,31 @@ class WiFiDogService
             return $this->portalFailurePage($message, $session, $gateway);
         }
 
-        if (! $session && $gateway) {
-            $session = $this->captiveSessionService->resolveOrCreate($gateway, [
-                'ip' => $request->query('ip'),
-                'mac' => $request->query('mac'),
-                'ssid' => $request->query('ssid'),
-                'gw_address' => $request->query('gw_address'),
-                'gw_port' => $request->query('gw_port'),
-                'url' => $request->query('url'),
-            ]);
+        // Ruijie success redirect is often /portal/?gw_id=&mac= without token.
+        // Prefer the already-authenticated session over creating a new pending one.
+        if (! $session && $gateway && $mac) {
+            $session = $this->captiveSessionService->findActiveByMac($gateway, $mac);
+        }
 
-            $this->trace('portal.session_resolved', $this->sessionContext($session));
+        if (! $session && $gateway && $message === '') {
+            // Only create/reuse pending when this is a real portal entry, not a
+            // post-auth success bounce without a known session.
+            if ($token === '' && $mac === null) {
+                return $this->portalFailurePage('denied', null, $gateway);
+            }
+
+            if (! $session) {
+                $session = $this->captiveSessionService->resolveOrCreate($gateway, [
+                    'ip' => $request->query('ip'),
+                    'mac' => $request->query('mac'),
+                    'ssid' => $request->query('ssid'),
+                    'gw_address' => $request->query('gw_address'),
+                    'gw_port' => $request->query('gw_port'),
+                    'url' => $request->query('url'),
+                ]);
+
+                $this->trace('portal.session_resolved', $this->sessionContext($session));
+            }
         }
 
         if ($session?->isAuthenticated()) {
@@ -366,12 +379,10 @@ class WiFiDogService
      */
     public function ping(Request $request): Response
     {
-        $gwId = $this->extractGatewayId($request);
-
         $this->trace('ping', $this->requestContext($request, 'ping'));
 
         try {
-            $gateway = $this->gatewayResolver->resolveActive($gwId);
+            $gateway = $this->resolveGatewayFromRequest($request);
             $this->touchGateway($gateway, $request);
 
             $this->trace('ping.out', [
@@ -393,7 +404,8 @@ class WiFiDogService
             $this->trace('ping.out', [
                 'direction' => 'api->ap',
                 'reason' => 'gateway_rejected',
-                'gw_id' => $gwId,
+                'gw_id' => $this->extractGatewayId($request),
+                'gw_sn' => $this->param($request, 'gw_sn'),
                 'message' => $e->getMessage(),
                 'response_status' => $e->getStatusCode(),
             ]);
@@ -531,7 +543,13 @@ class WiFiDogService
             'path' => '/'.$request->path(),
             'client_ip' => $this->param($request, 'ip') ?? $request->ip(),
             'client_mac' => $this->param($request, 'mac'),
-            'gw_id' => $this->extractGatewayId($request),
+            'gw_id' => $this->param($request, 'gw_id') ?: $this->param($request, 'dev_id'),
+            'gw_sn' => $this->param($request, 'gw_sn'),
+            'gw_address' => $this->param($request, 'gw_address'),
+            'gw_port' => $this->param($request, 'gw_port'),
+            'apmac' => $this->param($request, 'apmac'),
+            'ssid' => $this->param($request, 'ssid'),
+            'vlanid' => $this->param($request, 'vlanid'),
             'token_present' => $token !== '',
             'session_token_hash' => $token !== '' ? hash('sha256', $token) : null,
             'user_agent' => $request->userAgent(),
@@ -642,8 +660,45 @@ class WiFiDogService
     }
 
     /**
+     * Resolve the registered gateway from Ruijie identifiers.
+     *
+     * Tries gw_id, then dev_id, then gw_sn so either MAC or serial can match
+     * network_devices.gateway_id / serial_number.
+     */
+    private function resolveGatewayFromRequest(Request $request, bool $required = true): ?NetworkDevice
+    {
+        $candidates = [];
+        foreach (['gw_id', 'dev_id', 'gw_sn'] as $key) {
+            $value = trim((string) $this->param($request, $key, ''));
+            if ($value !== '' && ! in_array($value, $candidates, true)) {
+                $candidates[] = $value;
+            }
+        }
+
+        if ($candidates === []) {
+            if ($required) {
+                throw new HttpException(400, 'gw_id is required.');
+            }
+
+            return null;
+        }
+
+        $last = null;
+        foreach ($candidates as $id) {
+            try {
+                return $this->gatewayResolver->resolveActive($id);
+            } catch (HttpException $e) {
+                $last = $e;
+            }
+        }
+
+        // Identifiers were supplied but none matched a registered gateway.
+        throw $last ?? new HttpException(404, 'Unknown WiFiDog gateway.');
+    }
+
+    /**
      * WiFiDog v1 sends gw_id; Ruijie also sends gw_sn (serial) and some builds
-     * dev_id. Accept any of them so the gateway resolves.
+     * dev_id. Prefer the first non-empty for logging / single-id contexts.
      */
     private function extractGatewayId(Request $request): string
     {

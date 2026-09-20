@@ -137,7 +137,11 @@ class CaptiveSessionService
      */
     public function findActiveByMac(NetworkDevice $gateway, string $mac): ?CaptiveSession
     {
-        $normalized = $this->normalizeMacOptional($mac);
+        try {
+            $normalized = $this->normalizeMacOptional($mac);
+        } catch (ValidationException) {
+            return null;
+        }
 
         if ($normalized === null) {
             return null;
@@ -284,7 +288,19 @@ class CaptiveSessionService
         }
 
         if ($mac) {
-            $normalized = $this->normalizeMacOptional($mac);
+            try {
+                $normalized = $this->normalizeMacOptional($mac);
+            } catch (ValidationException) {
+                Log::channel('wifidog')->info('wifidog.auth_denied', [
+                    'reason' => 'invalid_mac_format',
+                    'gw_id' => $session->gateway_id,
+                    'gateway_id' => $session->network_device_id,
+                    'session_token_hash' => hash('sha256', $token),
+                ]);
+
+                return false;
+            }
+
             if ($session->client_mac && $normalized && strcasecmp($session->client_mac, $normalized) !== 0) {
                 Log::channel('wifidog')->info('wifidog.auth_denied', [
                     'reason' => 'mac_mismatch',

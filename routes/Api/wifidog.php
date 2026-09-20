@@ -27,8 +27,9 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('wifidog')
     ->middleware('throttle:120,1')
     ->group(function () {
-        Route::match(['get', 'post'], '/login', [WiFiDogController::class, 'login']);
-        Route::match(['get', 'post'], '/auth', [WiFiDogController::class, 'auth']);
-        Route::match(['get', 'post'], '/portal', [WiFiDogController::class, 'portal']);
-        Route::match(['get', 'post'], '/ping', [WiFiDogController::class, 'ping']);
+        // Ruijie builds call both /login and /login/? — register both.
+        foreach (['/login', '/login/', '/auth', '/auth/', '/portal', '/portal/', '/ping', '/ping/'] as $path) {
+            $action = trim($path, '/');
+            Route::match(['get', 'post'], $path, [WiFiDogController::class, $action]);
+        }
     });
