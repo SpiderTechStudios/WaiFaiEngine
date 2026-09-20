@@ -8,6 +8,7 @@ use App\Models\Company;
 use App\Models\Customer;
 use App\Models\InternetPlan;
 use App\Models\NetworkDevice;
+use App\Services\CaptiveSessionService;
 use App\Services\RouterService;
 use Tests\TestCase;
 
@@ -235,7 +236,7 @@ class WiFiDogTest extends TestCase
 
         $this->get('/api/wifidog/auth?stage=login&token='.$pending->token.'&mac=AA:BB:CC:DD:EE:FF&gw_id=323')
             ->assertOk()
-            ->assertSee('Auth: 0', false);
+            ->assertSee('Auth:0', false);
 
         $plan = InternetPlan::query()->create([
             'company_id' => $company->id,
@@ -281,7 +282,7 @@ class WiFiDogTest extends TestCase
 
         $this->get('/api/wifidog/auth?stage=login&token='.$authToken.'&mac=AA:BB:CC:DD:EE:FF&gw_id=323')
             ->assertOk()
-            ->assertSee('Auth: 1', false);
+            ->assertSee('Auth:1', false);
     }
 
     public function test_expired_session_is_not_authorized(): void
@@ -305,7 +306,7 @@ class WiFiDogTest extends TestCase
 
         $this->get('/api/wifidog/auth?stage=login&token='.$token)
             ->assertOk()
-            ->assertSee('Auth: 0', false);
+            ->assertSee('Auth:0', false);
 
         $this->assertDatabaseHas('captive_sessions', [
             'token' => $token,
@@ -454,7 +455,7 @@ class WiFiDogTest extends TestCase
             ->assertRedirect('http://www.google.com');
     }
 
-    public function test_authenticated_login_redirects_to_gateway_auth(): void
+    public function test_login_never_redirects_to_gateway_auth_or_authorizes(): void
     {
         config([
             'captive.portal_url' => 'https://waifai.test/connect',
@@ -485,7 +486,10 @@ class WiFiDogTest extends TestCase
             ->assertRedirect()
             ->headers->get('Location');
 
-        $this->assertStringStartsWith('http://192.168.0.1:2060/wifidog/auth?token=', $location);
+        // /login must send the browser to the portal, never to the gateway.
+        $this->assertStringStartsWith('https://waifai.test/connect?', $location);
+        $this->assertStringNotContainsString('/wifidog/auth', $location);
+        $this->assertStringNotContainsString('Auth:', $location);
         $this->assertDatabaseCount('captive_sessions', 1);
     }
 
@@ -516,7 +520,7 @@ class WiFiDogTest extends TestCase
             'expires_at' => now()->addHour(),
         ])->save();
 
-        $url = app(\App\Services\CaptiveSessionService::class)->gatewayAuthRedirectUrl($session->fresh());
+        $url = app(CaptiveSessionService::class)->gatewayAuthRedirectUrl($session->fresh());
         $this->assertSame('http://192.168.0.1:2060/wifidog/auth?token='.$token, $url);
     }
 
@@ -547,7 +551,7 @@ class WiFiDogTest extends TestCase
         $this->assertSame('192.168.0.22', $session->fresh()->gw_address);
     }
 
-    public function test_bare_wifidog_routes_behave_like_login(): void
+    public function test_login_route_redirects_to_connect_portal(): void
     {
         config([
             'captive.portal_url' => 'https://waifai.test/connect',
@@ -558,13 +562,106 @@ class WiFiDogTest extends TestCase
         $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'spider']);
         $this->createRuijieRouter($company, '323');
 
-        foreach (['/wifidog', '/api/wifidog', '/wifidog/login', '/api/wifidog/login'] as $path) {
-            $location = $this->get($path.'?gw_id=323&ip=192.168.0.35&mac=AA:BB:CC:DD:EE:FF')
-                ->assertRedirect()
-                ->headers->get('Location');
+        $location = $this->get('/api/wifidog/login?gw_id=323&ip=192.168.0.35&mac=AA:BB:CC:DD:EE:FF')
+            ->assertRedirect()
+            ->headers->get('Location');
 
-            $this->assertStringStartsWith('https://waifai.test/connect?', $location, "Failed for {$path}");
-        }
+        $this->assertStringStartsWith('https://waifai.test/connect?', $location);
+    }
+
+    public function test_auth_stage_login_returns_exactly_auth_one_as_plain_text(): void
+    {
+        $owner = $this->createUser();
+        $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'spider']);
+        $router = $this->createRuijieRouter($company, '323');
+
+        $token = str_repeat('1', 32);
+        CaptiveSession::query()->create([
+            'company_id' => $company->id,
+            'network_device_id' => $router->id,
+            'network_station_id' => $router->network_station_id,
+            'gateway_id' => '323',
+            'client_mac' => 'AA:BB:CC:DD:EE:FF',
+            'client_ip' => '192.168.0.93',
+            'gw_address' => '192.168.0.144',
+            'gw_port' => 2060,
+            'token' => $token,
+            'status' => CaptiveSession::STATUS_AUTHENTICATED,
+            'authenticated_at' => now(),
+            'expires_at' => now()->addHour(),
+        ]);
+
+        $response = $this->withHeaders(['User-Agent' => 'AP 1.0.0'])->get(
+            '/api/wifidog/auth?stage=login&gw_id=323&gw_sn=G1UQ5C8006474&ip=192.168.0.93&mac=AA:BB:CC:DD:EE:FF&token='.$token.'&incoming=0&outgoing=0'
+        );
+
+        $response->assertOk();
+        $this->assertStringStartsWith('text/plain', (string) $response->headers->get('Content-Type'));
+        $this->assertSame('Auth:1', $response->getContent());
+    }
+
+    public function test_auth_stage_logout_disconnects_session_and_returns_auth_zero(): void
+    {
+        $owner = $this->createUser();
+        $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'spider']);
+        $router = $this->createRuijieRouter($company, '323');
+
+        $token = str_repeat('2', 32);
+        $session = CaptiveSession::query()->create([
+            'company_id' => $company->id,
+            'network_device_id' => $router->id,
+            'network_station_id' => $router->network_station_id,
+            'gateway_id' => '323',
+            'client_mac' => 'AA:BB:CC:DD:EE:FF',
+            'client_ip' => '192.168.0.93',
+            'token' => $token,
+            'status' => CaptiveSession::STATUS_AUTHENTICATED,
+            'authenticated_at' => now(),
+            'expires_at' => now()->addHour(),
+        ]);
+
+        $response = $this->get('/api/wifidog/auth?stage=logout&gw_id=323&token='.$token);
+
+        $response->assertOk();
+        $this->assertSame('Auth:0', $response->getContent());
+        $this->assertSame(CaptiveSession::STATUS_DISCONNECTED, $session->fresh()->status);
+    }
+
+    public function test_auth_stage_query_authorizes_only_known_authenticated_mac(): void
+    {
+        $owner = $this->createUser();
+        $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'spider']);
+        $router = $this->createRuijieRouter($company, '323');
+
+        CaptiveSession::query()->create([
+            'company_id' => $company->id,
+            'network_device_id' => $router->id,
+            'network_station_id' => $router->network_station_id,
+            'gateway_id' => '323',
+            'client_mac' => 'AA:BB:CC:DD:EE:FF',
+            'client_ip' => '192.168.0.93',
+            'token' => str_repeat('3', 32),
+            'status' => CaptiveSession::STATUS_AUTHENTICATED,
+            'authenticated_at' => now(),
+            'expires_at' => now()->addHour(),
+        ]);
+
+        $this->assertSame('Auth:1', $this->get('/api/wifidog/auth?stage=query&gw_id=323&mac=AA:BB:CC:DD:EE:FF')->getContent());
+        $this->assertSame('Auth:0', $this->get('/api/wifidog/auth?stage=query&gw_id=323&mac=11:22:33:44:55:66')->getContent());
+    }
+
+    public function test_portal_with_message_denied_renders_failure_page_and_not_auth_one(): void
+    {
+        $owner = $this->createUser();
+        $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'spider']);
+        $this->createRuijieRouter($company, '323');
+
+        $response = $this->get('/api/wifidog/portal?gw_id=323&mac=AA:BB:CC:DD:EE:FF&message=denied');
+
+        $response->assertOk();
+        $this->assertStringStartsWith('text/html', (string) $response->headers->get('Content-Type'));
+        $response->assertSee('Authentication failed');
+        $this->assertStringNotContainsString('Auth:1', (string) $response->getContent());
     }
 
     private function createRuijieRouter(Company $company, string $gwId, string $status = 'active'): NetworkDevice

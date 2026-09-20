@@ -22,7 +22,7 @@ class WiFiDogController extends Controller
         return $this->wiFiDogService->auth($request);
     }
 
-    public function portal(Request $request): RedirectResponse
+    public function portal(Request $request): Response
     {
         return $this->wiFiDogService->portal($request);
     }

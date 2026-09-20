@@ -1,91 +1,34 @@
 <?php
 
 use App\Http\Controllers\Api\WiFiDog\WiFiDogController;
-use App\Http\Controllers\TestWifiDogController;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 
 /*
-| WiFiDog / Ruijie gateway protocol endpoints (no user auth).
+| Production WiFiDog / Ruijie Reyee hotspot endpoints (no user auth).
 |
-| Canonical paths used by gateways: /api/wifidog/*
+| These are the ONLY WiFiDog endpoints. They are called by the Ruijie RAP62-OD
+| (ReyeeOS) external captive portal.
 |
-| IMPORTANT — Ruijie / WiFiDog AuthServer settings:
-|   Hostname = waifai.shereheyangu.com
-|   Path     = /api/wifidog/          ← must NOT include "login"
-|   LoginScriptPathFragment = login/?  (default)
+| Ruijie configures a single Portal Server URL "base" and appends a script
+| fragment to it, so the base must be:
 |
-| WiFiDog concatenates: Path + LoginScriptPathFragment
-|   Correct: /api/wifidog/ + login/?  => /api/wifidog/login/?gw_id=...
-|   Wrong:   /api/wifidog/login/ + login/? => /api/wifidog/login/login/  (404)
+|   https://waifai.shereheyangu.com/api/wifidog
 |
-| After login succeeds, Laravel 302-redirects the phone browser to CAPTIVE_PORTAL_URL
-| (frontend /connect), never back into /api/wifidog/*.
+| which the gateway then extends to:
 |
-| After the gateway authorizes the client it 302-redirects the browser to the
-| auth server's portal/ script (GET /api/wifidog/portal?gw_id=...&token=...).
-| We answer with a redirect to the originally requested URL (or CAPTIVE_PORTAL_SUCCESS_URL)
-| so the customer lands on their destination instead of a 404.
+|   <base>/login   browser -> authentication portal (NO authorization here)
+|   <base>/auth    AP server-to-server -> "Auth:1" / "Auth:0" (plain text)
+|   <base>/portal  browser -> post-auth result / ?message=denied failure page
+|   <base>/ping    AP heartbeat -> "Pong" (plain text)
+|
+| Do not point the AP base at .../api/wifidog/login: that produces doubled
+| paths (login/login) and the server-to-server /auth leg never reaches us.
 */
-// Route::prefix('wifidog')
-//     ->middleware('throttle:120,1')
-//     ->group(function () {
-//         Route::get('/', [WiFiDogController::class, 'login']);
-//         Route::get('/login', [WiFiDogController::class, 'login']);
-//         Route::get('/auth', [WiFiDogController::class, 'auth']);
-//         Route::get('/portal', [WiFiDogController::class, 'portal']);
-//         Route::get('/ping', [WiFiDogController::class, 'ping']);
-
-//         // Compatibility: gateways whose AuthServer Path mistakenly includes
-//         // "login" (e.g. Path=/api/wifidog/login/) call /login/auth, /login/ping,
-//         // etc. Route those to the correct handlers so the client can still be
-//         // authorized even while the AP config is wrong.
-//         Route::get('/login/login', [WiFiDogController::class, 'login']);
-//         Route::get('/login/auth', [WiFiDogController::class, 'auth']);
-//         Route::get('/login/portal', [WiFiDogController::class, 'portal']);
-//         Route::get('/login/ping', [WiFiDogController::class, 'ping']);
-
-//         // Diagnostics: log any path the Ruijie AP calls that we don't handle,
-//         // so a wrong AuthServer Path / script fragment shows up in the log.
-//         Route::any('/{path}', function (Request $request, string $path) {
-//             Log::warning('wifidog.unhandled_route', [
-//                 'path' => $path,
-//                 'method' => $request->method(),
-//                 'query' => $request->query(),
-//                 'user_agent' => $request->userAgent(),
-//             ]);
-
-//             return response('Auth: 0', 200)->header('Content-Type', 'text/plain');
-//         })->where('path', '.*');
-//     });
-
-
-/*
-| Ruijie Reyee WiFiDog Hotspot API wiring.
-|
-| The gateway is configured with a Portal ServiceURL base and appends:
-|   <base>/login/    (browser login / portal)
-|   <base>/auth/     (AP server-to-server verify: stage=login|counters|logout|query)
-|   <base>/portal/   (browser post-auth / ?message=denied)
-|   <base>/ping/     (AP heartbeat)
-|
-| Point the AP at <base> = https://waifai.shereheyangu.com/public/api/wifidog
-| (or https://waifai.shereheyangu.com/api/wifidog once the docroot is public/).
-| The aliases below also cover a base that wrongly includes /login.
-*/
-Route::prefix('wifidog')->group(function () {
-    Route::get('/', [TestWifiDogController::class, 'login']);
-    Route::get('/login', [TestWifiDogController::class, 'login']);
-    Route::get('/auth', [TestWifiDogController::class, 'auth']);
-    Route::get('/portal', [TestWifiDogController::class, 'portal']);
-    Route::get('/portal/accept', [TestWifiDogController::class, 'accept']);
-    Route::get('/ping', [TestWifiDogController::class, 'ping']);
-
-    // Compatibility for a ServiceURL base that includes /login.
-    Route::get('/login/login', [TestWifiDogController::class, 'login']);
-    Route::get('/login/auth', [TestWifiDogController::class, 'auth']);
-    Route::get('/login/portal', [TestWifiDogController::class, 'portal']);
-    Route::get('/login/portal/accept', [TestWifiDogController::class, 'accept']);
-    Route::get('/login/ping', [TestWifiDogController::class, 'ping']);
-});
+Route::prefix('wifidog')
+    ->middleware('throttle:120,1')
+    ->group(function () {
+        Route::match(['get', 'post'], '/login', [WiFiDogController::class, 'login']);
+        Route::match(['get', 'post'], '/auth', [WiFiDogController::class, 'auth']);
+        Route::match(['get', 'post'], '/portal', [WiFiDogController::class, 'portal']);
+        Route::match(['get', 'post'], '/ping', [WiFiDogController::class, 'ping']);
+    });

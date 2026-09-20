@@ -6,6 +6,7 @@ use App\Models\AccessGrant;
 use App\Models\CaptiveSession;
 use App\Models\NetworkDevice;
 use App\Models\NetworkSession;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -335,6 +336,51 @@ class CaptiveSessionService
     }
 
     /**
+     * Record that the gateway acknowledged an already-authenticated session
+     * (WiFiDog /auth stage=login). Never promotes a pending session — the
+     * production portal is the only thing allowed to authenticate a session.
+     */
+    public function recordGatewayAuthorization(CaptiveSession $session, ?string $ip = null): CaptiveSession
+    {
+        if (! $session->isAuthenticated()) {
+            return $session;
+        }
+
+        $session->forceFill([
+            'authenticated_at' => $session->authenticated_at ?: now(),
+            'client_ip' => $ip ?: $session->client_ip,
+            'last_seen_at' => now(),
+        ])->save();
+
+        return $session;
+    }
+
+    /**
+     * WiFiDog /auth stage=logout. Deauthorize the client but keep the historical
+     * session record for reporting.
+     */
+    public function disconnect(CaptiveSession $session): CaptiveSession
+    {
+        $session->forceFill([
+            'status' => CaptiveSession::STATUS_DISCONNECTED,
+            'last_seen_at' => now(),
+        ])->save();
+
+        Log::channel('wifidog')->info('wifidog.captive_session_logged_out', [
+            'gw_id' => $session->gateway_id,
+            'gateway_id' => $session->network_device_id,
+            'network_id' => $session->network_station_id,
+            'client_mac' => $session->client_mac,
+            'client_ip' => $session->client_ip,
+            'logout_at' => $session->last_seen_at?->toIso8601String(),
+            'session_token_hash' => hash('sha256', $session->token),
+            'decision' => 'logged_out',
+        ]);
+
+        return $session;
+    }
+
+    /**
      * @param  array<string, mixed>  $extra  Additional query params (e.g. mac, ip, gw_address, gw_port).
      */
     public function portalRedirectUrl(CaptiveSession $session, array $extra = []): string
@@ -532,7 +578,7 @@ class CaptiveSessionService
         return max(1, (int) config('captive.session_ttl_minutes', 10));
     }
 
-    private function extendAuthenticatedExpiry(NetworkSession $hotspotSession): \Carbon\CarbonInterface
+    private function extendAuthenticatedExpiry(NetworkSession $hotspotSession): CarbonInterface
     {
         $hotspotSession->loadMissing('accessGrant');
         $grantExpiry = $hotspotSession->accessGrant?->expires_at;
