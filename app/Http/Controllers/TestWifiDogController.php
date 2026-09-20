@@ -111,6 +111,14 @@ class TestWifiDogController extends Controller
         ]);
 
         $token = trim((string) $request->query('token', ''));
+        $message = trim((string) $request->query('message', ''));
+
+        // Ruijie's message script (e.g. auth failure) also points here with
+        // ?message=denied and no token. Render the gateway message instead of
+        // failing with "token is required".
+        if ($token === '' && $message !== '') {
+            return $this->gatewayMessagePage($request, $message);
+        }
 
         if ($token === '') {
             return response()->json([
@@ -169,6 +177,79 @@ class TestWifiDogController extends Controller
             <li>Session ID: {$sessionId}</li>
         </ul>
         <a class="btn" href="{$acceptUrl}">ACCEPT TEST CLIENT</a>
+    </div>
+</body>
+</html>
+HTML;
+
+        return response($html, 200)->header('Content-Type', 'text/html');
+    }
+
+    /**
+     * Renders the gateway's message script page (e.g. ?message=denied).
+     */
+    private function gatewayMessagePage(Request $request, string $message)
+    {
+        $gwId = (string) $request->query('gw_id', '');
+        $clientIp = (string) $request->query('ip', '');
+        $clientMac = (string) $request->query('mac', '');
+
+        Log::info('WIFIDOG PORTAL MESSAGE', [
+            'message' => $message,
+            'gw_id' => $gwId,
+            'client_mac' => $clientMac,
+            'client_ip' => $clientIp,
+        ]);
+
+        $restartUrl = e(url('/api/wifidog/login').'?'.http_build_query(array_filter([
+            'gw_id' => $gwId !== '' ? $gwId : null,
+            'gw_sn' => $request->query('gw_sn'),
+            'gw_address' => $request->query('gw_address'),
+            'gw_port' => $request->query('gw_port'),
+            'ip' => $clientIp !== '' ? $clientIp : null,
+            'mac' => $clientMac !== '' ? $clientMac : null,
+            'url' => $request->query('url'),
+        ], fn ($value) => $value !== null && $value !== '')));
+
+        $messageHtml = e($message);
+        $gwIdHtml = e($gwId);
+        $clientIpHtml = e($clientIp);
+        $clientMacHtml = e($clientMac);
+
+        $html = <<<HTML
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>WaiFai Test Portal</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+               background: #f1f5f9; color: #0f172a; margin: 0; padding: 24px; }
+        .card { max-width: 480px; margin: 0 auto; background: #fff; border-radius: 14px;
+                padding: 22px; box-shadow: 0 1px 3px rgba(15,23,42,.08); }
+        h1 { margin: 0 0 6px; font-size: 22px; }
+        .msg { display: inline-block; background: #fee2e2; color: #b91c1c; font-weight: 700;
+               border-radius: 999px; padding: 3px 10px; font-size: 13px; }
+        p { color: #475569; }
+        ul { padding-left: 18px; color: #334155; font-size: 14px; }
+        a.btn { display: block; text-align: center; background: #0F4C81; color: #fff;
+                text-decoration: none; padding: 14px; border-radius: 10px; font-weight: 700; margin-top: 8px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>WaiFai Test Portal</h1>
+        <p>Gateway message: <span class="msg">{$messageHtml}</span></p>
+        <p>The Ruijie gateway redirected the browser here without a session token,
+           which means it did not authorize the client (it never reached our
+           <code>/api/wifidog/auth</code>). Check the AP AuthServer path/URL.</p>
+        <ul>
+            <li>Gateway ID: {$gwIdHtml}</li>
+            <li>Client IP: {$clientIpHtml}</li>
+            <li>Client MAC: {$clientMacHtml}</li>
+        </ul>
+        <a class="btn" href="{$restartUrl}">Restart test</a>
     </div>
 </body>
 </html>
