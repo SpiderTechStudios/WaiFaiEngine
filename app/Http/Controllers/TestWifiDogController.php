@@ -14,7 +14,8 @@ class TestWifiDogController extends Controller
     public function __construct(
         private CaptiveSessionService $captiveSessionService,
         private GatewayResolver $gatewayResolver,
-    ) {}
+    ) {
+    }
 
     /**
      * WiFiDog login (browser entry point).
@@ -79,7 +80,7 @@ class TestWifiDogController extends Controller
 
         $query = http_build_query(['token' => $token]);
         if ($url !== '') {
-            $query .= '&url='.rawurlencode($url);
+            $query .= '&url=' . rawurlencode($url);
         }
 
         $gatewayAuthUrl = "http://{$gwAddress}:{$gwPort}/wifidog/auth?{$query}";
@@ -104,7 +105,8 @@ class TestWifiDogController extends Controller
     {
         Log::info('call from Auth', ['request' => $request->all()]);
 
-        return 'Auth: 1';
+        // return 'Auth: 1';
+        return ['Auth' => 1];
     }
 
     /**
@@ -127,7 +129,7 @@ class TestWifiDogController extends Controller
             }
         }
 
-        if ($target === '' || ! preg_match('#^https?://#i', $target)) {
+        if ($target === '' || !preg_match('#^https?://#i', $target)) {
             $target = (string) config('captive.portal_success_url', 'http://www.google.com');
         }
 
