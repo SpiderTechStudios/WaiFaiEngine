@@ -65,6 +65,7 @@ Route::prefix('wifidog')->group(function () {
     Route::get('/login', [TestWifiDogController::class, 'login']);
     Route::get('/auth', [TestWifiDogController::class, 'auth']);
     Route::get('/portal', [TestWifiDogController::class, 'portal']);
+    Route::get('/portal/accept', [TestWifiDogController::class, 'accept']);
     Route::get('/ping', [TestWifiDogController::class, 'ping']);
 
     // End-to-end guarantee test (legacy/flow.png): login -> granted -> verify -> portal.
