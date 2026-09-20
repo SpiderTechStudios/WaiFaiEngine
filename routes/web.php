@@ -20,15 +20,15 @@ Route::get('/', function () {
 Route::get('/connect', [CaptivePortalController::class, 'show'])->name('captive.connect');
 
 /*
-| WiFiDog auth-server HTTP interface (exactly per the WiFiDog protocol spec):
+| Ruijie Reyee WiFiDog Hotspot API (spec-correct endpoints).
 |
-|   GET /login   browser  -> 302 to http://{gw_address}:{gw_port}/wifidog/auth?token=...&url=...
-|   GET /auth    AP (s2s) -> "Auth: 1" / "Auth: 0" (text/plain)
-|   GET /ping    AP (s2s) -> "Pong"
-|   GET /portal  browser  -> 302 (post-auth / message landing)
+|   GET /login   browser -> portal (payment / connect page)
+|   GET /auth    AP (s2s) -> {"auth":1|0} for Ruijie APs, else "Auth: 1|0"
+|   GET /ping    AP (s2s) -> Pong
+|   GET /portal  browser -> post-auth / ?message=denied landing
 |
-| Also exposed under /api/wifidog/* and /wifidog/* so any gateway base-path
-| configuration reaches the same handlers.
+| Exposed at the root (base = https://host), under /wifidog/* and /api/wifidog/*
+| so any configured ServiceURL base reaches the same handlers.
 */
 Route::middleware('throttle:120,1')->group(function () {
     Route::get('/login', [WiFiDogController::class, 'login']);
@@ -41,4 +41,10 @@ Route::middleware('throttle:120,1')->group(function () {
     Route::get('/wifidog/auth', [WiFiDogController::class, 'auth']);
     Route::get('/wifidog/portal', [WiFiDogController::class, 'portal']);
     Route::get('/wifidog/ping', [WiFiDogController::class, 'ping']);
+
+    // Compatibility for a ServiceURL base that includes /login.
+    Route::get('/login/login', [WiFiDogController::class, 'login']);
+    Route::get('/login/auth', [WiFiDogController::class, 'auth']);
+    Route::get('/login/portal', [WiFiDogController::class, 'portal']);
+    Route::get('/login/ping', [WiFiDogController::class, 'ping']);
 });

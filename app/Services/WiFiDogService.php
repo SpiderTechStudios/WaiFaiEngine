@@ -116,11 +116,64 @@ class WiFiDogService
      */
     public function auth(Request $request): Response
     {
-        $token = trim((string) $request->query('token', ''));
-        $tokenHash = $token !== '' ? hash('sha256', $token) : null;
         $stage = (string) $request->query('stage', 'login');
+        $token = trim((string) $request->query('token', ''));
+        $mac = filled($request->query('mac')) ? (string) $request->query('mac') : null;
+        $ip = filled($request->query('ip')) ? (string) $request->query('ip') : null;
+        $gwId = $request->query('gw_id') ?: $request->query('dev_id');
+        $tokenHash = $token !== '' ? hash('sha256', $token) : null;
 
-        $this->trace('auth.in', $this->requestContext($request, 'auth') + ['stage' => $stage]);
+        $this->trace('auth.in', $this->requestContext($request, 'auth') + [
+            'stage' => $stage,
+            'user_agent' => $request->userAgent(),
+            'referer' => $request->headers->get('referer'),
+        ]);
+
+        $gateway = null;
+
+        if (filled($gwId)) {
+            try {
+                $gateway = $this->gatewayResolver->resolveActive((string) $gwId);
+                $this->touchGateway($gateway, $request);
+            } catch (HttpException $e) {
+                $this->trace('auth.out', [
+                    'direction' => 'api->ap',
+                    'stage' => $stage,
+                    'auth_code' => 0,
+                    'reason' => 'unknown_gateway',
+                    'request_gw_id' => $gwId,
+                    'message' => $e->getMessage(),
+                ]);
+
+                return $this->authResponse(0, $request);
+            }
+        }
+
+        // Ruijie MAB / roaming status query: no token, look the client up by MAC.
+        if ($stage === 'query') {
+            $session = ($gateway && $mac)
+                ? $this->captiveSessionService->findActiveByMac($gateway, $mac)
+                : null;
+
+            $allowed = $session !== null
+                && $this->captiveSessionService->authorizeToken((string) $session->token, $mac, $ip);
+
+            $this->trace('auth.out', [
+                'direction' => 'api->ap',
+                'stage' => $stage,
+                'auth_code' => $allowed ? 1 : 0,
+                'reason' => $allowed ? 'query_authenticated' : 'query_not_authenticated',
+                'captive_session_id' => $session?->id,
+                'client_mac' => $mac,
+                'session_token_hash' => $session ? hash('sha256', $session->token) : null,
+            ]);
+
+            return $this->authResponse(
+                $allowed ? 1 : 0,
+                $request,
+                $allowed && $session ? ['token' => $session->token] : [],
+            );
+        }
 
         if ($token === '') {
             $this->trace('auth.out', [
@@ -130,7 +183,7 @@ class WiFiDogService
                 'reason' => 'empty_token',
             ]);
 
-            return $this->authResponse(0);
+            return $this->authResponse(0, $request);
         }
 
         $session = $this->captiveSessionService->findByToken($token);
@@ -155,39 +208,19 @@ class WiFiDogService
                 : null,
         ]);
 
-        $gwId = $request->query('gw_id') ?: $request->query('dev_id');
+        if ($gateway && $session && (int) $session->network_device_id !== (int) $gateway->id) {
+            $this->trace('auth.out', [
+                'direction' => 'api->ap',
+                'stage' => $stage,
+                'auth_code' => 0,
+                'reason' => 'gateway_token_mismatch',
+                'request_gw_id' => $gwId,
+                'session_gateway_id' => $session->network_device_id,
+                'gateway_id' => $gateway->id,
+                'session_token_hash' => $tokenHash,
+            ]);
 
-        if (filled($gwId)) {
-            try {
-                $gateway = $this->gatewayResolver->resolveActive((string) $gwId);
-                $this->touchGateway($gateway, $request);
-
-                if ($session && (int) $session->network_device_id !== (int) $gateway->id) {
-                    $this->trace('auth.out', [
-                        'direction' => 'api->ap',
-                        'stage' => $stage,
-                        'auth_code' => 0,
-                        'reason' => 'gateway_token_mismatch',
-                        'request_gw_id' => $gwId,
-                        'session_gateway_id' => $session->network_device_id,
-                        'gateway_id' => $gateway->id,
-                        'session_token_hash' => $tokenHash,
-                    ]);
-
-                    return $this->authResponse(0);
-                }
-            } catch (HttpException $e) {
-                $this->trace('auth.out', [
-                    'direction' => 'api->ap',
-                    'stage' => $stage,
-                    'auth_code' => 0,
-                    'reason' => 'unknown_gateway',
-                    'request_gw_id' => $gwId,
-                    'message' => $e->getMessage(),
-                ]);
-
-                return $this->authResponse(0);
-            }
+            return $this->authResponse(0, $request);
         }
 
         if ($stage === 'logout') {
@@ -207,14 +240,11 @@ class WiFiDogService
                 'session_token_hash' => $tokenHash,
             ]);
 
-            return $this->authResponse(0);
+            return $this->authResponse(0, $request);
         }
 
-        $allowed = $this->captiveSessionService->authorizeToken(
-            $token,
-            filled($request->query('mac')) ? (string) $request->query('mac') : null,
-            filled($request->query('ip')) ? (string) $request->query('ip') : null,
-        );
+        // stage=login (default) and stage=counters both require a valid session.
+        $allowed = $this->captiveSessionService->authorizeToken($token, $mac, $ip);
 
         $this->trace('auth.out', [
             'direction' => 'api->ap',
@@ -223,12 +253,12 @@ class WiFiDogService
             'decision' => $allowed ? 'authorized' : 'denied',
             'captive_session_id' => $session?->id,
             'session_status' => $session?->status,
-            'client_mac' => $request->query('mac'),
-            'client_ip' => $request->query('ip'),
+            'client_mac' => $mac,
+            'client_ip' => $ip,
             'session_token_hash' => $tokenHash,
         ]);
 
-        return $this->authResponse($allowed ? 1 : 0);
+        return $this->authResponse($allowed ? 1 : 0, $request);
     }
 
     /**
@@ -353,8 +383,13 @@ class WiFiDogService
                 'gateway_id' => $gateway->id,
                 'network_id' => $gateway->network_station_id,
                 'gw_id' => $gateway->gateway_id,
+                'dev_model' => $request->query('dev_model'),
+                'dev_softversion' => $request->query('dev_softversion'),
                 'sys_uptime' => $request->query('sys_uptime'),
+                'sys_memfree' => $request->query('sys_memfree'),
+                'sys_load' => $request->query('sys_load'),
                 'wifidog_uptime' => $request->query('wifidog_uptime'),
+                'user_agent' => $request->userAgent(),
                 'response_status' => 200,
             ]);
         } catch (HttpException $e) {
@@ -373,12 +408,19 @@ class WiFiDogService
     }
 
     /**
-     * The gateway daemon sends "User-Agent: WiFiDog <version>" for its
-     * server-to-server auth/ping calls; everything else is the phone browser.
+     * The gateway daemon calls server-to-server. Ruijie/Reyee APs send
+     * "User-Agent: AP 1.0.0"; classic WiFiDog sends "WiFiDog <version>".
+     * Everything else is the phone browser.
      */
     private function caller(Request $request): string
     {
-        return str_contains((string) $request->userAgent(), 'WiFiDog') ? 'ap' : 'mobile';
+        $userAgent = (string) $request->userAgent();
+
+        if (preg_match('/^(AP\s|Ruijie|Reyee|MCP|WMC)/i', $userAgent) || str_contains($userAgent, 'WiFiDog')) {
+            return 'ap';
+        }
+
+        return 'mobile';
     }
 
     private function traceKey(Request $request): string
@@ -536,9 +578,25 @@ class WiFiDogService
         return trim((string) $request->query('dev_id', ''));
     }
 
-    private function authResponse(int $code): Response
+    /**
+     * Ruijie Reyee APs send "User-Agent: AP 1.0.0" and support both the classic
+     * plain-text "Auth: 1" and the recommended JSON {"auth":1}. Classic WiFiDog
+     * gateways only understand the plain-text form, so negotiate by caller.
+     *
+     * @param  array<string, mixed>  $extra
+     */
+    private function authResponse(int $code, ?Request $request = null, array $extra = []): Response
     {
-        // WiFiDog protocol: plain text "Auth: 1" (login) / "Auth: 0".
+        $request ??= request();
+        $userAgent = (string) ($request?->userAgent() ?? '');
+
+        $wantsJson = ($request !== null && $request->expectsJson())
+            || (bool) preg_match('/^(AP\s|Ruijie|Reyee|MCP|WMC)/i', $userAgent);
+
+        if ($wantsJson) {
+            return response()->json(array_merge(['auth' => $code], $extra));
+        }
+
         return response('Auth: '.$code, 200)->header('Content-Type', 'text/plain');
     }
 }

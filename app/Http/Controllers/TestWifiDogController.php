@@ -2,8 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AccessGrant;
+use App\Models\CaptiveSession;
+use App\Models\Customer;
+use App\Models\InternetPlan;
 use App\Services\CaptiveSessionService;
 use App\Services\GatewayResolver;
+use App\Services\WiFiDogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -12,13 +17,14 @@ class TestWifiDogController extends Controller
     public function __construct(
         private CaptiveSessionService $captiveSessionService,
         private GatewayResolver $gatewayResolver,
+        private WiFiDogService $wiFiDogService,
     ) {}
 
     /**
-     * WiFiDog login: resolve/create the captive session and redirect the browser
-     * straight to the gateway's local auth URL.
+     * Portal login entry (Ruijie <ServiceURL>/login/).
      *
-     *   302 -> http://{gw_address}:{gw_port}/wifidog/auth?token=...&url=...
+     * Creates/reuses the captive session and redirects the browser to the test
+     * portal page, which shows the client context and an ACCEPT button.
      */
     public function login(Request $request)
     {
@@ -48,14 +54,19 @@ class TestWifiDogController extends Controller
             'url' => $url !== '' ? $url : null,
         ]);
 
-        $gatewayAuthUrl = $this->gatewayAuthUrl(
-            $gwAddress,
-            $gwPort,
-            $session->token,
-            $url !== '' ? $url : $session->requested_url,
-        );
+        $portalUrl = url('/api/wifidog/portal').'?'.http_build_query(array_filter([
+            'token' => $session->token,
+            'gw_id' => $gwId !== '' ? $gwId : $gateway->gateway_id,
+            'gw_sn' => $request->query('gw_sn'),
+            'gw_address' => $gwAddress !== '' ? $gwAddress : null,
+            'gw_port' => $gwPort,
+            'ip' => $session->client_ip,
+            'mac' => $session->client_mac,
+            'ssid' => $session->ssid,
+            'url' => $url !== '' ? $url : $session->requested_url,
+        ], fn ($value) => $value !== null && $value !== ''));
 
-        Log::info('WIFIDOG LOGIN -> GATEWAY AUTH', [
+        Log::info('WIFIDOG LOGIN -> PORTAL', [
             'gw_id' => $gwId,
             'gw_address' => $gwAddress,
             'gw_port' => $gwPort,
@@ -63,15 +74,15 @@ class TestWifiDogController extends Controller
             'client_mac' => $session->client_mac,
             'client_ip' => $session->client_ip,
             'session_token_hash' => hash('sha256', $session->token),
-            'redirect_to' => preg_replace('/([?&]token=)[^&]+/i', '$1***', $gatewayAuthUrl),
+            'redirect_to' => preg_replace('/([?&]token=)[^&]+/i', '$1***', $portalUrl),
         ]);
 
-        return redirect()->away($gatewayAuthUrl);
+        return redirect()->away($portalUrl);
     }
 
     /**
-     * WiFiDog portal: show a simple test page with an ACCEPT button that points
-     * to /api/wifidog/portal/accept. When Ruijie sends ?message=... (no token),
+     * Test captive portal page. Shows client context and an ACCEPT button
+     * (/api/wifidog/portal/accept). When Ruijie sends ?message=... (no token),
      * show the gateway message page instead.
      */
     public function portal(Request $request)
@@ -106,6 +117,7 @@ class TestWifiDogController extends Controller
             'captive_session_id' => $session->id,
             'client_mac' => $session->client_mac,
             'client_ip' => $session->client_ip,
+            'session_status' => $session->status,
             'session_token_hash' => hash('sha256', $session->token),
         ]);
 
@@ -113,6 +125,7 @@ class TestWifiDogController extends Controller
         $clientIp = e((string) $session->client_ip);
         $clientMac = e((string) $session->client_mac);
         $sessionId = e((string) $session->id);
+        $status = e((string) $session->status);
 
         $html = <<<HTML
 <!doctype html>
@@ -141,6 +154,7 @@ class TestWifiDogController extends Controller
             <li>Client IP: {$clientIp}</li>
             <li>Client MAC: {$clientMac}</li>
             <li>Session ID: {$sessionId}</li>
+            <li>Status: {$status}</li>
         </ul>
         <a class="btn" href="{$acceptUrl}">ACCEPT TEST CLIENT</a>
     </div>
@@ -152,8 +166,9 @@ HTML;
     }
 
     /**
-     * Portal accept: build another gateway auth URL (exactly like login) and
-     * redirect the browser to it. No payment, no app-level authorization.
+     * The portal has "authenticated" the user: mark the app session authenticated
+     * (test-only access grant if it has none) and redirect the browser to the
+     * gateway's local WiFiDog auth URL, exactly as the Ruijie flow requires.
      */
     public function accept(Request $request)
     {
@@ -179,6 +194,25 @@ HTML;
             ], 404);
         }
 
+        if (! $session->isAuthenticated()) {
+            $grantId = $session->access_grant_id ?: $this->createTestAccessGrant($session)->id;
+
+            $session = $this->captiveSessionService->authenticate($session, [
+                'access_grant_id' => $grantId,
+                'mac_address' => $session->client_mac,
+                'ip_address' => $session->client_ip,
+            ]);
+
+            Log::info('WIFIDOG SESSION AUTHENTICATED', [
+                'captive_session_id' => $session->id,
+                'session_status' => $session->status,
+                'access_grant_id' => $session->access_grant_id,
+                'network_session_id' => $session->network_session_id,
+                'client_mac' => $session->client_mac,
+                'client_ip' => $session->client_ip,
+            ]);
+        }
+
         $address = $session->gw_address ?: $session->networkDevice?->lan_ip;
         $port = $session->gw_port ?: ($session->networkDevice?->wifidog_port ?: 2060);
 
@@ -189,7 +223,7 @@ HTML;
             $session->requested_url,
         );
 
-        Log::info('WIFIDOG PORTAL ACCEPT -> GATEWAY AUTH', [
+        Log::info('WIFIDOG PORTAL -> GATEWAY AUTH', [
             'gateway_address' => $address,
             'gateway_port' => $port,
             'captive_session_id' => $session->id,
@@ -202,22 +236,58 @@ HTML;
         return redirect()->away($gatewayAuthUrl);
     }
 
+    /**
+     * AP verifies the token with the portal (server-to-server). Delegates to the
+     * real WiFiDog service so the test matches production exactly (all stages,
+     * JSON for Ruijie APs / "Auth: N" for classic gateways).
+     */
     public function auth(Request $request)
     {
         Log::info('WIFIDOG AUTH', [
             'request' => $request->all(),
         ]);
 
-        return 'Auth: 1';
+        return $this->wiFiDogService->auth($request);
     }
 
     public function ping(Request $request)
     {
         Log::info('WIFIDOG PING', [
-            'request' => request()->all(),
+            'request' => $request->all(),
         ]);
 
-        return 'Pong';
+        return $this->wiFiDogService->ping($request);
+    }
+
+    /**
+     * Test-only access grant so the app session can be authenticated without the
+     * payment workflow.
+     */
+    private function createTestAccessGrant(CaptiveSession $session): AccessGrant
+    {
+        $plan = InternetPlan::query()
+            ->where('company_id', $session->company_id)
+            ->where('status', 'active')
+            ->orderBy('price')
+            ->firstOrFail();
+
+        $customer = Customer::query()->firstOrCreate(
+            [
+                'company_id' => $session->company_id,
+                'phone' => 'SIM-'.preg_replace('/[^A-Fa-f0-9]/', '', (string) $session->client_mac),
+            ],
+            ['name' => 'Test Client', 'status' => 'active'],
+        );
+
+        return AccessGrant::query()->create([
+            'company_id' => $session->company_id,
+            'customer_id' => $customer->id,
+            'internet_plan_id' => $plan->id,
+            'source' => 'simulator',
+            'starts_at' => now(),
+            'expires_at' => now()->addHour(),
+            'status' => 'active',
+        ]);
     }
 
     /**
@@ -291,7 +361,7 @@ HTML;
         <h1>WaiFai Test Portal</h1>
         <p>Gateway message: <span class="msg">{$messageHtml}</span></p>
         <p>The gateway redirected the browser here without a session token, so our
-           <code>/api/wifidog/auth</code> was never called (no <code>WIFIDOG AUTH</code> log).</p>
+           <code>/api/wifidog/auth</code> was not called with <code>stage=login</code>.</p>
         <ul>
             <li>Gateway ID: {$gwIdHtml}</li>
             <li>Client IP: {$clientIpHtml}</li>

@@ -61,10 +61,31 @@ use Illuminate\Support\Facades\Route;
 //     });
 
 
+/*
+| Ruijie Reyee WiFiDog Hotspot API wiring.
+|
+| The gateway is configured with a Portal ServiceURL base and appends:
+|   <base>/login/    (browser login / portal)
+|   <base>/auth/     (AP server-to-server verify: stage=login|counters|logout|query)
+|   <base>/portal/   (browser post-auth / ?message=denied)
+|   <base>/ping/     (AP heartbeat)
+|
+| Point the AP at <base> = https://waifai.shereheyangu.com/public/api/wifidog
+| (or https://waifai.shereheyangu.com/api/wifidog once the docroot is public/).
+| The aliases below also cover a base that wrongly includes /login.
+*/
 Route::prefix('wifidog')->group(function () {
+    Route::get('/', [TestWifiDogController::class, 'login']);
     Route::get('/login', [TestWifiDogController::class, 'login']);
     Route::get('/auth', [TestWifiDogController::class, 'auth']);
     Route::get('/portal', [TestWifiDogController::class, 'portal']);
     Route::get('/portal/accept', [TestWifiDogController::class, 'accept']);
     Route::get('/ping', [TestWifiDogController::class, 'ping']);
+
+    // Compatibility for a ServiceURL base that includes /login.
+    Route::get('/login/login', [TestWifiDogController::class, 'login']);
+    Route::get('/login/auth', [TestWifiDogController::class, 'auth']);
+    Route::get('/login/portal', [TestWifiDogController::class, 'portal']);
+    Route::get('/login/portal/accept', [TestWifiDogController::class, 'accept']);
+    Route::get('/login/ping', [TestWifiDogController::class, 'ping']);
 });
