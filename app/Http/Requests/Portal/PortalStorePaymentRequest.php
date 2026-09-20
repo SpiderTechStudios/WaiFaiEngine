@@ -22,7 +22,7 @@ class PortalStorePaymentRequest extends FormRequest
             'customer_phone' => ['required', 'string', 'max:50'],
             'customer_email' => ['nullable', 'email'],
             'payment_method' => ['nullable', 'string', 'max:50'],
-            'captive_session' => ['nullable', 'string', 'size:64'],
+            'captive_session' => ['nullable', 'string', 'size:32'],
         ];
     }
 }

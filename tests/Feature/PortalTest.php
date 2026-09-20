@@ -129,7 +129,7 @@ class PortalTest extends TestCase
             'internet_plan_id' => $packageId,
             'customer_phone' => '0711987654',
             'customer_name' => 'Optional',
-            'captive_session' => str_repeat('a', 64),
+            'captive_session' => str_repeat('a', 32),
         ])->assertCreated()
             ->assertJsonPath('data.status', 'pending')
             ->assertJsonPath('data.provider', 'palmpesa')

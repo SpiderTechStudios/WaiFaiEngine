@@ -28,7 +28,7 @@ class PortalStoreSessionRequest extends FormRequest
             'network_ssid_id' => ['nullable', 'integer'],
             'session_id' => ['nullable', 'string', 'max:255'],
             'metadata' => ['nullable', 'array'],
-            'captive_session' => ['nullable', 'string', 'size:64'],
+            'captive_session' => ['nullable', 'string', 'size:32'],
         ];
     }
 

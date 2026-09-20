@@ -13,7 +13,7 @@ class CaptiveDocumentation
         summary: 'Resolve a captive portal session by token',
         description: 'Public frontend API. Returns safe network/gateway/client context for the connect portal. Network is bound to the session created by WiFiDog login — do not trust subdomain from the URL alone for authorization.',
         parameters: [
-            new OA\Parameter(name: 'token', in: 'path', required: true, schema: new OA\Schema(type: 'string', minLength: 64, maxLength: 64)),
+            new OA\Parameter(name: 'token', in: 'path', required: true, schema: new OA\Schema(type: 'string', minLength: 32, maxLength: 32)),
         ],
         responses: [
             new OA\Response(response: 200, description: 'Captive session', content: new OA\JsonContent(ref: '#/components/schemas/CaptiveSessionResponse')),
@@ -29,7 +29,7 @@ class CaptiveDocumentation
         summary: 'Authorize a captive session after voucher or payment',
         description: 'Marks the captive session authenticated, creates a hotspot NetworkSession, and returns gateway_auth_url for the client to hit the gateway WiFiDog auth endpoint.',
         parameters: [
-            new OA\Parameter(name: 'token', in: 'path', required: true, schema: new OA\Schema(type: 'string', minLength: 64, maxLength: 64)),
+            new OA\Parameter(name: 'token', in: 'path', required: true, schema: new OA\Schema(type: 'string', minLength: 32, maxLength: 32)),
         ],
         requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(properties: [
             new OA\Property(property: 'access_grant_id', type: 'integer', nullable: true),

@@ -54,7 +54,7 @@ class WifiDogSimulatorTest extends TestCase
             ->assertJsonPath('steps.4_verify_token.response', 'Auth: 1');
 
         $token = (string) $response->json('steps.2_login.token');
-        $this->assertMatchesRegularExpression('/^[a-f0-9]{64}$/', $token);
+        $this->assertMatchesRegularExpression('/^[a-f0-9]{32}$/', $token);
 
         // The AP's verify-token call must approve.
         $this->get('/api/wifidog/auth?stage=login&gw_id=SIMGW001&token='.$token.'&mac=AA:BB:CC:DD:EE:FF&ip=192.168.0.50')

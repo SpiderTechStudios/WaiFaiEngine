@@ -498,7 +498,8 @@ class CaptiveSessionService
 
     private function generateToken(): string
     {
-        return Str::lower(bin2hex(random_bytes(32)));
+        // 16 random bytes => 32 hex characters.
+        return Str::lower(bin2hex(random_bytes(16)));
     }
 
     private function ttlMinutes(): int

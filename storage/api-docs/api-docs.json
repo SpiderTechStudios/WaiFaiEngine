@@ -829,8 +829,8 @@
                         "required": true,
                         "schema": {
                             "type": "string",
-                            "maxLength": 64,
-                            "minLength": 64
+                            "maxLength": 32,
+                            "minLength": 32
                         }
                     }
                 ],
@@ -873,8 +873,8 @@
                         "required": true,
                         "schema": {
                             "type": "string",
-                            "maxLength": 64,
-                            "minLength": 64
+                            "maxLength": 32,
+                            "minLength": 32
                         }
                     }
                 ],
@@ -6924,7 +6924,7 @@
                                         "nullable": true
                                     },
                                     "captive_session": {
-                                        "description": "64-char token from WiFiDog login redirect (?session=)",
+                                        "description": "32-char token from WiFiDog login redirect (?session=)",
                                         "type": "string",
                                         "nullable": true
                                     }
@@ -7064,7 +7064,7 @@
                                         "nullable": true
                                     },
                                     "captive_session": {
-                                        "description": "64-char token from WiFiDog login",
+                                        "description": "32-char token from WiFiDog login",
                                         "type": "string",
                                         "nullable": true
                                     },
@@ -7166,7 +7166,7 @@
                                         "nullable": true
                                     },
                                     "captive_session": {
-                                        "description": "64-char token from WiFiDog login redirect",
+                                        "description": "32-char token from WiFiDog login redirect",
                                         "type": "string",
                                         "nullable": true
                                     }

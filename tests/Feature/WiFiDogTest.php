@@ -82,7 +82,7 @@ class WiFiDogTest extends TestCase
         $this->assertStringNotContainsString('/api/wifidog', $location);
         $this->assertStringNotContainsString('/login/login', $location);
         $this->assertStringContainsString('subdomain=spider', $location);
-        $this->assertMatchesRegularExpression('/session=[a-f0-9]{64}/', $location);
+        $this->assertMatchesRegularExpression('/session=[a-f0-9]{32}/', $location);
 
         $this->assertDatabaseCount('captive_sessions', 1);
         $this->assertDatabaseHas('captive_sessions', [
@@ -228,7 +228,7 @@ class WiFiDogTest extends TestCase
             'client_ip' => '192.168.0.35',
             'gw_address' => '192.168.0.1',
             'gw_port' => 2060,
-            'token' => str_repeat('a', 64),
+            'token' => str_repeat('a', 32),
             'status' => CaptiveSession::STATUS_PENDING,
             'expires_at' => now()->addMinutes(10),
         ]);
@@ -262,7 +262,7 @@ class WiFiDogTest extends TestCase
             'status' => 'active',
         ]);
 
-        $authToken = str_repeat('b', 64);
+        $authToken = str_repeat('b', 32);
         CaptiveSession::query()->create([
             'company_id' => $company->id,
             'network_device_id' => $router->id,
@@ -290,7 +290,7 @@ class WiFiDogTest extends TestCase
         $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'spider']);
         $router = $this->createRuijieRouter($company, '323');
 
-        $token = str_repeat('c', 64);
+        $token = str_repeat('c', 32);
         CaptiveSession::query()->create([
             'company_id' => $company->id,
             'network_device_id' => $router->id,
@@ -380,7 +380,7 @@ class WiFiDogTest extends TestCase
 
         $this->assertStringStartsWith('https://waifai.test/connect?', $location);
         $this->assertStringContainsString('subdomain=spider', $location);
-        $this->assertMatchesRegularExpression('/session=[a-f0-9]{64}/', $location);
+        $this->assertMatchesRegularExpression('/session=[a-f0-9]{32}/', $location);
         $this->assertStringNotContainsString('google.com', $location);
         $this->assertDatabaseCount('captive_sessions', 1);
         $this->assertDatabaseHas('captive_sessions', [
@@ -400,7 +400,7 @@ class WiFiDogTest extends TestCase
         $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'spider']);
         $router = $this->createRuijieRouter($company, '323');
 
-        $token = str_repeat('e', 64);
+        $token = str_repeat('e', 32);
         CaptiveSession::query()->create([
             'company_id' => $company->id,
             'network_device_id' => $router->id,
@@ -433,7 +433,7 @@ class WiFiDogTest extends TestCase
         $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'spider']);
         $router = $this->createRuijieRouter($company, '323');
 
-        $token = str_repeat('f', 64);
+        $token = str_repeat('f', 32);
         CaptiveSession::query()->create([
             'company_id' => $company->id,
             'network_device_id' => $router->id,
@@ -465,7 +465,7 @@ class WiFiDogTest extends TestCase
         $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'spider']);
         $router = $this->createRuijieRouter($company, '323');
 
-        $token = str_repeat('d', 64);
+        $token = str_repeat('d', 32);
         CaptiveSession::query()->create([
             'company_id' => $company->id,
             'network_device_id' => $router->id,

@@ -76,7 +76,7 @@ class CaptivePortalTest extends TestCase
         $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'juku']);
         $router = $this->createRouter($company, '58b4bb192d35', $owner);
 
-        $token = str_repeat('a', 64);
+        $token = str_repeat('a', 32);
         CaptiveSession::query()->create([
             'company_id' => $company->id,
             'network_device_id' => $router->id,
