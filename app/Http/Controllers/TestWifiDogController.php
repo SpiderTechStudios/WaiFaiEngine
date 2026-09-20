@@ -78,7 +78,7 @@ class TestWifiDogController extends Controller
             'request' => $request->all(),
         ]);
 
-        return ['Auth' => 1];
+        return response("Auth: 1", 200)->header('Content-Type', 'text/plain');
     }
 
     public function portal(Request $request)
@@ -87,7 +87,9 @@ class TestWifiDogController extends Controller
             'request' => request()->all(),
         ]);
 
-        return ['Auth' => 1];
+        $message = $request->input('message');
+
+        return $message;
     }
 
     public function ping(Request $request)
@@ -96,6 +98,6 @@ class TestWifiDogController extends Controller
             'request' => request()->all(),
         ]);
 
-        return 'Pong';
+        return response("Pong", 200)->header('Content-Type', 'text/plain');
     }
 }
