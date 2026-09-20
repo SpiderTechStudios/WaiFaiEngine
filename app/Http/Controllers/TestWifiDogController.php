@@ -12,7 +12,8 @@ class TestWifiDogController extends Controller
     public function __construct(
         private CaptiveSessionService $captiveSessionService,
         private GatewayResolver $gatewayResolver,
-    ) {}
+    ) {
+    }
 
     /**
      * WiFiDog login: resolve/create the captive session and redirect the browser
@@ -50,10 +51,10 @@ class TestWifiDogController extends Controller
 
         $query = http_build_query(['token' => $session->token]);
         if ($url !== '') {
-            $query .= '&url='.rawurlencode($url);
+            $query .= '&url=' . rawurlencode($url);
         }
-        
-        
+
+
         $gatewayAuthUrl = "http://{$gwAddress}:{$gwPort}/wifidog/auth?{$query}";
 
 
@@ -77,7 +78,7 @@ class TestWifiDogController extends Controller
             'request' => $request->all(),
         ]);
 
-        return 'Auth: 1';
+        return ['Auth' => 1];
     }
 
     public function portal(Request $request)
@@ -86,7 +87,7 @@ class TestWifiDogController extends Controller
             'request' => request()->all(),
         ]);
 
-        return 'Auth: 1';
+        return ['Auth' => 1];
     }
 
     public function ping(Request $request)
