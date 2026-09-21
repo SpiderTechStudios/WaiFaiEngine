@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class TestingWifidogController extends Controller
 {
@@ -13,8 +14,10 @@ class TestingWifidogController extends Controller
         $ip = str_replace('.', '', trim($ip));
         $mac = str_replace(':', '', strtolower(trim($mac)));
 
-        return $ip . $mac;
+        // Combine and encode using native PHP Base64
+        return base64_encode($ip . '|' . $mac);
     }
+
 
 
 
@@ -28,6 +31,7 @@ class TestingWifidogController extends Controller
         $mac = $request->mac;
 
         $token = $this->createToken($ip, $mac);
+        
 
         $url = 'http://' . $gwAddress . ':' . $gwPort . '/wifidog/auth?token=' . $token;
 
@@ -38,6 +42,21 @@ class TestingWifidogController extends Controller
     public function auth(Request $request)
     {
         Log::info('WIFIDOG_AUTH_IN : REQUEST ', $request->all());
+        $validator = Validator::make($request->all(), [
+            'token' => 'required|string',
+            'stage' => 'required|string|in:login,logout,counters',
+            'incoming' => 'required_if:stage,counters|integer',
+            'outgoing' => 'required_if:stage,counters|integer',
+            'ip' => 'ip',
+            'mac' => 'string',
+        ]);
+        $userStatus = -1;
+        $status = 400;
+        if (!$validator->fails()) {
+            $userStatus = 1;
+            $status = 200;
+        }
+        return response()->txt('Auth: ' . $userStatus, $status);
     }
 
     public function portal(Request $request)
