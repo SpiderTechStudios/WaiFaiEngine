@@ -45,3 +45,8 @@ Route::prefix('wifidog')->group(function () {
     Route::match(['get', 'post'], '/portal', [TestingWifidogController::class, 'portal']);
     Route::match(['get', 'post'], '/ping', [TestingWifidogController::class, 'ping']);
 });
+
+    Route::match(['get', 'post'], '/login', [TestingWifidogController::class, 'login']);
+    Route::match(['get', 'post'], '/auth', [TestingWifidogController::class, 'auth']);
+    Route::match(['get', 'post'], '/portal', [TestingWifidogController::class, 'portal']);
+    Route::match(['get', 'post'], '/ping', [TestingWifidogController::class, 'ping']);
