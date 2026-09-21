@@ -61,7 +61,7 @@ class TestingWifidogController extends Controller
             $userStatus = 1;
             $status = 200;
         }
-        return response()->txt('Auth: ' . $userStatus, $status);
+        return response('Auth: ' . $userStatus, $status)->header('Content-Type', 'text/plain');
     }
 
     public function portal(Request $request)
