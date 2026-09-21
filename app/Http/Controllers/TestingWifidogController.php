@@ -9,15 +9,21 @@ use Illuminate\Support\Facades\Validator;
 class TestingWifidogController extends Controller
 {
 
+    // protected function createToken(string $ip, string $mac): string
+    // {
+    //     $ip = str_replace('.', '', trim($ip));
+    //     $mac = str_replace(':', '', strtolower(trim($mac)));
+
+    //     // Combine and encode using native PHP Base64
+    //     return base64_encode($ip . '|' . $mac);
+    // }
     protected function createToken(string $ip, string $mac): string
     {
         $ip = str_replace('.', '', trim($ip));
         $mac = str_replace(':', '', strtolower(trim($mac)));
 
-        // Combine and encode using native PHP Base64
-        return base64_encode($ip . '|' . $mac);
+        return $ip . $mac;
     }
-
 
 
 
@@ -31,7 +37,6 @@ class TestingWifidogController extends Controller
         $mac = $request->mac;
 
         $token = $this->createToken($ip, $mac);
-        
 
         $url = 'http://' . $gwAddress . ':' . $gwPort . '/wifidog/auth?token=' . $token;
 
