@@ -38,7 +38,7 @@ class TestingWifidogController extends Controller
 
         $token = $this->createToken($ip, $mac);
 
-        $url = 'http://' . $gwAddress . ':' . $gwPort . '/wifidog/auth?token=' . $token;
+        $url = 'http://' . $gwAddress . ':' . $gwPort . '/auth?token=' . $token;
 
         return redirect()->away($url);
     }
