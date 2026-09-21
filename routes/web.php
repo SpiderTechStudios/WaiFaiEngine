@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\WiFiDog\WiFiDogController;
 use App\Http\Controllers\Web\CaptivePortalController;
 use Illuminate\Support\Facades\Route;
 
@@ -20,3 +21,15 @@ Route::get('/', function () {
 | (/api/wifidog/login, /auth, /portal, /ping).
 */
 Route::get('/connect', [CaptivePortalController::class, 'show'])->name('captive.connect');
+
+Route::prefix('wifidog')
+    ->middleware('throttle:120,1')
+    ->group(function () {
+        // Ruijie builds call both /login and /login/? — register both.
+        foreach (['/login', '/login/', '/auth', '/auth/', '/portal', '/portal/', '/ping', '/ping/'] as $path) {
+            $action = trim($path, '/');
+            Route::match(['get', 'post'], $path, [WiFiDogController::class, $action]);
+        }
+    });
+
+    
