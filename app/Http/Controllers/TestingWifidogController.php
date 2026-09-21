@@ -61,6 +61,12 @@ class TestingWifidogController extends Controller
             $userStatus = 1;
             $status = 200;
         }
+
+        $dt = [
+            'status' => $userStatus,
+            'userStatus' => $userStatus
+        ];
+        Log::info('WIFIDOG_AUTH_RESULT', $dt);
         return response('auth:' . $userStatus, $status)->header('Content-Type', 'text/plain');
     }
 
