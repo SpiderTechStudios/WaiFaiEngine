@@ -18,6 +18,13 @@ return [
     'enrollment_ttl_minutes' => (int) env('PLATFORM_ENROLLMENT_TTL_MINUTES', 4),
 
     /*
+    | How long after an enrollment expires a provider-confirmed payment may still
+    | create the account. Mobile-money approvals often land after the short
+    | reservation TTL; without this window a successful payment would be lost.
+    */
+    'enrollment_payment_grace_minutes' => (int) env('PLATFORM_ENROLLMENT_PAYMENT_GRACE_MINUTES', 60),
+
+    /*
     | Maximum failed platform-subscription payment attempts per enrollment.
     */
     'enrollment_max_failed_attempts' => (int) env('PLATFORM_ENROLLMENT_MAX_FAILED_ATTEMPTS', 3),

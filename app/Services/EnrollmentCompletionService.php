@@ -54,13 +54,20 @@ class EnrollmentCompletionService
             }
 
             if ($enrollment->status === Enrollment::STATUS_EXPIRED || $enrollment->expires_at->isPast()) {
+                if (! $this->withinPaymentGrace($enrollment)) {
+                    $metadata = $payment->metadata ?? [];
+                    $metadata['requires_manual_review'] = true;
+                    $metadata['manual_review_reason'] = 'confirmed_payment_after_grace_window';
+                    $payment->forceFill(['metadata' => $metadata])->save();
+
+                    throw ValidationException::withMessages([
+                        'enrollment' => ['This enrollment has expired and cannot create an account.'],
+                    ]);
+                }
+
                 if ($enrollment->status !== Enrollment::STATUS_EXPIRED) {
                     $enrollment->forceFill(['status' => Enrollment::STATUS_EXPIRED])->save();
                 }
-
-                throw ValidationException::withMessages([
-                    'enrollment' => ['This enrollment has expired and cannot create an account.'],
-                ]);
             }
 
             $this->enrollmentService->assertEmailAvailable($enrollment->email, $enrollment->id);
@@ -118,5 +125,22 @@ class EnrollmentCompletionService
 
             return $enrollment->fresh();
         });
+    }
+
+    /**
+     * A provider-confirmed payment may still create the account for a while
+     * after the reservation TTL lapsed (mobile-money approvals are async).
+     */
+    private function withinPaymentGrace(Enrollment $enrollment): bool
+    {
+        if (! $enrollment->expires_at) {
+            return true;
+        }
+
+        $graceMinutes = max(0, (int) config('platform.enrollment_payment_grace_minutes', 60));
+
+        return now()->lessThanOrEqualTo(
+            $enrollment->expires_at->copy()->addMinutes($graceMinutes)
+        );
     }
 }

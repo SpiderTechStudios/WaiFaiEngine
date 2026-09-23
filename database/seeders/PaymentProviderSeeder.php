@@ -86,13 +86,14 @@ class PaymentProviderSeeder extends Seeder
                 'supports_payouts' => false,
                 'is_active' => true,
                 'credentials' => [],
-                'settings' => [
+                'settings' => array_filter([
                     'driver' => PaymentProvider::SLUG_PALMPESA,
                     'vendor' => config('services.palmpesa.vendor', 'TILL61103867'),
                     'status_check_minutes' => (int) config('services.palmpesa.status_check_minutes', 4),
                     'default_address' => 'Dar es Salaam',
                     'default_postcode' => '11111',
-                ],
+                    'callback_url' => config('services.palmpesa.callback_url'),
+                ], fn ($value) => $value !== null && $value !== ''),
             ]
         );
 

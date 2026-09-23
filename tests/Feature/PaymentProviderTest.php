@@ -2,7 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\Brand;
+use App\Models\Device;
+use App\Models\DeviceCategory;
 use App\Models\Enrollment;
+use App\Models\Order;
 use App\Models\PaymentProvider;
 use App\Models\PlatformPayment;
 use App\Models\User;
@@ -241,6 +245,161 @@ class PaymentProviderTest extends TestCase
             ->assertJsonPath('data.status', 'paid');
 
         $this->assertSame('paid', $payment->fresh()->status);
+    }
+
+    public function test_palmpesa_callback_fulfills_product_purchase_order(): void
+    {
+        config([
+            'services.palmpesa.api_token' => 'test-palmpesa-token',
+            'services.palmpesa.base_url' => 'https://palmpesa.drmlelwa.co.tz',
+        ]);
+
+        $palmpesa = PaymentProvider::query()->where('slug', PaymentProvider::SLUG_PALMPESA)->firstOrFail();
+        $palmpesa->forceFill(['credentials' => [], 'is_active' => true, 'supports_payments' => true])->save();
+        app(PaymentProviderService::class)->setDefaultForPayments($palmpesa->fresh());
+
+        Http::fake([
+            '*/api/palmpesa/initiate' => Http::response([
+                'message' => 'Payment initiated.',
+                'order_id' => 'PALMPESA-SHOP-001',
+            ], 200),
+            '*/api/order-status' => Http::response([
+                'resultcode' => '000',
+                'result' => 'SUCCESS',
+                'data' => [[
+                    'order_id' => 'PALMPESA-SHOP-001',
+                    'amount' => '100000',
+                    'payment_status' => 'COMPLETED',
+                    'currency' => 'TZS',
+                ]],
+            ], 200),
+        ]);
+
+        $owner = $this->createUser();
+        $this->createCompanyFor($owner, 'owner');
+        $headers = $this->authHeaders($owner);
+
+        $brand = Brand::query()->create(['name' => 'Shop Brand', 'slug' => 'shop-brand', 'is_active' => true]);
+        $category = DeviceCategory::query()->create(['name' => 'Shop Category']);
+        $device = Device::query()->create([
+            'name' => 'Office Router',
+            'slug' => 'office-router',
+            'sku' => 'SKU-SHOP-1',
+            'device_category_id' => $category->id,
+            'brand_id' => $brand->id,
+            'price' => 100000,
+            'stock_quantity' => 5,
+            'is_active' => true,
+        ]);
+
+        $this->withHeaders($headers)
+            ->postJson('/api/v1/cart/items', ['device_id' => $device->id, 'quantity' => 1])
+            ->assertOk();
+
+        $checkout = $this->withHeaders($headers)
+            ->postJson('/api/v1/cart/checkout', ['fulfillment_method' => 'delivery', 'phone' => '0712345678'])
+            ->assertCreated()
+            ->assertJsonPath('data.payment.purpose', 'device_purchase');
+
+        $orderId = (int) $checkout->json('data.order.id');
+        $payment = PlatformPayment::query()->where('order_id', $orderId)->firstOrFail();
+
+        $this->assertSame('PALMPESA-SHOP-001', $payment->external_reference);
+
+        $this->postJson('/api/v1/webhooks/payments/palmpesa', [
+            'order_id' => 'PALMPESA-SHOP-001',
+            'payment_status' => 'COMPLETED',
+        ])->assertOk();
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $orderId,
+            'status' => Order::STATUS_PROCESSING,
+            'payment_status' => 'paid',
+        ]);
+        $this->assertSame(4, $device->fresh()->stock_quantity);
+    }
+
+    public function test_palmpesa_callback_completes_enrollment_after_expiry_within_grace(): void
+    {
+        config([
+            'services.palmpesa.api_token' => 'test-palmpesa-token',
+            'services.palmpesa.base_url' => 'https://palmpesa.drmlelwa.co.tz',
+        ]);
+
+        $palmpesa = PaymentProvider::query()->where('slug', PaymentProvider::SLUG_PALMPESA)->firstOrFail();
+        $palmpesa->forceFill(['credentials' => [], 'is_active' => true, 'supports_payments' => true])->save();
+        app(PaymentProviderService::class)->setDefaultForPayments($palmpesa->fresh());
+
+        Http::fake([
+            '*/api/palmpesa/initiate' => Http::response([
+                'message' => 'Payment initiated.',
+                'order_id' => 'PALMPESA-LATE-001',
+            ], 200),
+            '*/api/order-status' => Http::response([
+                'resultcode' => '000',
+                'result' => 'SUCCESS',
+                'data' => [[
+                    'order_id' => 'PALMPESA-LATE-001',
+                    'amount' => '10000',
+                    'payment_status' => 'COMPLETED',
+                ]],
+            ], 200),
+        ]);
+
+        $reference = $this->postJson('/api/v1/auth/register', $this->enrollmentPayload())
+            ->assertCreated()
+            ->json('data.enrollment_reference');
+
+        Enrollment::query()->where('reference', $reference)->update([
+            'expires_at' => now()->subMinute(),
+        ]);
+
+        $this->postJson('/api/v1/webhooks/payments/palmpesa', [
+            'order_id' => 'PALMPESA-LATE-001',
+            'payment_status' => 'COMPLETED',
+        ])->assertOk();
+
+        $this->assertDatabaseHas('users', ['email' => 'jane@example.com']);
+        $this->assertDatabaseHas('signup_intents', ['reference' => $reference, 'status' => 'completed']);
+    }
+
+    public function test_enrollment_payment_status_poll_reconciles_palmpesa_and_completes(): void
+    {
+        config([
+            'services.palmpesa.api_token' => 'test-palmpesa-token',
+            'services.palmpesa.base_url' => 'https://palmpesa.drmlelwa.co.tz',
+        ]);
+
+        $palmpesa = PaymentProvider::query()->where('slug', PaymentProvider::SLUG_PALMPESA)->firstOrFail();
+        $palmpesa->forceFill(['credentials' => [], 'is_active' => true, 'supports_payments' => true])->save();
+        app(PaymentProviderService::class)->setDefaultForPayments($palmpesa->fresh());
+
+        Http::fake([
+            '*/api/palmpesa/initiate' => Http::response([
+                'message' => 'Payment initiated.',
+                'order_id' => 'PALMPESA-POLL-001',
+            ], 200),
+            '*/api/order-status' => Http::response([
+                'resultcode' => '000',
+                'result' => 'SUCCESS',
+                'data' => [[
+                    'order_id' => 'PALMPESA-POLL-001',
+                    'amount' => '10000',
+                    'payment_status' => 'COMPLETED',
+                ]],
+            ], 200),
+        ]);
+
+        $reference = $this->postJson('/api/v1/auth/register', $this->enrollmentPayload())
+            ->assertCreated()
+            ->json('data.enrollment_reference');
+
+        $this->getJson('/api/v1/auth/enrollments/'.$reference.'/payment-status')
+            ->assertOk()
+            ->assertJsonPath('data.enrollment_status', 'completed')
+            ->assertJsonPath('data.account_created', true);
+
+        $this->assertDatabaseHas('users', ['email' => 'jane@example.com']);
     }
 
     public function test_palmpesa_reconciles_still_pending_after_four_minutes_via_order_status(): void

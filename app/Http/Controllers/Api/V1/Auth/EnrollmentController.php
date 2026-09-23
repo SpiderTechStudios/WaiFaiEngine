@@ -36,6 +36,13 @@ class EnrollmentController extends Controller
     {
         $enrollment = $this->enrollmentService->findByReferenceOrFail($reference);
 
+        // Even when the provider callback is delayed or missed, polling must be
+        // able to confirm the charge and create the account.
+        if (! $enrollment->isCompleted()) {
+            $this->platformPaymentService->reconcileEnrollmentPayment($enrollment);
+            $enrollment->refresh();
+        }
+
         if ($enrollment->status === Enrollment::STATUS_EXPIRED) {
             return $this->error(
                 [

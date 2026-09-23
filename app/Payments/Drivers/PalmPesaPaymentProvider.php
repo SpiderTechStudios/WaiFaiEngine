@@ -7,7 +7,9 @@ use App\Models\PlatformPayment;
 use App\Payments\PaymentProviderDriver;
 use App\Payments\ProviderChargeResult;
 use App\Payments\ProviderVerificationResult;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -54,10 +56,9 @@ class PalmPesaPaymentProvider implements PaymentProviderDriver
                 'customer_postcode',
                 $this->provider->setting('default_postcode', '11111')
             ),
-            'callback_url' => (string) $this->provider->setting(
-                'callback_url',
-                rtrim((string) config('app.url'), '/').'/api/v1/webhooks/payments/'.$this->provider->slug
-            ),
+            'callback_url' => (string) ($this->provider->setting('callback_url')
+                ?: config('services.palmpesa.callback_url')
+                ?: rtrim((string) config('app.url'), '/').'/api/v1/webhooks/payments/'.$this->provider->slug),
         ];
 
         $response = Http::withToken($token)
@@ -68,7 +69,7 @@ class PalmPesaPaymentProvider implements PaymentProviderDriver
         if (! $response->successful()) {
             $providerMessage = $this->extractProviderError($response);
 
-            \Illuminate\Support\Facades\Log::warning('PalmPesa initiate failed', [
+            Log::warning('PalmPesa initiate failed', [
                 'status' => $response->status(),
                 'body' => $response->json() ?? $response->body(),
                 'request' => array_merge($body, ['phone' => $body['phone']]),
@@ -132,11 +133,25 @@ class PalmPesaPaymentProvider implements PaymentProviderDriver
 
         $status = strtolower((string) (
             $data['payment_status']
-            ?? $data['status']
             ?? $payload['payment_status']
+            ?? $data['status']
             ?? $payload['status']
+            ?? $data['result']
+            ?? $payload['result']
             ?? 'pending'
         ));
+
+        // PalmPesa reports the terminal state in payment_status; only fall back to
+        // resultcode/result when no explicit payment_status is present.
+        if ($status === '' || $status === 'pending') {
+            $resultCode = (string) ($data['resultcode'] ?? $payload['resultcode'] ?? '');
+            $result = strtolower((string) ($data['result'] ?? $payload['result'] ?? ''));
+            if ($result !== '' && ! in_array($result, ['pending', 'processing'], true)) {
+                $status = $result;
+            } elseif ($resultCode !== '' && $resultCode !== '000') {
+                $status = 'failed';
+            }
+        }
 
         $amount = $data['amount'] ?? $payload['amount'] ?? null;
 
@@ -152,6 +167,10 @@ class PalmPesaPaymentProvider implements PaymentProviderDriver
             txRef: (string) (
                 $data['transaction_id']
                 ?? $payload['transaction_id']
+                ?? $data['referenceid']
+                ?? $payload['referenceid']
+                ?? $data['reference_id']
+                ?? $payload['reference_id']
                 ?? $data['order_id']
                 ?? $payload['order_id']
                 ?? $payload['reference']
@@ -185,9 +204,11 @@ class PalmPesaPaymentProvider implements PaymentProviderDriver
             );
         }
 
+        // Keep this short: the provider requires webhooks to answer within 10s and
+        // verification runs inline before acknowledging the callback.
         $response = Http::withToken($this->apiToken())
             ->acceptJson()
-            ->timeout(30)
+            ->timeout(max(2, (int) config('services.palmpesa.status_timeout', 8)))
             ->post($this->baseUrl().'/api/order-status', [
                 'order_id' => $orderId,
             ]);
@@ -312,7 +333,7 @@ class PalmPesaPaymentProvider implements PaymentProviderDriver
         return $phone.'@guest.'.$host;
     }
 
-    private function extractProviderError(\Illuminate\Http\Client\Response $response): string
+    private function extractProviderError(Response $response): string
     {
         $json = $response->json();
         if (! is_array($json)) {

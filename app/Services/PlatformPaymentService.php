@@ -8,10 +8,13 @@ use App\Models\Enrollment;
 use App\Models\InstallationRequest;
 use App\Models\Order;
 use App\Models\PaymentProvider;
+use App\Models\PaymentTransaction;
 use App\Models\PlatformPayment;
 use App\Payments\PaymentProviderManager;
+use App\Payments\ProviderVerificationResult;
 use App\Support\PlatformPricing;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -292,6 +295,35 @@ class PlatformPaymentService
         return $payment->fresh();
     }
 
+    /**
+     * Re-check the enrollment's latest pending provider payment. Called while the
+     * client polls payment-status so a missed/delayed provider callback still
+     * resolves the payment and completes account creation.
+     */
+    public function reconcileEnrollmentPayment(Enrollment $enrollment): ?PlatformPayment
+    {
+        $payment = $enrollment->payments()
+            ->where('status', PlatformPayment::STATUS_PENDING)
+            ->latest('id')
+            ->first();
+
+        if (! $payment) {
+            return null;
+        }
+
+        try {
+            return $this->reconcileProviderPayment($payment);
+        } catch (\Throwable $e) {
+            Log::debug('Enrollment payment reconcile skipped', [
+                'enrollment_id' => $enrollment->id,
+                'payment_id' => $payment->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return $payment->fresh();
+        }
+    }
+
     public function markPaid(PlatformPayment $payment): PlatformPayment
     {
         $payment = DB::transaction(function () use ($payment) {
@@ -301,7 +333,10 @@ class PlatformPaymentService
                 return $payment;
             }
 
-            if ($payment->status === PlatformPayment::STATUS_CANCELLED) {
+            if (
+                $payment->status === PlatformPayment::STATUS_CANCELLED
+                && ! $this->canReviveCancelledEnrollmentPayment($payment)
+            ) {
                 throw ValidationException::withMessages([
                     'payment' => ['Cancelled payments cannot be marked paid.'],
                 ]);
@@ -404,24 +439,35 @@ class PlatformPaymentService
         }
 
         $parsed = $driver->parseWebhook($payload);
-        $reference = (string) ($parsed->txRef ?: ($payload['reference'] ?? $payload['transaction_reference'] ?? $payload['transaction_id'] ?? ''));
-        $externalReference = (string) ($parsed->providerReference ?: ($payload['order_id'] ?? ''));
 
-        $payment = null;
-        if ($reference !== '') {
-            $payment = PlatformPayment::query()->where('reference', $reference)->first();
-        }
-        if (! $payment && $externalReference !== '') {
-            $payment = PlatformPayment::query()->where('external_reference', $externalReference)->first();
-        }
-        // PalmPesa callbacks often send only provider order_id; if txRef was set to that order_id, try external_reference.
-        if (! $payment && $reference !== '') {
-            $payment = PlatformPayment::query()->where('external_reference', $reference)->first();
-        }
+        Log::info('payment_provider_webhook_received', [
+            'provider' => $providerSlug,
+            'status' => $parsed->status,
+            'tx_ref' => $parsed->txRef,
+            'provider_reference' => $parsed->providerReference,
+            'payload_keys' => array_keys($payload),
+        ]);
+
+        $payment = $this->resolveWebhookPayment($payload, $parsed);
 
         if (! $payment) {
+            Log::warning('payment_provider_webhook_unmatched', [
+                'provider' => $providerSlug,
+                'tx_ref' => $parsed->txRef,
+                'provider_reference' => $parsed->providerReference,
+                'payload' => $payload,
+            ]);
+
             abort(404, 'Payment not found.');
         }
+
+        Log::info('payment_provider_webhook_resolved', [
+            'provider' => $providerSlug,
+            'payment_id' => $payment->id,
+            'reference' => $payment->reference,
+            'purpose' => $payment->resolvePurpose(),
+            'status' => $payment->status,
+        ]);
 
         if ($payment->provider_slug && $payment->provider_slug !== $providerSlug) {
             throw ValidationException::withMessages([
@@ -434,19 +480,7 @@ class PlatformPaymentService
             return $payment;
         }
 
-        if ($parsed->amount !== null && (int) round($parsed->amount) !== (int) round((float) $payment->amount)) {
-            throw ValidationException::withMessages([
-                'amount' => ['Callback amount does not match the payment intent.'],
-            ]);
-        }
-
-        if ($parsed->currency !== null && strtoupper($parsed->currency) !== strtoupper((string) $payment->currency)) {
-            throw ValidationException::withMessages([
-                'currency' => ['Callback currency does not match the payment intent.'],
-            ]);
-        }
-
-        // Prefer live verification when secrets exist.
+        // Prefer live verification when credentials exist; it is authoritative.
         try {
             $verified = $driver->verifyTransaction($payment);
             if ($verified->isSuccessful()) {
@@ -456,6 +490,28 @@ class PlatformPaymentService
             }
         } catch (\Throwable) {
             // Keep webhook parse result if verify is unavailable.
+        }
+
+        // Validate amount/currency against the authoritative (verified) result.
+        if ($parsed->amount !== null && (int) round($parsed->amount) !== (int) round((float) $payment->amount)) {
+            $this->auditLogger->log(
+                'platform_payment_amount_mismatch',
+                null,
+                $payment->company_id,
+                PlatformPayment::class,
+                $payment->id,
+                newValues: ['expected' => (float) $payment->amount, 'reported' => $parsed->amount],
+            );
+
+            throw ValidationException::withMessages([
+                'amount' => ['Callback amount does not match the payment intent.'],
+            ]);
+        }
+
+        if ($parsed->currency !== null && strtoupper($parsed->currency) !== strtoupper((string) $payment->currency)) {
+            throw ValidationException::withMessages([
+                'currency' => ['Callback currency does not match the payment intent.'],
+            ]);
         }
 
         if ($parsed->providerReference) {
@@ -474,6 +530,44 @@ class PlatformPaymentService
         }
 
         return $payment->fresh();
+    }
+
+    /**
+     * Locate the platform payment behind a provider callback. All three payment
+     * types (licensing, internet access, product purchase) share this lookup;
+     * the payment's purpose then decides how it is fulfilled.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function resolveWebhookPayment(array $payload, ProviderVerificationResult $parsed): ?PlatformPayment
+    {
+        $candidates = array_values(array_unique(array_filter([
+            (string) ($parsed->txRef ?? ''),
+            (string) ($parsed->providerReference ?? ''),
+            (string) ($payload['reference'] ?? ''),
+            (string) ($payload['referenceid'] ?? ''),
+            (string) ($payload['reference_id'] ?? ''),
+            (string) ($payload['transaction_id'] ?? ''),
+            (string) ($payload['transaction_reference'] ?? ''),
+            (string) ($payload['order_id'] ?? ''),
+            (string) data_get($payload, 'data.0.order_id', ''),
+            (string) data_get($payload, 'data.0.transaction_id', ''),
+            (string) data_get($payload, 'data.0.reference', ''),
+        ], fn ($value) => $value !== '')));
+
+        if ($candidates === []) {
+            return null;
+        }
+
+        return PlatformPayment::query()
+            ->where(function ($query) use ($candidates): void {
+                $query->whereIn('reference', $candidates)
+                    ->orWhereIn('external_reference', $candidates)
+                    ->orWhereIn('provider_event_id', $candidates);
+            })
+            ->orderByRaw('CASE WHEN status = ? THEN 0 ELSE 1 END', [PlatformPayment::STATUS_PENDING])
+            ->latest('id')
+            ->first();
     }
 
     /**
@@ -575,7 +669,7 @@ class PlatformPaymentService
      *
      * @param  array<string, mixed>  $data
      */
-    public function startHotspotPortalPayment(\App\Models\PaymentTransaction $transaction, array $data = []): PlatformPayment
+    public function startHotspotPortalPayment(PaymentTransaction $transaction, array $data = []): PlatformPayment
     {
         $transaction->loadMissing(['customer', 'internetPlan']);
 
@@ -607,6 +701,33 @@ class PlatformPaymentService
             'existing_paid_query' => null,
             'initiate' => true,
         ]);
+    }
+
+    /**
+     * A cancelled enrollment payment may still be honored when the provider
+     * confirms it inside the post-expiry grace window.
+     */
+    private function canReviveCancelledEnrollmentPayment(PlatformPayment $payment): bool
+    {
+        if (! $payment->isEnrollmentSubscription() || ! $payment->signup_intent_id) {
+            return false;
+        }
+
+        $enrollment = Enrollment::query()->whereKey($payment->signup_intent_id)->first();
+
+        if (! $enrollment || $enrollment->isCompleted()) {
+            return false;
+        }
+
+        if (! $enrollment->expires_at) {
+            return true;
+        }
+
+        $graceMinutes = max(0, (int) config('platform.enrollment_payment_grace_minutes', 60));
+
+        return now()->lessThanOrEqualTo(
+            $enrollment->expires_at->copy()->addMinutes($graceMinutes)
+        );
     }
 
     /**

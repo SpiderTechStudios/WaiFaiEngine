@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Notifications\VerifyEmailNotification;
 use App\Services\PlatformPaymentService;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class EnrollmentTest extends TestCase
@@ -175,9 +176,6 @@ class EnrollmentTest extends TestCase
             ->assertCreated()
             ->json('data.enrollment_reference');
 
-        $payment = Enrollment::query()->where('reference', $reference)->firstOrFail()
-            ->payments()->latest('id')->firstOrFail();
-
         Enrollment::query()->where('reference', $reference)->update([
             'expires_at' => now()->subMinute(),
         ]);
@@ -188,8 +186,48 @@ class EnrollmentTest extends TestCase
 
         $this->postJson('/api/v1/auth/enrollments/'.$reference.'/retry-payment')
             ->assertStatus(410);
+    }
 
-        $this->expectException(\Illuminate\Validation\ValidationException::class);
+    public function test_confirmed_payment_after_expiry_completes_within_grace(): void
+    {
+        Notification::fake();
+
+        $reference = $this->postJson('/api/v1/auth/register', $this->enrollmentPayload())
+            ->assertCreated()
+            ->json('data.enrollment_reference');
+
+        $payment = Enrollment::query()->where('reference', $reference)->firstOrFail()
+            ->payments()->latest('id')->firstOrFail();
+
+        Enrollment::query()->where('reference', $reference)->update([
+            'expires_at' => now()->subMinute(),
+        ]);
+
+        app(PlatformPaymentService::class)->markPaid($payment->fresh());
+
+        $this->assertDatabaseHas('users', ['email' => 'jane@example.com']);
+        $this->assertDatabaseHas('signup_intents', [
+            'reference' => $reference,
+            'status' => 'completed',
+        ]);
+    }
+
+    public function test_confirmed_payment_after_grace_does_not_create_account(): void
+    {
+        $reference = $this->postJson('/api/v1/auth/register', $this->enrollmentPayload())
+            ->assertCreated()
+            ->json('data.enrollment_reference');
+
+        $payment = Enrollment::query()->where('reference', $reference)->firstOrFail()
+            ->payments()->latest('id')->firstOrFail();
+
+        $graceMinutes = (int) config('platform.enrollment_payment_grace_minutes', 60);
+
+        Enrollment::query()->where('reference', $reference)->update([
+            'expires_at' => now()->subMinutes($graceMinutes + 5),
+        ]);
+
+        $this->expectException(ValidationException::class);
         app(PlatformPaymentService::class)->markPaid($payment->fresh());
     }
 

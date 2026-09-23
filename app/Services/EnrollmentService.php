@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\Company;
 use App\Models\Enrollment;
-use App\Models\PlatformPayment;
 use App\Models\User;
 use App\Support\PlatformPricing;
 use Illuminate\Support\Facades\Hash;
@@ -108,12 +107,10 @@ class EnrollmentService
 
         $enrollment->forceFill(['status' => Enrollment::STATUS_EXPIRED])->save();
 
-        $enrollment->payments()
-            ->where('status', PlatformPayment::STATUS_PENDING)
-            ->update([
-                'status' => PlatformPayment::STATUS_CANCELLED,
-                'cancelled_at' => now(),
-            ]);
+        // Pending provider payments are intentionally left open: a mobile-money
+        // callback or status poll may confirm the charge after the reservation
+        // lapsed, and a confirmed payment must still be able to create the
+        // account within the payment grace window (see EnrollmentCompletionService).
 
         $this->auditLogger->log(
             'enrollment_expired',
@@ -172,12 +169,8 @@ class EnrollmentService
 
         $enrollment->forceFill(['status' => Enrollment::STATUS_EXPIRED])->save();
 
-        $enrollment->payments()
-            ->where('status', PlatformPayment::STATUS_PENDING)
-            ->update([
-                'status' => PlatformPayment::STATUS_CANCELLED,
-                'cancelled_at' => now(),
-            ]);
+        // Keep pending provider payments open so a late confirmation can still
+        // be reconciled instead of silently losing a successful charge.
 
         $this->auditLogger->log(
             'enrollment_invalidated_after_failed_attempts',

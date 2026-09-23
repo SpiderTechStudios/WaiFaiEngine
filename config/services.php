@@ -62,6 +62,8 @@ return [
         'user_id' => env('PALMPESA_USER_ID'),
         'base_url' => env('PALMPESA_BASE_URL', 'https://palmpesa.drmlelwa.co.tz'),
         'status_check_minutes' => (int) env('PALMPESA_STATUS_CHECK_MINUTES', 4),
+        'status_timeout' => (int) env('PALMPESA_STATUS_TIMEOUT', 8),
+        'callback_url' => env('PALMPESA_CALLBACK_URL'),
         'vendor' => env('PALMPESA_VENDOR', 'TILL61103867'),
     ],
 
