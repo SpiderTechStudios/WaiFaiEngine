@@ -280,8 +280,87 @@ class WiFiDogService
             $session = null;
         }
 
-        // Gateway explicitly reported a failure (e.g. message=denied).
+        // Ruijie often lands on /portal?message=denied after Auth:0 (or before the
+        // phone ever reached /wifidog/auth). Prefer recovering to the captive
+        // portal / gateway auth instead of a dead-end failure page.
         if ($message !== '') {
+            if (! $session && $gateway && $mac) {
+                $session = $this->captiveSessionService->findActiveByMac($gateway, $mac)
+                    ?? $this->captiveSessionService->findLatestByMac($gateway, $mac);
+            }
+
+            if ($session?->isAuthenticated()) {
+                $gatewayAuthUrl = $this->captiveSessionService->gatewayAuthRedirectUrl($session);
+
+                if (filled($gatewayAuthUrl)) {
+                    $this->trace('portal.out', [
+                        'direction' => 'api->mobile',
+                        'result' => 'retry_gateway_auth_after_denied',
+                        'gateway_message' => $message,
+                        'captive_session_id' => $session->id,
+                        'redirect_to' => $this->maskQueryValue($gatewayAuthUrl, 'token'),
+                        'response_status' => 302,
+                    ]);
+
+                    return redirect()->away($gatewayAuthUrl);
+                }
+
+                $target = $this->resolvePortalTargetUrl($session, $request->query('url'));
+
+                $this->trace('portal.out', [
+                    'direction' => 'api->mobile',
+                    'result' => 'redirect_original_url_after_denied',
+                    'gateway_message' => $message,
+                    'captive_session_id' => $session->id,
+                    'redirect_to' => $target,
+                    'response_status' => 302,
+                ]);
+
+                return redirect()->away($target);
+            }
+
+            if ($gateway && ! $session && ($mac || $token !== '')) {
+                $session = $this->captiveSessionService->resolveOrCreate($gateway, [
+                    'ip' => $request->query('ip'),
+                    'mac' => $request->query('mac'),
+                    'ssid' => $request->query('ssid'),
+                    'gw_address' => $request->query('gw_address'),
+                    'gw_port' => $request->query('gw_port'),
+                    'url' => $request->query('url'),
+                ]);
+            }
+
+            if ($session && $gateway) {
+                try {
+                    $portalUrl = $this->captiveSessionService->portalRedirectUrl($session, [
+                        'mac' => $session->client_mac,
+                        'ip' => $session->client_ip,
+                        'gw_address' => $session->gw_address,
+                        'gw_port' => $session->gw_port,
+                    ]);
+                } catch (\RuntimeException $e) {
+                    $this->trace('portal.error', [
+                        'reason' => 'portal_url_misconfigured',
+                        'gateway_message' => $message,
+                        'message' => $e->getMessage(),
+                    ]);
+
+                    return $this->portalFailurePage($message, $session, $gateway);
+                }
+
+                $this->trace('portal.out', [
+                    'direction' => 'api->mobile',
+                    'result' => 'redirect_captive_portal_after_denied',
+                    'gateway_message' => $message,
+                    'captive_session_id' => $session->id,
+                    'session_status' => $session->status,
+                    'redirect_to' => $this->maskQueryValue($portalUrl, 'session'),
+                    'response_status' => 302,
+                ]);
+
+                return redirect()->away($portalUrl);
+            }
+
             $this->trace('portal.out', [
                 'direction' => 'api->mobile',
                 'result' => 'gateway_failure_page',

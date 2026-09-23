@@ -161,6 +161,35 @@ class CaptiveSessionService
     }
 
     /**
+     * Latest non-expired captive session for a MAC on this gateway (any status).
+     * Used to recover from Ruijie /portal?message=denied bounces.
+     */
+    public function findLatestByMac(NetworkDevice $gateway, string $mac): ?CaptiveSession
+    {
+        try {
+            $normalized = $this->normalizeMacOptional($mac);
+        } catch (ValidationException) {
+            return null;
+        }
+
+        if ($normalized === null) {
+            return null;
+        }
+
+        return CaptiveSession::query()
+            ->with(['company', 'networkDevice', 'networkStation', 'accessGrant'])
+            ->where('company_id', $gateway->company_id)
+            ->where('network_device_id', $gateway->id)
+            ->where('client_mac', $normalized)
+            ->where('status', '!=', CaptiveSession::STATUS_REJECTED)
+            ->where(function ($query): void {
+                $query->whereNull('expires_at')->orWhere('expires_at', '>', now());
+            })
+            ->latest('id')
+            ->first();
+    }
+
+    /**
      * Mark a captive session authenticated after voucher/payment success.
      *
      * @param  array{access_grant_id?: int, payment_transaction_id?: int, mac_address?: ?string, ip_address?: ?string}  $data

@@ -746,13 +746,54 @@ class WiFiDogTest extends TestCase
         $this->assertDatabaseCount('captive_sessions', 1);
     }
 
-    public function test_portal_with_message_denied_renders_failure_page_and_not_auth_one(): void
+    public function test_portal_with_message_denied_redirects_pending_client_to_captive_portal(): void
     {
         $owner = $this->createUser();
         $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'spider']);
         $this->createRuijieRouter($company, '323');
 
-        $response = $this->get('/api/wifidog/portal?gw_id=323&mac=AA:BB:CC:DD:EE:FF&message=denied');
+        $location = $this->get('/api/wifidog/portal?gw_id=323&ip=192.168.0.35&mac=AA:BB:CC:DD:EE:FF&message=denied')
+            ->assertRedirect()
+            ->headers->get('Location');
+
+        $this->assertStringStartsWith('https://waifai.test/connect?', $location);
+        $this->assertStringContainsString('subdomain=spider', $location);
+        $this->assertDatabaseHas('captive_sessions', [
+            'gateway_id' => '323',
+            'client_mac' => 'AA:BB:CC:DD:EE:FF',
+            'status' => CaptiveSession::STATUS_PENDING,
+        ]);
+    }
+
+    public function test_portal_with_message_denied_retries_gateway_auth_for_authenticated_session(): void
+    {
+        $owner = $this->createUser();
+        $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'spider']);
+        $router = $this->createRuijieRouter($company, '323');
+
+        $token = str_repeat('d', 32);
+        CaptiveSession::query()->create([
+            'company_id' => $company->id,
+            'network_device_id' => $router->id,
+            'network_station_id' => $router->network_station_id,
+            'gateway_id' => '323',
+            'client_mac' => 'AA:BB:CC:DD:EE:FF',
+            'client_ip' => '192.168.0.35',
+            'gw_address' => '192.168.0.1',
+            'gw_port' => 2060,
+            'token' => $token,
+            'status' => CaptiveSession::STATUS_AUTHENTICATED,
+            'authenticated_at' => now(),
+            'expires_at' => now()->addHour(),
+        ]);
+
+        $this->get('/api/wifidog/portal?gw_id=323&mac=AA:BB:CC:DD:EE:FF&message=denied')
+            ->assertRedirect('http://192.168.0.1:2060/wifidog/auth?token='.$token);
+    }
+
+    public function test_portal_with_message_denied_without_gateway_context_renders_failure_page(): void
+    {
+        $response = $this->get('/api/wifidog/portal?message=denied');
 
         $response->assertOk();
         $this->assertStringStartsWith('text/html', (string) $response->headers->get('Content-Type'));
