@@ -590,4 +590,50 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
     ]
 )]
+#[OA\Schema(
+    schema: 'AdminEnrollmentPayment',
+    properties: [
+        new OA\Property(property: 'id', type: 'integer', example: 12),
+        new OA\Property(property: 'reference', type: 'string', example: 'PAY-ABC123XYZ0'),
+        new OA\Property(property: 'status', type: 'string', enum: ['pending', 'paid', 'failed', 'cancelled', 'expired'], example: 'pending'),
+        new OA\Property(property: 'purpose', type: 'string', example: 'platform_subscription'),
+        new OA\Property(property: 'provider', type: 'string', nullable: true, example: 'palmpesa'),
+        new OA\Property(property: 'amount', type: 'string', example: '10000.00'),
+        new OA\Property(property: 'currency', type: 'string', example: 'TZS'),
+        new OA\Property(property: 'external_reference', type: 'string', nullable: true, example: 'PALMPESA17682869972044'),
+        new OA\Property(property: 'phone', type: 'string', nullable: true, example: '0711987654'),
+        new OA\Property(property: 'initiated_at', type: 'string', format: 'date-time', nullable: true),
+        new OA\Property(property: 'paid_at', type: 'string', format: 'date-time', nullable: true),
+        new OA\Property(property: 'failed_at', type: 'string', format: 'date-time', nullable: true),
+        new OA\Property(property: 'failure_reason', type: 'string', nullable: true, example: 'declined'),
+        new OA\Property(property: 'provider_message', type: 'string', nullable: true),
+        new OA\Property(property: 'requires_manual_review', type: 'boolean', example: false),
+    ]
+)]
+#[OA\Schema(
+    schema: 'AdminEnrollment',
+    description: 'An enrollment that registered but has not completed payment.',
+    properties: [
+        new OA\Property(property: 'id', type: 'string', format: 'uuid'),
+        new OA\Property(property: 'reference', type: 'string', example: 'ENR-ABC123XYZ'),
+        new OA\Property(property: 'status', type: 'string', enum: ['pending_payment', 'payment_failed', 'processing_payment', 'expired', 'cancelled'], example: 'pending_payment'),
+        new OA\Property(property: 'business_name', type: 'string', example: 'ABC Internet'),
+        new OA\Property(property: 'first_name', type: 'string', example: 'Jane'),
+        new OA\Property(property: 'last_name', type: 'string', example: 'Doe'),
+        new OA\Property(property: 'email', type: 'string', format: 'email', example: 'jane@example.com'),
+        new OA\Property(property: 'phone', type: 'string', nullable: true, example: '0700123456'),
+        new OA\Property(property: 'payment_phone', type: 'string', nullable: true, example: '0711987654'),
+        new OA\Property(property: 'portal_subdomain', type: 'string', nullable: true, example: 'abc-internet'),
+        new OA\Property(property: 'amount', type: 'string', example: '10000.00'),
+        new OA\Property(property: 'currency', type: 'string', example: 'TZS'),
+        new OA\Property(property: 'failed_payment_attempts', type: 'integer', example: 0),
+        new OA\Property(property: 'remaining_attempts', type: 'integer', example: 3),
+        new OA\Property(property: 'expires_at', type: 'string', format: 'date-time', nullable: true),
+        new OA\Property(property: 'is_expired', type: 'boolean', example: false),
+        new OA\Property(property: 'created_at', type: 'string', format: 'date-time', nullable: true),
+        new OA\Property(property: 'payment_status', type: 'string', nullable: true, enum: ['pending', 'paid', 'failed', 'cancelled', 'expired'], example: 'pending'),
+        new OA\Property(property: 'latest_payment', ref: '#/components/schemas/AdminEnrollmentPayment', nullable: true),
+        new OA\Property(property: 'payments', type: 'array', items: new OA\Items(ref: '#/components/schemas/AdminEnrollmentPayment')),
+    ]
+)]
 class DomainSchemas {}

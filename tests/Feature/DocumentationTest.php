@@ -27,6 +27,8 @@ class DocumentationTest extends TestCase
         $this->assertContains('/auth/enrollments/{reference}/retry-payment', $paths);
         $this->assertContains('/webhooks/payments/{provider}', $paths);
         $this->assertContains('/webhooks/payouts/{provider}', $paths);
+        $this->assertContains('/superadmin/enrollments', $paths);
+        $this->assertContains('/superadmin/enrollments/{enrollment}', $paths);
         $this->assertContains('/superadmin/payment-providers/{paymentProvider}', $paths);
         $this->assertContains('/superadmin/payment-providers/{paymentProvider}/default-payments', $paths);
         $this->assertContains('/superadmin/payment-providers/{paymentProvider}/default-payouts', $paths);

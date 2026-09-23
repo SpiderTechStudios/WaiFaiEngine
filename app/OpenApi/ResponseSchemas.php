@@ -627,4 +627,33 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'data', type: 'array', items: new OA\Items(ref: '#/components/schemas/PaymentProvider')),
     ]
 )]
+#[OA\Schema(
+    schema: 'EnrollmentAdminResponse',
+    properties: [
+        new OA\Property(property: 'status', type: 'boolean', example: true),
+        new OA\Property(property: 'code', type: 'integer', example: 200),
+        new OA\Property(property: 'message', type: 'string', example: 'Enrollment retrieved'),
+        new OA\Property(property: 'data', ref: '#/components/schemas/AdminEnrollment'),
+    ]
+)]
+#[OA\Schema(
+    schema: 'PaginatedEnrollmentsResponse',
+    properties: [
+        new OA\Property(property: 'status', type: 'boolean', example: true),
+        new OA\Property(property: 'code', type: 'integer', example: 200),
+        new OA\Property(property: 'message', type: 'string', example: 'Stuck enrollments retrieved'),
+        new OA\Property(property: 'data', properties: [
+            new OA\Property(property: 'items', type: 'array', items: new OA\Items(ref: '#/components/schemas/AdminEnrollment')),
+            new OA\Property(property: 'meta', ref: '#/components/schemas/PaginationMeta'),
+            new OA\Property(property: 'summary', properties: [
+                new OA\Property(property: 'total', type: 'integer', example: 4),
+                new OA\Property(property: 'pending_payment', type: 'integer', example: 2),
+                new OA\Property(property: 'payment_failed', type: 'integer', example: 1),
+                new OA\Property(property: 'processing_payment', type: 'integer', example: 0),
+                new OA\Property(property: 'expired', type: 'integer', example: 1),
+                new OA\Property(property: 'cancelled', type: 'integer', example: 0),
+            ], type: 'object'),
+        ], type: 'object'),
+    ]
+)]
 class ResponseSchemas {}

@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\Admin\AdminRouterController;
 use App\Http\Controllers\Api\V1\Operations\PaymentController;
 use App\Http\Controllers\Api\V1\Operations\WithdrawalController;
 use App\Http\Controllers\Api\V1\SuperAdmin\CompanyController as SuperAdminCompanyController;
+use App\Http\Controllers\Api\V1\SuperAdmin\EnrollmentController as SuperAdminEnrollmentController;
 use App\Http\Controllers\Api\V1\SuperAdmin\PaymentProviderController;
 use App\Http\Controllers\Api\V1\SuperAdmin\UserController as SuperAdminUserController;
 use Illuminate\Support\Facades\Route;
@@ -36,6 +37,9 @@ Route::prefix('superadmin')->middleware(['auth:sanctum', 'active.user', 'superad
     Route::get('/companies/{company}', [SuperAdminCompanyController::class, 'show']);
     Route::patch('/companies/{company}/suspend', [SuperAdminCompanyController::class, 'suspend']);
     Route::patch('/companies/{company}/activate', [SuperAdminCompanyController::class, 'activate']);
+
+    Route::get('/enrollments', [SuperAdminEnrollmentController::class, 'index']);
+    Route::get('/enrollments/{enrollment}', [SuperAdminEnrollmentController::class, 'show']);
 
     Route::get('/payments', [PaymentController::class, 'getAllPayments']);
     Route::get('/payments/{payment}', [PaymentController::class, 'getPayment']);
