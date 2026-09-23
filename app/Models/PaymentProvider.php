@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Crypt;
 
 class PaymentProvider extends Model
 {
@@ -39,9 +41,50 @@ class PaymentProvider extends Model
             'is_active' => 'boolean',
             'is_default_for_payments' => 'boolean',
             'is_default_for_payouts' => 'boolean',
-            'credentials' => 'encrypted:array',
             'settings' => 'array',
         ];
+    }
+
+    /**
+     * Read credentials without ever throwing when the stored value cannot be
+     * decrypted (e.g. APP_KEY rotated or the row was written as plaintext).
+     * A broken credential blob must not take down payment webhooks.
+     *
+     * @return array<string, mixed>
+     */
+    public function getCredentialsAttribute(mixed $value): array
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+
+        if (blank($value)) {
+            return [];
+        }
+
+        try {
+            $decrypted = Crypt::decryptString((string) $value);
+        } catch (DecryptException) {
+            // Fall back to plaintext JSON when the payload was never encrypted.
+            $decoded = json_decode((string) $value, true);
+
+            return is_array($decoded) ? $decoded : [];
+        }
+
+        $decoded = json_decode($decrypted, true);
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    public function setCredentialsAttribute(mixed $value): void
+    {
+        if (is_array($value)) {
+            $value = json_encode($value);
+        }
+
+        $this->attributes['credentials'] = blank($value)
+            ? null
+            : Crypt::encryptString((string) $value);
     }
 
     public function getRouteKeyName(): string

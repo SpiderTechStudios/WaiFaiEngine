@@ -127,8 +127,14 @@ class PalmPesaPaymentProvider implements PaymentProviderDriver
     public function parseWebhook(array $payload): ProviderVerificationResult
     {
         $data = $payload;
-        if (isset($payload['data'][0]) && is_array($payload['data'][0])) {
-            $data = array_merge($payload, $payload['data'][0]);
+        if (isset($payload['data']) && is_array($payload['data'])) {
+            $nested = isset($payload['data'][0]) && is_array($payload['data'][0])
+                ? $payload['data'][0]
+                : $payload['data'];
+
+            if (is_array($nested)) {
+                $data = array_merge($payload, $nested);
+            }
         }
 
         $status = strtolower((string) (
@@ -167,6 +173,8 @@ class PalmPesaPaymentProvider implements PaymentProviderDriver
             txRef: (string) (
                 $data['transaction_id']
                 ?? $payload['transaction_id']
+                ?? $data['tx_ref']
+                ?? $payload['tx_ref']
                 ?? $data['referenceid']
                 ?? $payload['referenceid']
                 ?? $data['reference_id']

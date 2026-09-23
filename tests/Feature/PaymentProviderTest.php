@@ -11,6 +11,7 @@ use App\Models\PaymentProvider;
 use App\Models\PlatformPayment;
 use App\Models\User;
 use App\Services\PaymentProviderService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -243,6 +244,103 @@ class PaymentProviderTest extends TestCase
             'payment_status' => 'COMPLETED',
         ])->assertOk()
             ->assertJsonPath('data.status', 'paid');
+
+        $this->assertSame('paid', $payment->fresh()->status);
+    }
+
+    public function test_palmpesa_webhook_survives_undecryptable_provider_credentials(): void
+    {
+        config([
+            'services.palmpesa.api_token' => 'test-palmpesa-token',
+            'services.palmpesa.base_url' => 'https://palmpesa.drmlelwa.co.tz',
+        ]);
+
+        $palmpesa = PaymentProvider::query()->where('slug', PaymentProvider::SLUG_PALMPESA)->firstOrFail();
+        $palmpesa->forceFill(['credentials' => [], 'is_active' => true, 'supports_payments' => true])->save();
+        app(PaymentProviderService::class)->setDefaultForPayments($palmpesa->fresh());
+
+        Http::fake([
+            '*/api/palmpesa/initiate' => Http::response([
+                'message' => 'Payment initiated.',
+                'order_id' => 'PALMPESA-CORRUPT-001',
+            ], 200),
+            '*/api/order-status' => Http::response([
+                'resultcode' => '000',
+                'result' => 'SUCCESS',
+                'data' => [[
+                    'order_id' => 'PALMPESA-CORRUPT-001',
+                    'amount' => '10000',
+                    'payment_status' => 'COMPLETED',
+                ]],
+            ], 200),
+        ]);
+
+        $reference = $this->postJson('/api/v1/auth/register', $this->enrollmentPayload())
+            ->assertCreated()
+            ->json('data.enrollment_reference');
+
+        $payment = Enrollment::query()->where('reference', $reference)->firstOrFail()
+            ->payments()->latest('id')->firstOrFail();
+
+        // Simulate a rotated APP_KEY / plaintext row: the stored value is no longer decryptable.
+        DB::table('payment_providers')
+            ->where('slug', PaymentProvider::SLUG_PALMPESA)
+            ->update(['credentials' => 'not-a-valid-encrypted-payload']);
+
+        $this->assertSame([], PaymentProvider::query()->where('slug', PaymentProvider::SLUG_PALMPESA)->firstOrFail()->credentials);
+
+        $this->postJson('/api/v1/webhooks/payments/palmpesa', [
+            'order_id' => 'PALMPESA-CORRUPT-001',
+            'payment_status' => 'COMPLETED',
+        ])->assertOk();
+
+        $this->assertSame('paid', $payment->fresh()->status);
+        $this->assertDatabaseHas('users', ['email' => 'jane@example.com']);
+    }
+
+    public function test_palmpesa_webhook_resolves_payment_by_tx_ref(): void
+    {
+        config([
+            'services.palmpesa.api_token' => 'test-palmpesa-token',
+            'services.palmpesa.base_url' => 'https://palmpesa.drmlelwa.co.tz',
+        ]);
+
+        $palmpesa = PaymentProvider::query()->where('slug', PaymentProvider::SLUG_PALMPESA)->firstOrFail();
+        $palmpesa->forceFill(['credentials' => [], 'is_active' => true, 'supports_payments' => true])->save();
+        app(PaymentProviderService::class)->setDefaultForPayments($palmpesa->fresh());
+
+        Http::fake([
+            '*/api/palmpesa/initiate' => Http::response([
+                'message' => 'Payment initiated.',
+                'order_id' => 'PALMPESA-TXREF-001',
+            ], 200),
+            '*/api/order-status' => Http::response([
+                'resultcode' => '000',
+                'result' => 'SUCCESS',
+                'data' => [[
+                    'order_id' => 'PALMPESA-TXREF-001',
+                    'amount' => '10000',
+                    'payment_status' => 'COMPLETED',
+                ]],
+            ], 200),
+        ]);
+
+        $reference = $this->postJson('/api/v1/auth/register', $this->enrollmentPayload())
+            ->assertCreated()
+            ->json('data.enrollment_reference');
+
+        $payment = Enrollment::query()->where('reference', $reference)->firstOrFail()
+            ->payments()->latest('id')->firstOrFail();
+
+        $this->postJson('/api/v1/webhooks/payments/palmpesa', [
+            'event' => 'charge.completed',
+            'data' => [
+                'tx_ref' => $payment->reference,
+                'status' => 'successful',
+                'amount' => 10000,
+                'currency' => 'TZS',
+            ],
+        ])->assertOk();
 
         $this->assertSame('paid', $payment->fresh()->status);
     }

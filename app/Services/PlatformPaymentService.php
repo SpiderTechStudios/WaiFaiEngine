@@ -549,10 +549,15 @@ class PlatformPaymentService
             (string) ($payload['reference_id'] ?? ''),
             (string) ($payload['transaction_id'] ?? ''),
             (string) ($payload['transaction_reference'] ?? ''),
+            (string) ($payload['tx_ref'] ?? ''),
             (string) ($payload['order_id'] ?? ''),
             (string) data_get($payload, 'data.0.order_id', ''),
             (string) data_get($payload, 'data.0.transaction_id', ''),
             (string) data_get($payload, 'data.0.reference', ''),
+            (string) data_get($payload, 'data.tx_ref', ''),
+            (string) data_get($payload, 'data.reference', ''),
+            (string) data_get($payload, 'data.order_id', ''),
+            (string) data_get($payload, 'data.transaction_id', ''),
         ], fn ($value) => $value !== '')));
 
         if ($candidates === []) {
