@@ -248,6 +248,49 @@ class PaymentProviderTest extends TestCase
         $this->assertSame('paid', $payment->fresh()->status);
     }
 
+    public function test_palmpesa_webhook_completes_enrollment_already_marked_paid(): void
+    {
+        config([
+            'services.palmpesa.api_token' => 'test-palmpesa-token',
+            'services.palmpesa.base_url' => 'https://palmpesa.drmlelwa.co.tz',
+        ]);
+
+        $palmpesa = PaymentProvider::query()->where('slug', PaymentProvider::SLUG_PALMPESA)->firstOrFail();
+        $palmpesa->forceFill(['credentials' => [], 'is_active' => true, 'supports_payments' => true])->save();
+        app(PaymentProviderService::class)->setDefaultForPayments($palmpesa->fresh());
+
+        Http::fake([
+            '*/api/palmpesa/initiate' => Http::response([
+                'message' => 'Payment initiated.',
+                'order_id' => 'PALMPESA-STUCK-001',
+            ], 200),
+        ]);
+
+        $reference = $this->postJson('/api/v1/auth/register', $this->enrollmentPayload())
+            ->assertCreated()
+            ->json('data.enrollment_reference');
+
+        $payment = Enrollment::query()->where('reference', $reference)->firstOrFail()
+            ->payments()->latest('id')->firstOrFail();
+
+        // Payment settled but account creation failed (e.g. mail outage rolled it back).
+        $payment->forceFill([
+            'status' => PlatformPayment::STATUS_PAID,
+            'paid_at' => now(),
+            'processed_at' => now(),
+        ])->save();
+
+        $this->assertDatabaseMissing('users', ['email' => 'jane@example.com']);
+
+        $this->postJson('/api/v1/webhooks/payments/palmpesa', [
+            'order_id' => 'PALMPESA-STUCK-001',
+            'payment_status' => 'COMPLETED',
+        ])->assertOk();
+
+        $this->assertDatabaseHas('users', ['email' => 'jane@example.com']);
+        $this->assertDatabaseHas('signup_intents', ['reference' => $reference, 'status' => 'completed']);
+    }
+
     public function test_palmpesa_webhook_survives_undecryptable_provider_credentials(): void
     {
         config([

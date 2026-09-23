@@ -6,7 +6,10 @@ use App\Models\Enrollment;
 use App\Models\PlatformPayment;
 use App\Models\User;
 use App\Notifications\VerifyEmailNotification;
+use App\Services\EnrollmentCompletionService;
 use App\Services\PlatformPaymentService;
+use Illuminate\Auth\Events\Registered;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
@@ -108,6 +111,55 @@ class EnrollmentTest extends TestCase
             User::query()->where('email', 'jane@example.com')->first(),
             VerifyEmailNotification::class,
         );
+    }
+
+    public function test_enrollment_completion_survives_verification_email_failure(): void
+    {
+        $reference = $this->postJson('/api/v1/auth/register', $this->enrollmentPayload())
+            ->assertCreated()
+            ->json('data.enrollment_reference');
+
+        $payment = Enrollment::query()->where('reference', $reference)->firstOrFail()
+            ->payments()->latest('id')->firstOrFail();
+
+        $payment->forceFill([
+            'status' => PlatformPayment::STATUS_PAID,
+            'paid_at' => now(),
+            'processed_at' => now(),
+        ])->save();
+
+        Event::listen(
+            Registered::class,
+            fn () => throw new \RuntimeException('smtp down'),
+        );
+
+        app(EnrollmentCompletionService::class)->completeFromPayment($payment);
+
+        $this->assertDatabaseHas('users', ['email' => 'jane@example.com']);
+        $this->assertDatabaseHas('signup_intents', ['reference' => $reference, 'status' => 'completed']);
+    }
+
+    public function test_complete_paid_enrollments_command_creates_missing_accounts(): void
+    {
+        $reference = $this->postJson('/api/v1/auth/register', $this->enrollmentPayload())
+            ->assertCreated()
+            ->json('data.enrollment_reference');
+
+        $payment = Enrollment::query()->where('reference', $reference)->firstOrFail()
+            ->payments()->latest('id')->firstOrFail();
+
+        $payment->forceFill([
+            'status' => PlatformPayment::STATUS_PAID,
+            'paid_at' => now(),
+            'processed_at' => now(),
+        ])->save();
+
+        $this->assertDatabaseMissing('users', ['email' => 'jane@example.com']);
+
+        $this->artisan('enrollments:complete-paid')->assertSuccessful();
+
+        $this->assertDatabaseHas('users', ['email' => 'jane@example.com']);
+        $this->assertDatabaseHas('signup_intents', ['reference' => $reference, 'status' => 'completed']);
     }
 
     public function test_payment_callback_replay_is_idempotent(): void

@@ -7,6 +7,7 @@ use App\Models\PlatformPayment;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class EnrollmentCompletionService
@@ -23,7 +24,9 @@ class EnrollmentCompletionService
      */
     public function completeFromPayment(PlatformPayment $payment): Enrollment
     {
-        return DB::transaction(function () use ($payment) {
+        $user = null;
+
+        $enrollment = DB::transaction(function () use ($payment, &$user) {
             $payment = PlatformPayment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
 
             if (! $payment->signup_intent_id) {
@@ -106,8 +109,6 @@ class EnrollmentCompletionService
                 'company_id' => $company->id,
             ])->save();
 
-            event(new Registered($user));
-
             $this->auditLogger->log(
                 'enrollment_completed',
                 $user,
@@ -125,6 +126,23 @@ class EnrollmentCompletionService
 
             return $enrollment->fresh();
         });
+
+        // Verification email is sent after the account is committed. A mail
+        // failure must never roll back user/company creation (which would leave
+        // a paid enrollment stuck without an account).
+        if ($user instanceof User) {
+            try {
+                event(new Registered($user));
+            } catch (\Throwable $e) {
+                Log::warning('enrollment_verification_email_failed', [
+                    'user_id' => $user->id,
+                    'enrollment_id' => $enrollment->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return $enrollment;
     }
 
     /**

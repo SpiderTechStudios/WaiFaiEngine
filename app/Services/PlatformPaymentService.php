@@ -303,12 +303,23 @@ class PlatformPaymentService
     public function reconcileEnrollmentPayment(Enrollment $enrollment): ?PlatformPayment
     {
         $payment = $enrollment->payments()
-            ->where('status', PlatformPayment::STATUS_PENDING)
             ->latest('id')
             ->first();
 
         if (! $payment) {
             return null;
+        }
+
+        // Already paid but the account may not have been created (e.g. a
+        // transient failure on the first callback). Retry completion.
+        if ($payment->status === PlatformPayment::STATUS_PAID) {
+            $this->retryEnrollmentCompletion($payment);
+
+            return $payment->fresh();
+        }
+
+        if ($payment->status !== PlatformPayment::STATUS_PENDING) {
+            return $payment;
         }
 
         try {
@@ -321,6 +332,29 @@ class PlatformPaymentService
             ]);
 
             return $payment->fresh();
+        }
+    }
+
+    /**
+     * Idempotently retry account creation for an already-paid enrollment
+     * payment. Never throws: failures are logged and retried on the next
+     * callback or payment-status poll.
+     */
+    public function retryEnrollmentCompletion(PlatformPayment $payment): void
+    {
+        if (! $payment->isEnrollmentSubscription() || ! $payment->signup_intent_id) {
+            return;
+        }
+
+        try {
+            $this->enrollmentCompletionService->completeFromPayment($payment);
+        } catch (\Throwable $e) {
+            Log::error('enrollment_completion_failed', [
+                'payment_id' => $payment->id,
+                'reference' => $payment->reference,
+                'signup_intent_id' => $payment->signup_intent_id,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 
@@ -475,9 +509,13 @@ class PlatformPaymentService
             ]);
         }
 
-        // Idempotent: already processed successfully.
+        // Idempotent: already processed successfully. Still re-run purpose
+        // fulfillment (e.g. enrollment account creation) in case it failed
+        // after the payment was marked paid.
         if ($payment->status === PlatformPayment::STATUS_PAID) {
-            return $payment;
+            $this->retryEnrollmentCompletion($payment);
+
+            return $payment->fresh();
         }
 
         // Prefer live verification when credentials exist; it is authoritative.
@@ -522,7 +560,22 @@ class PlatformPaymentService
         }
 
         if ($parsed->isSuccessful()) {
-            return $this->markPaid($payment->fresh());
+            try {
+                return $this->markPaid($payment->fresh());
+            } catch (ValidationException $e) {
+                // The payment is committed as paid even if post-payment
+                // fulfillment failed; retry completion and acknowledge so the
+                // provider does not keep retrying.
+                $payment->refresh();
+
+                if ($payment->status === PlatformPayment::STATUS_PAID) {
+                    $this->retryEnrollmentCompletion($payment);
+
+                    return $payment->fresh();
+                }
+
+                throw $e;
+            }
         }
 
         if ($parsed->isFailed()) {
