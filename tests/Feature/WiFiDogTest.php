@@ -14,6 +14,18 @@ use Tests\TestCase;
 
 class WiFiDogTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // WiFiDog /login always redirects to the backend-hosted /connect page.
+        config([
+            'app.url' => 'https://waifai.test',
+            'captive.force_backend_portal' => true,
+            'captive.portal_connect_path' => '/connect',
+        ]);
+    }
+
     public function test_unknown_gateway_returns_404(): void
     {
         $this->get('/api/wifidog/login?gw_id=unknown')
@@ -113,9 +125,31 @@ class WiFiDogTest extends TestCase
         $this->assertStringStartsWith('https://waifai.test/connect?', $location);
     }
 
-    public function test_misconfigured_portal_url_pointing_at_wifidog_api_is_rejected(): void
+    public function test_misconfigured_portal_url_pointing_at_wifidog_api_is_ignored_when_backend_forced(): void
     {
         config([
+            // Even if CAPTIVE_PORTAL_URL is wrong, force_backend_portal uses APP_URL/connect.
+            'captive.portal_url' => 'https://waifai.test/api/wifidog/login',
+            'captive.portal_base_url' => 'https://waifai.test/api/wifidog/login',
+            'captive.force_backend_portal' => true,
+        ]);
+
+        $owner = $this->createUser();
+        $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'spider']);
+        $this->createRuijieRouter($company, '323');
+
+        $location = $this->get('/api/wifidog/login?gw_id=323&ip=192.168.0.35')
+            ->assertRedirect()
+            ->headers->get('Location');
+
+        $this->assertStringStartsWith('https://waifai.test/connect?', $location);
+        $this->assertStringNotContainsString('/api/wifidog/login', $location);
+    }
+
+    public function test_legacy_external_portal_url_pointing_at_wifidog_api_is_rejected(): void
+    {
+        config([
+            'captive.force_backend_portal' => false,
             'captive.portal_url' => 'https://waifai.test/api/wifidog/login',
             'captive.portal_base_url' => 'https://waifai.test/api/wifidog/login',
             'captive.portal_connect_path' => '/login',

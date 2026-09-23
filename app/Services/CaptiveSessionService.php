@@ -431,12 +431,27 @@ class CaptiveSessionService
 
     /**
      * Build the absolute connect-page URL (no query string).
+     *
+     * By default this is always {APP_URL}/connect — the Blade captive portal
+     * hosted by this backend — so Ruijie never lands on a separate frontend.
      */
     public function resolvePortalPageUrl(): string
     {
         $connectPath = '/'.trim((string) config('captive.portal_connect_path', '/connect'), '/');
         if ($connectPath === '/') {
             $connectPath = '/connect';
+        }
+
+        if (config('captive.force_backend_portal', true)) {
+            $base = rtrim((string) config('app.url'), '/');
+
+            if ($base === '' || ! preg_match('#^https?://#i', $base)) {
+                throw new \RuntimeException(
+                    'APP_URL must be an absolute http(s) URL so WiFiDog can redirect to the backend /connect portal.'
+                );
+            }
+
+            return $base.$connectPath;
         }
 
         $configured = trim((string) (config('captive.portal_url') ?: config('captive.portal_base_url') ?: ''));
@@ -448,7 +463,7 @@ class CaptiveSessionService
 
         if ($configured === '' || ! preg_match('#^https?://#i', $configured)) {
             throw new \RuntimeException(
-                'CAPTIVE_PORTAL_URL must be an absolute http(s) URL to the customer captive portal (e.g. https://waifai.shereheyangu.com/connect).'
+                'CAPTIVE_PORTAL_URL must be an absolute http(s) URL to the captive portal (e.g. https://api.waifai.co.tz/connect).'
             );
         }
 
@@ -475,7 +490,7 @@ class CaptiveSessionService
 
         if (str_contains($path, '/api/wifidog') || str_contains($path, '/api/v1/wifidog')) {
             throw new \RuntimeException(
-                'Captive portal URL must not point at the WiFiDog API. Set CAPTIVE_PORTAL_URL to the captive portal page (e.g. https://waifai.shereheyangu.com/connect), not /api/wifidog/login. On the Ruijie/WiFiDog gateway, AuthServer Path must be /api/wifidog/ (not /api/wifidog/login/).'
+                'Captive portal URL must not point at the WiFiDog API. WiFiDog /login must redirect to /connect on this backend (APP_URL), not /api/wifidog/login. On the Ruijie gateway, AuthServer Path must be /api/wifidog/ (not /api/wifidog/login/).'
             );
         }
 

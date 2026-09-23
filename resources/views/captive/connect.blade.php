@@ -62,7 +62,19 @@
             color: var(--brand);
             border: 2px solid var(--brand);
         }
-        .btn[disabled] { opacity: .6; cursor: not-allowed; }
+        .status-box {
+            margin-top: 14px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: #f8fafc;
+            border: 1px solid var(--line);
+            font-size: 14px;
+            color: var(--ink);
+        }
+        .status-box.ok { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
+        .status-box.wait { background: #fff7ed; border-color: #fed7aa; color: #9a3412; }
+        .status-box .meta { margin-top: 6px; color: var(--muted); font-size: 12px; word-break: break-all; }
+
         .support {
             text-align: center;
             font-size: 13px;
@@ -183,6 +195,7 @@
             <input id="subscribePhone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="Ingiza namba ya simu">
 
             <p id="subscribeError" class="error"></p>
+            <div id="subscribeStatus" class="status-box hidden"></div>
             <button type="button" id="subscribeSubmit" class="btn btn-primary" style="margin-top:14px">Endelea</button>
             <button type="button" class="back" data-back>&larr; Rudi nyuma</button>
         </section>
@@ -237,6 +250,7 @@
             empty: document.getElementById('subscribeEmpty'),
             subscribePhone: document.getElementById('subscribePhone'),
             subscribeError: document.getElementById('subscribeError'),
+            subscribeStatus: document.getElementById('subscribeStatus'),
             subscribeSubmit: document.getElementById('subscribeSubmit'),
             voucherCode: document.getElementById('voucherCode'),
             voucherPhone: document.getElementById('voucherPhone'),
@@ -378,10 +392,21 @@
             selectedPlanId = null;
             els.subscribePhone.value = '';
             setError(els.subscribeError, '');
+            setPaymentStatus('');
             document.querySelectorAll('.package').forEach((el) => el.classList.remove('selected'));
         }
         function resetVoucher() { els.voucherCode.value = ''; els.voucherPhone.value = ''; setError(els.voucherError, ''); }
         function resetRedeem() { els.redeemPhone.value = ''; setError(els.redeemError, ''); }
+
+        function setPaymentStatus(html, kind) {
+            if (!html) {
+                els.subscribeStatus.className = 'status-box hidden';
+                els.subscribeStatus.innerHTML = '';
+                return;
+            }
+            els.subscribeStatus.className = 'status-box ' + (kind || 'wait');
+            els.subscribeStatus.innerHTML = html;
+        }
 
         // ---- subscribe ----
         async function submitSubscribe() {
@@ -389,6 +414,7 @@
             const phone = normalizePhone(els.subscribePhone.value);
             if (phone === null) { setError(els.subscribeError, phoneError(els.subscribePhone.value)); return; }
             setError(els.subscribeError, '');
+            setPaymentStatus('');
 
             setBusy(els.subscribeSubmit, true);
             try {
@@ -397,11 +423,29 @@
                     customer_phone: phone,
                     captive_session: PORTAL.session_token || null,
                 });
-                pollPayment(result.data.id);
+                const payment = result.data || {};
+                const pushHint = payment.ussd_message
+                    || 'Ombi la malipo limetumwa kwenye simu yako. Thibitisha kwenye simu.';
+                setPaymentStatus(
+                    '<strong>Inasubiri malipo...</strong><div>' + escapeHtml(pushHint) + '</div>' +
+                    (payment.reference ? '<div class="meta">Ref: ' + escapeHtml(payment.reference) + '</div>' : ''),
+                    'wait'
+                );
+                showOverlay('Thibitisha malipo kwenye simu...');
+                pollPayment(payment.id);
             } catch (error) {
                 setBusy(els.subscribeSubmit, false);
+                hideOverlay();
                 setError(els.subscribeError, errorMessage(error));
             }
+        }
+
+        function escapeHtml(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
         }
 
         async function pollPayment(paymentId) {
@@ -412,23 +456,47 @@
                     const payment = result.data;
 
                     if (payment.status === 'failed') {
+                        hideOverlay();
                         setBusy(els.subscribeSubmit, false);
+                        setPaymentStatus('');
                         setError(els.subscribeError, 'Malipo yameshindikana. Tafadhali jaribu tena.');
                         return;
                     }
                     if (payment.next_action === 'open_gateway_auth_url' && payment.gateway_auth_url) {
+                        setPaymentStatus(
+                            '<strong>Malipo yamefanikiwa.</strong><div>Inakufungulia intaneti...</div>' +
+                            (payment.reference ? '<div class="meta">Ref: ' + escapeHtml(payment.reference) + '</div>' : ''),
+                            'ok'
+                        );
                         goToGateway(payment.gateway_auth_url);
                         return;
                     }
                     if (payment.status === 'paid') {
+                        hideOverlay();
                         setBusy(els.subscribeSubmit, false);
-                        setError(els.subscribeError, 'Malipo yamekamilika. Tafadhali chagua kifurushi tena ili kuendelea.');
+                        setPaymentStatus(
+                            '<strong>Malipo yamefanikiwa.</strong><div>Kifurushi chako kiko tayari. Inakufungulia intaneti...</div>' +
+                            (payment.reference ? '<div class="meta">Ref: ' + escapeHtml(payment.reference) + '</div>' : ''),
+                            'ok'
+                        );
+                        if (payment.gateway_auth_url) {
+                            goToGateway(payment.gateway_auth_url);
+                            return;
+                        }
+                        showOverlay('Malipo yamefanikiwa. Inakufungulia intaneti...');
                         return;
                     }
+
+                    setPaymentStatus(
+                        '<strong>Inasubiri uthibitisho...</strong><div>Tafadhali thibitisha kwenye simu, usifunge ukurasa huu.</div>' +
+                        (payment.reference ? '<div class="meta">Ref: ' + escapeHtml(payment.reference) + '</div>' : ''),
+                        'wait'
+                    );
                 } catch (error) {
                     // keep polling through transient errors
                 }
             }
+            hideOverlay();
             setBusy(els.subscribeSubmit, false);
             setError(els.subscribeError, 'Malipo hayajathibitishwa bado. Tafadhali jaribu tena.');
         }

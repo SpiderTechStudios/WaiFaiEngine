@@ -7,15 +7,20 @@ return [
     'session_ttl_minutes' => (int) env('CAPTIVE_SESSION_TTL', 30),
 
     /*
+    | Always send WiFiDog /login browsers to THIS backend's /connect page
+    | ({APP_URL}/connect), not a separate frontend. Set to false only when
+    | an external CAPTIVE_PORTAL_URL must be used.
+    */
+    'force_backend_portal' => filter_var(
+        env('CAPTIVE_FORCE_BACKEND_PORTAL', true),
+        FILTER_VALIDATE_BOOLEAN
+    ),
+
+    /*
     | Absolute customer-facing captive portal URL (no query string).
     |
-    | The captive portal is rendered by this same backend app (see
-    | routes/web.php -> CaptivePortalController), so it defaults to
-    | {APP_URL}/connect. Override with CAPTIVE_PORTAL_URL when the portal
-    | lives elsewhere.
-    |
-    | The WiFiDog login redirect becomes:
-    |   {CAPTIVE_PORTAL_URL}?subdomain={company.subdomain}&router={router}&session={token}
+    | Used only when force_backend_portal is false. Prefer leaving the force
+    | flag on so Ruijie always lands on the Blade portal in this app.
     |
     | NEVER set this to the WiFiDog API endpoint (/api/wifidog/login).
     */
@@ -34,8 +39,9 @@ return [
 
     /*
     | Origin fallback when CAPTIVE_PORTAL_URL is empty / origin-only.
+    | Defaults to APP_URL (backend), not FRONTEND_URL.
     */
-    'portal_origin' => rtrim((string) env('FRONTEND_URL', env('APP_URL', 'http://localhost')), '/'),
+    'portal_origin' => rtrim((string) env('APP_URL', 'http://localhost'), '/'),
 
     /*
     | Path appended when portal_url / origin does not already end with it.
