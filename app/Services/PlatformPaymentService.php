@@ -398,10 +398,11 @@ class PlatformPaymentService
             return $payment->fresh();
         });
 
-        if ($payment->isEnrollmentSubscription() && $payment->signup_intent_id) {
-            $this->enrollmentCompletionService->completeFromPayment($payment);
-            $payment->refresh();
-        }
+        // Never let account-creation failures undo or block a confirmed payment.
+        // Completion is retried on webhook replay, payment-status poll, and
+        // enrollments:complete-paid.
+        $this->retryEnrollmentCompletion($payment);
+        $payment->refresh();
 
         return $payment;
     }

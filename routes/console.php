@@ -10,4 +10,4 @@ Artisan::command('inspire', function () {
 
 Schedule::command('enrollments:expire')->everyMinute();
 Schedule::command('payments:reconcile-palmpesa')->everyMinute();
-Schedule::command('enrollments:complete-paid')->everyFiveMinutes();
+Schedule::command('enrollments:complete-paid')->everyMinute();

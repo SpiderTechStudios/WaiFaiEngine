@@ -56,15 +56,20 @@ class EnrollmentCompletionService
                 return $enrollment;
             }
 
+            // Reservation TTL only blocks unpaid retries. Once the provider has
+            // confirmed payment, the account must be created even if the signup
+            // intent row already flipped to expired (mobile-money is async).
             if ($enrollment->status === Enrollment::STATUS_EXPIRED || $enrollment->expires_at->isPast()) {
                 if (! $this->withinPaymentGrace($enrollment)) {
                     $metadata = $payment->metadata ?? [];
-                    $metadata['requires_manual_review'] = true;
-                    $metadata['manual_review_reason'] = 'confirmed_payment_after_grace_window';
+                    $metadata['completed_after_grace_window'] = true;
                     $payment->forceFill(['metadata' => $metadata])->save();
 
-                    throw ValidationException::withMessages([
-                        'enrollment' => ['This enrollment has expired and cannot create an account.'],
+                    Log::warning('enrollment_completed_after_grace_window', [
+                        'payment_id' => $payment->id,
+                        'enrollment_id' => $enrollment->id,
+                        'reference' => $enrollment->reference,
+                        'expires_at' => optional($enrollment->expires_at)?->toIso8601String(),
                     ]);
                 }
 
@@ -87,6 +92,8 @@ class EnrollmentCompletionService
                 'phone' => $enrollment->phone,
                 'status' => 'pending',
             ]);
+            // Already bcrypt from enrollment create; Hash::isHashed keeps the cast
+            // from re-hashing so the registrant can still log in.
             $user->password = $enrollment->password_hash;
             $user->save();
 

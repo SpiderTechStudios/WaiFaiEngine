@@ -11,7 +11,6 @@ use App\Services\PlatformPaymentService;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
-use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class EnrollmentTest extends TestCase
@@ -232,6 +231,17 @@ class EnrollmentTest extends TestCase
             'expires_at' => now()->subMinute(),
         ]);
 
+        // Pending charge is still within the payment grace window — keep polling.
+        $this->getJson('/api/v1/auth/enrollments/'.$reference.'/payment-status')
+            ->assertOk()
+            ->assertJsonPath('data.enrollment_status', 'expired');
+
+        $graceMinutes = (int) config('platform.enrollment_payment_grace_minutes', 60);
+
+        Enrollment::query()->where('reference', $reference)->update([
+            'expires_at' => now()->subMinutes($graceMinutes + 5),
+        ]);
+
         $this->getJson('/api/v1/auth/enrollments/'.$reference.'/payment-status')
             ->assertStatus(410)
             ->assertJsonPath('data.enrollment_status', 'expired');
@@ -264,7 +274,35 @@ class EnrollmentTest extends TestCase
         ]);
     }
 
-    public function test_confirmed_payment_after_grace_does_not_create_account(): void
+    public function test_confirmed_payment_after_grace_still_creates_account(): void
+    {
+        Notification::fake();
+
+        $reference = $this->postJson('/api/v1/auth/register', $this->enrollmentPayload())
+            ->assertCreated()
+            ->json('data.enrollment_reference');
+
+        $payment = Enrollment::query()->where('reference', $reference)->firstOrFail()
+            ->payments()->latest('id')->firstOrFail();
+
+        $graceMinutes = (int) config('platform.enrollment_payment_grace_minutes', 60);
+
+        Enrollment::query()->where('reference', $reference)->update([
+            'expires_at' => now()->subMinutes($graceMinutes + 5),
+            'status' => Enrollment::STATUS_EXPIRED,
+        ]);
+
+        app(PlatformPaymentService::class)->markPaid($payment->fresh());
+
+        $this->assertDatabaseHas('users', ['email' => 'jane@example.com']);
+        $this->assertDatabaseHas('signup_intents', [
+            'reference' => $reference,
+            'status' => 'completed',
+        ]);
+        $this->assertTrue((bool) data_get($payment->fresh()->metadata, 'completed_after_grace_window'));
+    }
+
+    public function test_paid_but_incomplete_enrollment_stays_pollable(): void
     {
         $reference = $this->postJson('/api/v1/auth/register', $this->enrollmentPayload())
             ->assertCreated()
@@ -277,10 +315,19 @@ class EnrollmentTest extends TestCase
 
         Enrollment::query()->where('reference', $reference)->update([
             'expires_at' => now()->subMinutes($graceMinutes + 5),
+            'status' => Enrollment::STATUS_EXPIRED,
         ]);
 
-        $this->expectException(ValidationException::class);
-        app(PlatformPaymentService::class)->markPaid($payment->fresh());
+        $payment->forceFill([
+            'status' => PlatformPayment::STATUS_PAID,
+            'paid_at' => now(),
+            'processed_at' => now(),
+        ])->save();
+
+        $this->getJson('/api/v1/auth/enrollments/'.$reference.'/payment-status')
+            ->assertOk()
+            ->assertJsonPath('data.enrollment_status', 'completed')
+            ->assertJsonPath('data.account_created', true);
     }
 
     public function test_expired_domain_reservation_is_released(): void

@@ -7,6 +7,7 @@ use App\Http\Requests\Auth\RegisterEnrollmentRequest;
 use App\Http\Requests\Auth\RetryEnrollmentPaymentRequest;
 use App\Http\Resources\EnrollmentStatusResource;
 use App\Models\Enrollment;
+use App\Models\PlatformPayment;
 use App\Services\EnrollmentService;
 use App\Services\PlatformPaymentService;
 use Illuminate\Http\JsonResponse;
@@ -43,7 +44,12 @@ class EnrollmentController extends Controller
             $enrollment->refresh();
         }
 
-        if ($enrollment->status === Enrollment::STATUS_EXPIRED) {
+        // Paid (or still reconciling) enrollments must not 410 — the UI needs to
+        // keep polling until user/company creation finishes.
+        if (
+            $enrollment->status === Enrollment::STATUS_EXPIRED
+            && ! $this->enrollmentStillRecoverable($enrollment)
+        ) {
             return $this->error(
                 [
                     'enrollment_reference' => $enrollment->reference,
@@ -54,9 +60,11 @@ class EnrollmentController extends Controller
             );
         }
 
-        $message = match ($enrollment->status) {
-            Enrollment::STATUS_COMPLETED => 'Payment successful. Your account has been created.',
-            Enrollment::STATUS_PAYMENT_FAILED => 'Payment was not successful. You may try again.',
+        $message = match (true) {
+            $enrollment->isCompleted() => 'Payment successful. Your account has been created.',
+            $enrollment->status === Enrollment::STATUS_PAYMENT_FAILED => 'Payment was not successful. You may try again.',
+            $enrollment->payments()->where('status', PlatformPayment::STATUS_PAID)->exists()
+                => 'Payment confirmed. Creating your account…',
             default => 'Waiting for payment confirmation.',
         };
 
@@ -68,6 +76,39 @@ class EnrollmentController extends Controller
             'message' => $message,
             'data' => (new EnrollmentStatusResource($enrollment))->resolve(),
         ], 200);
+    }
+
+    /**
+     * Expired reservation rows are still recoverable while a provider payment
+     * can confirm (pending) or while a paid charge still needs account creation.
+     */
+    private function enrollmentStillRecoverable(Enrollment $enrollment): bool
+    {
+        if ($enrollment->isCompleted()) {
+            return true;
+        }
+
+        $hasPaid = $enrollment->payments()
+            ->where('status', PlatformPayment::STATUS_PAID)
+            ->exists();
+
+        if ($hasPaid) {
+            return true;
+        }
+
+        $hasOpenPayment = $enrollment->payments()
+            ->where('status', PlatformPayment::STATUS_PENDING)
+            ->exists();
+
+        if (! $hasOpenPayment || ! $enrollment->expires_at) {
+            return false;
+        }
+
+        $graceMinutes = max(0, (int) config('platform.enrollment_payment_grace_minutes', 60));
+
+        return now()->lessThanOrEqualTo(
+            $enrollment->expires_at->copy()->addMinutes($graceMinutes)
+        );
     }
 
     public function retryPayment(RetryEnrollmentPaymentRequest $request, string $reference): JsonResponse
