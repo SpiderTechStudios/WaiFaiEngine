@@ -39,6 +39,14 @@ class PalmPesaPaymentProvider implements PaymentProviderDriver
         }
 
         $token = $this->apiToken();
+        if ($token === '') {
+            throw ValidationException::withMessages([
+                'payment' => [
+                    'PalmPesa is not configured on this server. Set PALMPESA_API_TOKEN in .env (or provider credentials), then clear config cache.',
+                ],
+            ]);
+        }
+
         $baseUrl = $this->baseUrl();
         $body = [
             'name' => $this->resolveCustomerName($payment),
@@ -264,17 +272,37 @@ class PalmPesaPaymentProvider implements PaymentProviderDriver
 
     private function shouldSimulate(): bool
     {
-        return config('platform.payment_auto_paid') || $this->apiToken() === '';
+        // Never pretend a live STK push succeeded just because the token is
+        // missing — that hides misconfiguration (no USSD on the phone).
+        return (bool) config('platform.payment_auto_paid');
     }
 
     private function apiToken(): string
     {
-        return (string) config('services.palmpesa.api_token', '');
+        $token = (string) config('services.palmpesa.api_token', '');
+        if ($token !== '') {
+            return $token;
+        }
+
+        return (string) (
+            $this->provider->credential('api_token', '')
+            ?: $this->provider->credential('token', '')
+            ?: ''
+        );
     }
 
     private function userId(): string
     {
-        return (string) config('services.palmpesa.user_id', '');
+        $userId = (string) config('services.palmpesa.user_id', '');
+        if ($userId !== '') {
+            return $userId;
+        }
+
+        return (string) (
+            $this->provider->credential('user_id', '')
+            ?: $this->provider->credential('userId', '')
+            ?: ''
+        );
     }
 
     private function baseUrl(): string
