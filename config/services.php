@@ -63,6 +63,8 @@ return [
         'base_url' => env('PALMPESA_BASE_URL', 'https://palmpesa.drmlelwa.co.tz'),
         'status_check_minutes' => (int) env('PALMPESA_STATUS_CHECK_MINUTES', 4),
         'status_timeout' => (int) env('PALMPESA_STATUS_TIMEOUT', 8),
+        // How often a captive-portal payment poll may call provider order-status.
+        'portal_reconcile_seconds' => (int) env('PALMPESA_PORTAL_RECONCILE_SECONDS', 20),
         'callback_url' => env('PALMPESA_CALLBACK_URL'),
         'vendor' => env('PALMPESA_VENDOR', 'TILL61103867'),
     ],

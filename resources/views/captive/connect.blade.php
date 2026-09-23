@@ -317,12 +317,16 @@
 
         function errorMessage(error) {
             const payload = error && error.payload;
+            const message = (payload && payload.message) || '';
+            if (/too many attempts/i.test(message)) {
+                return 'Unafanya maombi mengi sana. Subiri kidogo kisha jaribu tena.';
+            }
             if (payload && payload.data && typeof payload.data === 'object') {
                 const first = Object.values(payload.data)[0];
                 if (Array.isArray(first) && first[0]) return first[0];
                 if (typeof first === 'string') return first;
             }
-            return (payload && payload.message) || 'Kuna hitilafu. Tafadhali jaribu tena.';
+            return message || 'Kuna hitilafu. Tafadhali jaribu tena.';
         }
 
         function goToGateway(url) {

@@ -14,6 +14,7 @@ use App\Models\WalletTransaction;
 use App\Support\NetworkDetector;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -180,6 +181,8 @@ class PaymentService
 
     /**
      * On poll: reconcile linked platform payment if still pending (e.g. PalmPesa order-status).
+     * Provider status checks are intentionally spaced out — captive UI polls every few
+     * seconds and a shared API token must not hammer the provider on every request.
      */
     public function refreshPortalPaymentStatus(PaymentTransaction $payment): PaymentTransaction
     {
@@ -202,9 +205,15 @@ class PaymentService
         }
 
         if ($platformPayment->status === PlatformPayment::STATUS_PENDING) {
+            if (! $this->shouldReconcilePortalPaymentNow($payment)) {
+                return $payment->loadMissing(['customer', 'internetPlan']);
+            }
+
             try {
                 $platformPayment = app(PlatformPaymentService::class)->reconcileProviderPayment($platformPayment);
+                $this->rememberPortalReconcileAttempt($payment);
             } catch (\Throwable $e) {
+                $this->rememberPortalReconcileAttempt($payment);
                 Log::debug('Portal payment reconcile skipped', [
                     'payment_transaction_id' => $payment->id,
                     'error' => $e->getMessage(),
@@ -224,6 +233,29 @@ class PaymentService
         }
 
         return $payment->fresh(['customer', 'internetPlan']);
+    }
+
+    private function shouldReconcilePortalPaymentNow(PaymentTransaction $payment): bool
+    {
+        $seconds = max(5, (int) config('services.palmpesa.portal_reconcile_seconds', 20));
+        $last = data_get($payment->metadata, 'last_provider_reconcile_at');
+
+        if (! is_string($last) || $last === '') {
+            return true;
+        }
+
+        try {
+            return Carbon::parse($last)->lteOrEqualTo(now()->subSeconds($seconds));
+        } catch (\Throwable) {
+            return true;
+        }
+    }
+
+    private function rememberPortalReconcileAttempt(PaymentTransaction $payment): void
+    {
+        $metadata = $payment->metadata ?? [];
+        $metadata['last_provider_reconcile_at'] = now()->toIso8601String();
+        $payment->forceFill(['metadata' => $metadata])->save();
     }
 
     private function authorizeCaptiveIfPresent(PaymentTransaction $payment): void

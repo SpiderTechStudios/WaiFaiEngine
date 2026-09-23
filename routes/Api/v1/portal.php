@@ -10,10 +10,10 @@ Route::prefix('portal/{subdomain}')
             ->middleware('throttle:60,1');
 
         Route::post('/payments', [PortalController::class, 'createPayment'])
-            ->middleware('throttle:30,1');
+            ->middleware('throttle:portal-payment-create');
 
         Route::get('/payments/{payment}', [PortalController::class, 'showPayment'])
-            ->middleware('throttle:30,1');
+            ->middleware('throttle:portal-payment-status');
 
         Route::post('/vouchers/redeem', [PortalController::class, 'redeemVoucher'])
             ->middleware('throttle:10,1');

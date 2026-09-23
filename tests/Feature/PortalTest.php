@@ -84,6 +84,34 @@ class PortalTest extends TestCase
             ->assertJsonPath('data.package.name', 'Daily');
     }
 
+    public function test_portal_payment_status_polling_is_not_rate_limited_per_shared_ip_bucket(): void
+    {
+        $owner = $this->createUser();
+        $this->createCompanyFor($owner, 'owner', ['subdomain' => 'poll-cafe']);
+        $headers = $this->authHeaders($owner);
+
+        $packageId = $this->withHeaders($headers)->postJson('/api/v1/packages', [
+            'name' => 'Hourly',
+            'duration' => 1,
+            'duration_unit' => 'HOURS',
+            'price' => 1000,
+        ])->assertCreated()->json('data.id');
+
+        $paymentId = $this->postJson('/api/v1/portal/poll-cafe/payments', [
+            'internet_plan_id' => $packageId,
+            'customer_name' => 'Portal Guest',
+            'customer_phone' => '0711222444',
+            'payment_method' => 'mpesa',
+        ])->assertCreated()->json('data.id');
+
+        // Old shared throttle:30,1 failed once captive UI + other guests passed ~30 polls/min.
+        for ($i = 0; $i < 40; $i++) {
+            $this->getJson('/api/v1/portal/poll-cafe/payments/'.$paymentId)
+                ->assertOk()
+                ->assertJsonPath('data.status', 'pending');
+        }
+    }
+
     public function test_portal_payment_triggers_default_provider_ussd(): void
     {
         config([
