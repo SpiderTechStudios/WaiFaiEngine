@@ -43,6 +43,7 @@ class CaptivePortalController extends Controller
                     : 'Karibu! Chagua kifurushi chako ili kuendelea kutumia intaneti.',
                 'contact_phone' => filled($company->phone) ? $company->phone : '0687181497',
                 'brand_color' => filled($company->primary_color) ? $company->primary_color : '#0F4C81',
+                'logo_url' => filled($company->logo_url) ? $company->logo_url : null,
                 'subdomain' => $company->subdomain,
                 'router_name' => $router?->name,
                 'session_token' => $session?->token,

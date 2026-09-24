@@ -8,138 +8,285 @@
     <style>
         :root {
             --brand: {{ $portal['brand_color'] }};
+            --brand-soft: color-mix(in srgb, var(--brand) 18%, #ffffff);
             --brand-ink: #ffffff;
+            --accent: #f97316;
             --ink: #0f172a;
             --muted: #64748b;
-            --line: #e2e8f0;
-            --bg: #f1f5f9;
+            --line: #e8edf2;
+            --field: #f3f5f7;
             --danger: #b91c1c;
+            --ok: #065f46;
+            --wait: #9a3412;
+            --radius: 18px;
+            --radius-sm: 12px;
         }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         html, body { margin: 0; padding: 0; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background: var(--bg);
+            font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
             color: var(--ink);
-            line-height: 1.5;
+            line-height: 1.45;
             min-height: 100vh;
             display: flex;
             justify-content: center;
-            padding: 20px 16px 40px;
+            padding: 18px 14px 36px;
+            background:
+                linear-gradient(
+                    180deg,
+                    color-mix(in srgb, var(--brand) 55%, #ffffff) 0%,
+                    color-mix(in srgb, var(--brand) 12%, #ffffff) 42%,
+                    #ffffff 100%
+                );
         }
-        .portal { width: 100%; max-width: 480px; }
-        .brand-head { text-align: center; margin-bottom: 18px; }
-        .brand-head h1 { font-size: 24px; margin: 0 0 6px; letter-spacing: -0.01em; }
-        .brand-head p { margin: 0; color: var(--muted); font-size: 14px; }
-        .router-note { text-align: center; color: var(--muted); font-size: 12px; margin-top: 6px; }
-        .card {
+        .portal { width: 100%; max-width: 420px; }
+        .shell {
             background: #fff;
-            border-radius: 16px;
-            padding: 18px;
-            box-shadow: 0 1px 3px rgba(15, 23, 42, .08);
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow:
+                0 18px 40px rgba(15, 23, 42, .12),
+                0 2px 6px rgba(15, 23, 42, .06);
         }
-        .stack > * { margin: 0; }
-        .stack > * + * { margin-top: 12px; }
+        .shell-head {
+            background: var(--brand);
+            color: var(--brand-ink);
+            text-align: center;
+            padding: 22px 20px 26px;
+        }
+        .brand-mark {
+            width: 56px;
+            height: 56px;
+            margin: 0 auto 12px;
+            border-radius: 14px;
+            background: var(--accent);
+            display: grid;
+            place-items: center;
+            box-shadow: 0 8px 18px rgba(0,0,0,.12);
+            overflow: hidden;
+        }
+        .brand-mark img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .brand-mark svg { width: 28px; height: 28px; display: block; color: #111; }
+        .shell-head h1 {
+            margin: 0;
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+        .shell-head .welcome {
+            margin: 8px auto 0;
+            max-width: 28ch;
+            font-size: 13px;
+            line-height: 1.4;
+            opacity: .95;
+            font-weight: 500;
+        }
+        .shell-body { padding: 20px 18px 18px; }
+        .block-title {
+            margin: 0 0 10px;
+            font-size: 16px;
+            font-weight: 800;
+            color: var(--ink);
+        }
+        .section-label {
+            margin: 22px 0 10px;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+        .field {
+            width: 100%;
+            padding: 14px 14px;
+            font-size: 16px;
+            border: 0;
+            border-radius: var(--radius-sm);
+            background: var(--field);
+            color: var(--ink);
+        }
+        .field:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 28%, transparent);
+        }
+        .field + .field { margin-top: 10px; }
         .btn {
             display: block;
             width: 100%;
             text-align: center;
             border: 0;
-            border-radius: 12px;
+            border-radius: var(--radius-sm);
             padding: 14px 16px;
-            font-size: 15px;
-            font-weight: 600;
+            font-size: 16px;
+            font-weight: 700;
             cursor: pointer;
             transition: transform .05s ease, opacity .15s ease;
         }
         .btn:active { transform: scale(.99); }
+        .btn:disabled { opacity: .65; cursor: wait; }
         .btn-primary {
             background: var(--brand);
             color: var(--brand-ink);
+            margin-top: 12px;
         }
-        .btn-outline {
-            background: #fff;
-            color: var(--brand);
-            border: 2px solid var(--brand);
-        }
-        .status-box {
-            margin-top: 14px;
-            padding: 12px 14px;
-            border-radius: 12px;
-            background: #f8fafc;
-            border: 1px solid var(--line);
-            font-size: 14px;
-            color: var(--ink);
-        }
-        .status-box.ok { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
-        .status-box.wait { background: #fff7ed; border-color: #fed7aa; color: #9a3412; }
-        .status-box .meta { margin-top: 6px; color: var(--muted); font-size: 12px; word-break: break-all; }
-
-        .support {
-            text-align: center;
+        .btn-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 72px;
+            padding: 9px 16px;
+            border: 0;
+            border-radius: 999px;
+            background: var(--brand);
+            color: var(--brand-ink);
             font-size: 13px;
-            color: var(--muted);
-            margin-top: 18px;
-        }
-        .support a { color: var(--brand); font-weight: 600; text-decoration: none; }
-        h2.section-title { font-size: 18px; margin: 0 0 14px; }
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 10px;
-        }
-        .package {
-            text-align: left;
-            background: #fff;
-            border: 2px solid var(--line);
-            border-radius: 14px;
-            padding: 12px;
+            font-weight: 700;
             cursor: pointer;
+            flex-shrink: 0;
+        }
+        .btn-pill:active { transform: scale(.98); }
+        .packages { display: flex; flex-direction: column; gap: 10px; }
+        .package {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            width: 100%;
+            padding: 14px 14px;
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            background: #fff;
+            text-align: left;
             font: inherit;
             color: inherit;
-            position: relative;
+            cursor: default;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, .03);
         }
-        .package.selected {
-            border-color: var(--brand);
-            box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 18%, transparent);
+        .package .p-name {
+            font-weight: 800;
+            font-size: 15px;
+            margin: 0;
         }
-        .package .p-name { font-weight: 700; font-size: 15px; }
-        .package .p-desc { color: var(--muted); font-size: 12px; margin-top: 4px; }
-        .package .p-meta { color: var(--muted); font-size: 12px; margin-top: 6px; }
-        .package .p-price { margin-top: 8px; font-weight: 700; color: var(--brand); font-size: 16px; }
+        .package .p-price {
+            margin: 3px 0 0;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--brand);
+        }
+        .package .p-meta {
+            margin: 2px 0 0;
+            font-size: 12px;
+            color: var(--muted);
+        }
         .package .p-badge {
             display: inline-block;
+            margin-top: 4px;
             font-size: 10px;
-            font-weight: 700;
+            font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: .02em;
-            background: color-mix(in srgb, var(--brand) 14%, #fff);
+            letter-spacing: .03em;
             color: var(--brand);
+            background: var(--brand-soft);
             border-radius: 999px;
             padding: 2px 8px;
-            margin-top: 4px;
         }
-        label.field-label { display: block; font-size: 13px; font-weight: 600; margin: 14px 0 6px; }
-        input[type=tel], input[type=text] {
+        .quiet-link {
+            display: block;
             width: 100%;
-            padding: 13px 12px;
-            font-size: 16px;
-            border: 1.5px solid var(--line);
-            border-radius: 12px;
-            background: #fff;
-            color: var(--ink);
+            margin-top: 16px;
+            padding: 10px;
+            border: 0;
+            background: transparent;
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 600;
+            text-align: center;
+            cursor: pointer;
+            text-decoration: underline;
+            text-underline-offset: 3px;
         }
-        input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 15%, transparent); }
-        .error { color: var(--danger); font-size: 13px; margin: 10px 0 0; min-height: 0; }
+        .pay-summary {
+            background: var(--brand-soft);
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 14px;
+        }
+        .pay-summary .label {
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin: 0 0 4px;
+        }
+        .pay-summary .name {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 800;
+        }
+        .pay-summary .price {
+            margin: 4px 0 0;
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--brand);
+        }
+        .field-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 700;
+            margin: 0 0 8px;
+        }
+        .error {
+            color: var(--danger);
+            font-size: 13px;
+            margin: 10px 0 0;
+            min-height: 0;
+        }
+        .status-box {
+            margin-top: 12px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: #fff7ed;
+            border: 1px solid #fed7aa;
+            font-size: 14px;
+            color: var(--wait);
+        }
+        .status-box.ok {
+            background: #ecfdf5;
+            border-color: #a7f3d0;
+            color: var(--ok);
+        }
+        .status-box .meta {
+            margin-top: 6px;
+            font-size: 12px;
+            opacity: .85;
+            word-break: break-all;
+        }
         .back {
             display: inline-block;
-            margin-top: 16px;
+            margin-top: 14px;
             background: none;
             border: 0;
             color: var(--muted);
             font-size: 14px;
+            font-weight: 600;
             cursor: pointer;
             padding: 4px 0;
+        }
+        .support {
+            text-align: center;
+            font-size: 13px;
+            color: var(--muted);
+            margin-top: 16px;
+        }
+        .support a {
+            color: var(--brand);
+            font-weight: 700;
+            text-decoration: none;
         }
         .hidden { display: none !important; }
         .overlay {
@@ -155,77 +302,82 @@
             z-index: 50;
         }
         .spinner {
-            width: 30px; height: 30px; border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
             border: 3px solid color-mix(in srgb, var(--brand) 25%, #fff);
             border-top-color: var(--brand);
             animation: spin .8s linear infinite;
             margin-bottom: 14px;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
-        @media (min-width: 560px) {
-            .portal { max-width: 640px; }
-            .grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
-        }
     </style>
 </head>
 <body>
     <main class="portal">
-        <header class="brand-head">
-            <h1>{{ $portal['business_name'] }}</h1>
-            <p>{{ $portal['welcome_message'] }}</p>
-            @if (! empty($portal['router_name']))
-                <div class="router-note">{{ $portal['router_name'] }}</div>
-            @endif
-        </header>
+        <div class="shell">
+            <header class="shell-head">
+                <div class="brand-mark">
+                    @if (! empty($portal['logo_url']))
+                        <img src="{{ $portal['logo_url'] }}" alt="{{ $portal['business_name'] }}">
+                    @else
+                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M12 18.5a1.25 1.25 0 1 0 0-2.5 1.25 1.25 0 0 0 0 2.5Z" fill="currentColor"/>
+                            <path d="M8.2 14.3a5.5 5.5 0 0 1 7.6 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                            <path d="M5.5 11.4a9.5 9.5 0 0 1 13 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                            <path d="M2.8 8.5a13.5 13.5 0 0 1 18.4 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                        </svg>
+                    @endif
+                </div>
 
-        {{-- INITIAL STATE --}}
-        <section id="state-initial" class="card stack">
-            <button type="button" class="btn btn-primary" data-go="subscribe">Jiunge sasa</button>
-            <button type="button" class="btn btn-outline" data-go="voucher">Jiunge kwa vocha</button>
-            <button type="button" class="btn btn-outline" data-go="redeem">Endeleza kifurushi</button>
-        </section>
+                <h1>{{ $portal['business_name'] }}</h1>
+                <p class="welcome">{{ $portal['welcome_message'] }}</p>
+            </header>
 
-        {{-- SUBSCRIBE STATE --}}
-        <section id="state-subscribe" class="card hidden">
-            <h2 class="section-title">Chagua kifurushi</h2>
-            <div id="packageGrid" class="grid"></div>
-            <p id="subscribeEmpty" class="error hidden">Hakuna vifurushi vinavyopatikana kwa sasa.</p>
+            <div class="shell-body">
+                {{-- HOME: voucher + packages --}}
+                <section id="state-home">
+                    <h2 class="block-title">Weka namba ya voucher</h2>
+                    <input id="voucherCode" class="field" type="text" inputmode="numeric" autocomplete="off" placeholder="mf. 123456">
+                    <input id="voucherPhone" class="field" type="tel" inputmode="numeric" autocomplete="tel" placeholder="Namba ya simu">
+                    <p id="voucherError" class="error"></p>
+                    <button type="button" id="voucherSubmit" class="btn btn-primary">Unganisha</button>
 
-            <label class="field-label" for="subscribePhone">Number ya simu</label>
-            <input id="subscribePhone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="Ingiza namba ya simu">
+                    <div class="section-label">Nunua intaneti</div>
+                    <div id="packageGrid" class="packages"></div>
+                    <p id="subscribeEmpty" class="error hidden">Hakuna vifurushi vinavyopatikana kwa sasa.</p>
 
-            <p id="subscribeError" class="error"></p>
-            <div id="subscribeStatus" class="status-box hidden"></div>
-            <button type="button" id="subscribeSubmit" class="btn btn-primary" style="margin-top:14px">Endelea</button>
-            <button type="button" class="back" data-back>&larr; Rudi nyuma</button>
-        </section>
+                    <button type="button" class="quiet-link" data-go="redeem">Tayari una kifurushi? Endeleza hapa</button>
+                </section>
 
-        {{-- VOUCHER STATE --}}
-        <section id="state-voucher" class="card hidden">
-            <h2 class="section-title">Jiunge kwa vocha</h2>
+                {{-- PAY: after tapping Lipa --}}
+                <section id="state-pay" class="hidden">
+                    <div class="pay-summary">
+                        <p class="label">Kifurushi</p>
+                        <p class="name" id="payPlanName">—</p>
+                        <p class="price" id="payPlanPrice">—</p>
+                    </div>
 
-            <label class="field-label" for="voucherCode">Namba ya vocha</label>
-            <input id="voucherCode" type="text" inputmode="numeric" autocomplete="off" placeholder="Ingiza namba ya vocha">
+                    <label class="field-label" for="subscribePhone">Namba ya simu</label>
+                    <input id="subscribePhone" class="field" type="tel" inputmode="numeric" autocomplete="tel" placeholder="Ingiza namba ya simu">
 
-            <label class="field-label" for="voucherPhone">Number ya simu</label>
-            <input id="voucherPhone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="Ingiza namba ya simu">
+                    <p id="subscribeError" class="error"></p>
+                    <div id="subscribeStatus" class="status-box hidden"></div>
+                    <button type="button" id="subscribeSubmit" class="btn btn-primary">Lipa sasa</button>
+                    <button type="button" class="back" data-back>&larr; Rudi nyuma</button>
+                </section>
 
-            <p id="voucherError" class="error"></p>
-            <button type="button" id="voucherSubmit" class="btn btn-primary" style="margin-top:14px">Endelea</button>
-            <button type="button" class="back" data-back>&larr; Rudi nyuma</button>
-        </section>
-
-        {{-- REDEEM STATE --}}
-        <section id="state-redeem" class="card hidden">
-            <h2 class="section-title">Endeleza kifurushi</h2>
-
-            <label class="field-label" for="redeemPhone">Number ya simu</label>
-            <input id="redeemPhone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="Ingiza namba ya simu">
-
-            <p id="redeemError" class="error"></p>
-            <button type="button" id="redeemSubmit" class="btn btn-primary" style="margin-top:14px">Endelea</button>
-            <button type="button" class="back" data-back>&larr; Rudi nyuma</button>
-        </section>
+                {{-- REDEEM: continue existing package --}}
+                <section id="state-redeem" class="hidden">
+                    <h2 class="block-title">Endeleza kifurushi</h2>
+                    <label class="field-label" for="redeemPhone">Namba ya simu</label>
+                    <input id="redeemPhone" class="field" type="tel" inputmode="numeric" autocomplete="tel" placeholder="Ingiza namba ya simu">
+                    <p id="redeemError" class="error"></p>
+                    <button type="button" id="redeemSubmit" class="btn btn-primary">Endelea</button>
+                    <button type="button" class="back" data-back>&larr; Rudi nyuma</button>
+                </section>
+            </div>
+        </div>
 
         <p class="support">
             Kwa msaada, wasiliana nasi:
@@ -240,11 +392,14 @@
 
     <script>
         const PORTAL = @json($portal);
+        const durationLabels = { HOURS: 'Masaa', DAYS: 'Siku', WEEKS: 'Wiki', MONTHS: 'Miezi', UNLIMITED_DATA: 'Bila kikomo' };
+
+        let selectedPlanId = null;
+        let state = 'home';
 
         const els = {
-            initial: document.getElementById('state-initial'),
-            subscribe: document.getElementById('state-subscribe'),
-            voucher: document.getElementById('state-voucher'),
+            home: document.getElementById('state-home'),
+            pay: document.getElementById('state-pay'),
             redeem: document.getElementById('state-redeem'),
             grid: document.getElementById('packageGrid'),
             empty: document.getElementById('subscribeEmpty'),
@@ -252,6 +407,8 @@
             subscribeError: document.getElementById('subscribeError'),
             subscribeStatus: document.getElementById('subscribeStatus'),
             subscribeSubmit: document.getElementById('subscribeSubmit'),
+            payPlanName: document.getElementById('payPlanName'),
+            payPlanPrice: document.getElementById('payPlanPrice'),
             voucherCode: document.getElementById('voucherCode'),
             voucherPhone: document.getElementById('voucherPhone'),
             voucherError: document.getElementById('voucherError'),
@@ -263,18 +420,13 @@
             overlayText: document.getElementById('overlayText'),
         };
 
-        const states = { initial: els.initial, subscribe: els.subscribe, voucher: els.voucher, redeem: els.redeem };
-        const durationLabels = { HOURS: 'Saa', DAYS: 'Siku', WEEKS: 'Wiki', MONTHS: 'Miezi', UNLIMITED_DATA: 'Bila kikomo' };
-
-        let selectedPlanId = null;
-        let state = 'initial';
+        const states = { home: els.home, pay: els.pay, redeem: els.redeem };
 
         function setState(next) {
             state = next;
             Object.keys(states).forEach((key) => states[key].classList.toggle('hidden', key !== next));
-            if (next === 'initial') {
-                resetSubscribe();
-                resetVoucher();
+            if (next === 'home') {
+                resetPay();
                 resetRedeem();
             }
         }
@@ -304,7 +456,7 @@
 
         function formatPrice(value) {
             const amount = Number(value || 0);
-            return 'TSh ' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(amount);
+            return 'TZS ' + new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(amount);
         }
 
         function durationText(pkg) {
@@ -348,7 +500,11 @@
             window.location.href = url;
         }
 
-        // ---- package rendering ----
+        function fillPaySummary(pkg) {
+            els.payPlanName.textContent = pkg.name;
+            els.payPlanPrice.textContent = formatPrice(pkg.price) + ' · ' + durationText(pkg);
+        }
+
         function renderPackages() {
             els.grid.innerHTML = '';
             const packages = PORTAL.packages || [];
@@ -360,42 +516,60 @@
             els.empty.classList.add('hidden');
 
             packages.forEach((pkg) => {
-                const card = document.createElement('button');
-                card.type = 'button';
-                card.className = 'package';
-                card.dataset.id = pkg.id;
-                card.innerHTML =
-                    '<div class="p-name"></div>' +
-                    (pkg.badge ? '<div class="p-badge"></div>' : '') +
-                    (pkg.description ? '<div class="p-desc"></div>' : '') +
-                    '<div class="p-meta"></div>' +
-                    '<div class="p-price"></div>';
-                card.querySelector('.p-name').textContent = pkg.name;
-                if (pkg.badge) card.querySelector('.p-badge').textContent = pkg.badge;
-                if (pkg.description) card.querySelector('.p-desc').textContent = pkg.description;
-                card.querySelector('.p-meta').textContent = durationText(pkg);
-                card.querySelector('.p-price').textContent = formatPrice(pkg.price);
-                card.addEventListener('click', () => selectPackage(pkg.id));
-                els.grid.appendChild(card);
+                const row = document.createElement('div');
+                row.className = 'package';
+                row.dataset.id = pkg.id;
+
+                const info = document.createElement('div');
+                const name = document.createElement('p');
+                name.className = 'p-name';
+                name.textContent = pkg.name;
+                info.appendChild(name);
+
+                const price = document.createElement('p');
+                price.className = 'p-price';
+                price.textContent = formatPrice(pkg.price);
+                info.appendChild(price);
+
+                const meta = document.createElement('p');
+                meta.className = 'p-meta';
+                meta.textContent = durationText(pkg);
+                info.appendChild(meta);
+
+                if (pkg.badge) {
+                    const badge = document.createElement('span');
+                    badge.className = 'p-badge';
+                    badge.textContent = pkg.badge;
+                    info.appendChild(badge);
+                }
+
+                const payBtn = document.createElement('button');
+                payBtn.type = 'button';
+                payBtn.className = 'btn-pill';
+                payBtn.textContent = 'Lipa';
+                payBtn.addEventListener('click', () => openPay(pkg));
+
+                row.appendChild(info);
+                row.appendChild(payBtn);
+                els.grid.appendChild(row);
             });
         }
 
-        function selectPackage(id) {
-            selectedPlanId = id;
-            document.querySelectorAll('.package').forEach((el) => {
-                el.classList.toggle('selected', Number(el.dataset.id) === Number(id));
-            });
+        function openPay(pkg) {
+            selectedPlanId = pkg.id;
+            fillPaySummary(pkg);
             setError(els.subscribeError, '');
+            setPaymentStatus('');
+            els.subscribePhone.value = '';
+            setState('pay');
         }
 
-        function resetSubscribe() {
+        function resetPay() {
             selectedPlanId = null;
             els.subscribePhone.value = '';
             setError(els.subscribeError, '');
             setPaymentStatus('');
-            document.querySelectorAll('.package').forEach((el) => el.classList.remove('selected'));
         }
-        function resetVoucher() { els.voucherCode.value = ''; els.voucherPhone.value = ''; setError(els.voucherError, ''); }
         function resetRedeem() { els.redeemPhone.value = ''; setError(els.redeemError, ''); }
 
         function setPaymentStatus(html, kind) {
@@ -404,11 +578,10 @@
                 els.subscribeStatus.innerHTML = '';
                 return;
             }
-            els.subscribeStatus.className = 'status-box ' + (kind || 'wait');
+            els.subscribeStatus.className = 'status-box ' + (kind || '');
             els.subscribeStatus.innerHTML = html;
         }
 
-        // ---- subscribe ----
         async function submitSubscribe() {
             if (!selectedPlanId) { setError(els.subscribeError, 'Chagua kifurushi kwanza.'); return; }
             const phone = normalizePhone(els.subscribePhone.value);
@@ -429,7 +602,7 @@
                 setPaymentStatus(
                     '<strong>Inasubiri malipo...</strong><div>' + escapeHtml(pushHint) + '</div>' +
                     (payment.reference ? '<div class="meta">Ref: ' + escapeHtml(payment.reference) + '</div>' : ''),
-                    'wait'
+                    ''
                 );
                 showOverlay('Thibitisha malipo kwenye simu...');
                 pollPayment(payment.id);
@@ -475,7 +648,7 @@
                         hideOverlay();
                         setBusy(els.subscribeSubmit, false);
                         setPaymentStatus(
-                            '<strong>Malipo yamefanikiwa.</strong><div>Kifurushi chako kiko tayari. Inakufungulia intaneti...</div>' +
+                            '<strong>Malipo yamefanikiwa.</strong><div>Inakufungulia intaneti...</div>' +
                             (payment.reference ? '<div class="meta">Ref: ' + escapeHtml(payment.reference) + '</div>' : ''),
                             'ok'
                         );
@@ -490,7 +663,7 @@
                     setPaymentStatus(
                         '<strong>Inasubiri uthibitisho...</strong><div>Tafadhali thibitisha kwenye simu, usifunge ukurasa huu.</div>' +
                         (payment.reference ? '<div class="meta">Ref: ' + escapeHtml(payment.reference) + '</div>' : ''),
-                        'wait'
+                        ''
                     );
                 } catch (error) {
                     // keep polling through transient errors
@@ -501,10 +674,9 @@
             setError(els.subscribeError, 'Malipo hayajathibitishwa bado. Tafadhali jaribu tena.');
         }
 
-        // ---- voucher ----
         async function submitVoucher() {
             const code = els.voucherCode.value.trim();
-            if (!code) { setError(els.voucherError, 'Ingiza namba ya vocha.'); return; }
+            if (!code) { setError(els.voucherError, 'Ingiza namba ya voucher.'); return; }
             const phone = normalizePhone(els.voucherPhone.value);
             if (phone === null) { setError(els.voucherError, phoneError(els.voucherPhone.value)); return; }
             setError(els.voucherError, '');
@@ -529,7 +701,6 @@
             }
         }
 
-        // ---- redeem / continue subscription ----
         async function submitRedeem() {
             const phone = normalizePhone(els.redeemPhone.value);
             if (phone === null) { setError(els.redeemError, phoneError(els.redeemPhone.value)); return; }
@@ -568,19 +739,18 @@
             }
         }
 
-        // ---- wire up ----
         document.querySelectorAll('[data-go]').forEach((button) => {
             button.addEventListener('click', () => setState(button.dataset.go));
         });
         document.querySelectorAll('[data-back]').forEach((button) => {
-            button.addEventListener('click', () => setState('initial'));
+            button.addEventListener('click', () => setState('home'));
         });
         els.subscribeSubmit.addEventListener('click', submitSubscribe);
         els.voucherSubmit.addEventListener('click', submitVoucher);
         els.redeemSubmit.addEventListener('click', submitRedeem);
 
         renderPackages();
-        setState('initial');
+        setState('home');
     </script>
 </body>
 </html>
