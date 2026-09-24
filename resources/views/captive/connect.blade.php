@@ -85,6 +85,29 @@
             font-size: 12px;
             margin-top: 8px;
         }
+        .header-support {
+            margin-top: 12px;
+            font-size: 13px;
+            color: rgba(255,255,255,.95);
+        }
+        .header-support a {
+            color: #fff;
+            font-weight: 700;
+            text-decoration: none;
+            border-bottom: 1px solid rgba(255,255,255,.55);
+        }
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 18px;
+            line-height: 1.4;
+        }
+        .footer a {
+            color: var(--brand);
+            font-weight: 600;
+            text-decoration: none;
+        }
         .card {
             background: #fff;
             border-radius: 16px;
@@ -128,13 +151,6 @@
         .status-box.wait { background: #fff7ed; border-color: #fed7aa; color: #9a3412; }
         .status-box .meta { margin-top: 6px; color: var(--muted); font-size: 12px; word-break: break-all; }
 
-        .support {
-            text-align: center;
-            font-size: 13px;
-            color: var(--muted);
-            margin-top: 18px;
-        }
-        .support a { color: var(--brand); font-weight: 600; text-decoration: none; }
         h2.section-title { font-size: 18px; margin: 0 0 14px; }
         .grid {
             display: grid;
@@ -241,6 +257,10 @@
             @if (! empty($portal['router_name']))
                 <div class="router-note">{{ $portal['router_name'] }}</div>
             @endif
+            <div class="header-support">
+                Kwa msaada:
+                <a href="tel:{{ $portal['contact_phone'] }}">{{ $portal['contact_phone'] }}</a>
+            </div>
         </header>
 
         {{-- INITIAL STATE --}}
@@ -292,9 +312,8 @@
             <button type="button" class="back" data-back>&larr; Rudi nyuma</button>
         </section>
 
-        <p class="support">
-            Kwa msaada, wasiliana nasi:
-            <a href="tel:{{ $portal['contact_phone'] }}">{{ $portal['contact_phone'] }}</a>
+        <p class="footer">
+            Powered by <a href="https://waifai.co.tz" rel="noopener">WaiFai</a>
         </p>
     </main>
 
