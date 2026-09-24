@@ -403,8 +403,9 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'expires_at', type: 'string', format: 'date-time', example: '2026-09-01T12:04:00+00:00'),
         new OA\Property(property: 'remaining_attempts', type: 'integer', example: 3),
         new OA\Property(property: 'payment_phone', type: 'string', example: '0686911251'),
+        new OA\Property(property: 'can_retry_payment', type: 'boolean', example: true, description: 'True when the customer can resend a USSD/STK push for this enrollment'),
         new OA\Property(property: 'account_created', type: 'boolean', nullable: true, example: true),
-        new OA\Property(property: 'next_action', type: 'string', nullable: true, example: 'login'),
+        new OA\Property(property: 'next_action', type: 'string', nullable: true, example: 'retry_payment', description: 'retry_payment | login'),
         new OA\Property(property: 'redirect_to', type: 'string', nullable: true, example: '/login'),
         new OA\Property(property: 'payment', ref: '#/components/schemas/EnrollmentPaymentSummary', nullable: true),
     ]

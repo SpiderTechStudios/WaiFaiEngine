@@ -11,7 +11,7 @@ class EnrollmentDocumentation
         operationId: 'registerEnrollment',
         tags: ['Enrollment'],
         summary: 'Start pay-first registration enrollment',
-        description: 'Creates a temporary enrollment (no user/company yet), creates a platform_subscription payment intent on the default collection provider, and initiates USSD/STK. Enrollment expires after PLATFORM_ENROLLMENT_TTL_MINUTES (default 4). Account creation happens only after a verified provider webhook.',
+        description: 'Creates a temporary enrollment (no user/company yet), creates a platform_subscription payment intent on the default collection provider, and initiates USSD/STK. If the same email already has an incomplete enrollment that can still accept payment, that enrollment is resumed and a new USSD/STK push is sent instead of rejecting the request. Enrollment expires after PLATFORM_ENROLLMENT_TTL_MINUTES (default 4). Account creation happens only after a verified provider webhook.',
         requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(ref: '#/components/schemas/RegisterEnrollmentRequest')),
         responses: [
             new OA\Response(response: 201, description: 'Enrollment created; payment pending', content: new OA\JsonContent(ref: '#/components/schemas/EnrollmentStatusResponse')),
@@ -42,7 +42,7 @@ class EnrollmentDocumentation
         operationId: 'retryEnrollmentPayment',
         tags: ['Enrollment'],
         summary: 'Retry enrollment platform subscription payment',
-        description: 'Allowed while enrollment is not expired and fewer than 3 failed attempts have occurred. Optionally updates payment_phone. Reuses the same enrollment; creates a new payment intent on the current default provider.',
+        description: 'Allowed while the enrollment can still accept payment (active or within the post-expiry grace window) and fewer than 3 failed attempts have occurred. Optionally updates payment_phone. Reuses the same enrollment, extends the reservation TTL, cancels any pending charge, and initiates a new USSD/STK push.',
         parameters: [
             new OA\Parameter(name: 'reference', in: 'path', required: true, schema: new OA\Schema(type: 'string', example: 'ENR-ABC123XYZ')),
         ],

@@ -11,6 +11,7 @@ use App\Models\PlatformPayment;
 use App\Services\EnrollmentService;
 use App\Services\PlatformPaymentService;
 use Illuminate\Http\JsonResponse;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class EnrollmentController extends Controller
 {
@@ -21,15 +22,23 @@ class EnrollmentController extends Controller
 
     public function register(RegisterEnrollmentRequest $request): JsonResponse
     {
-        $enrollment = $this->enrollmentService->create($request->validated());
-        $payment = $this->platformPaymentService->startEnrollmentPayment($enrollment);
+        $result = $this->enrollmentService->createOrResume($request->validated());
+        $enrollment = $result['enrollment'];
+
+        $this->platformPaymentService->startEnrollmentPayment($enrollment, [
+            'payment_phone' => $enrollment->payment_phone,
+        ]);
 
         $enrollment->refresh();
 
+        $message = $result['resumed']
+            ? 'Existing registration found. A new payment request was sent to your phone.'
+            : 'Registration submitted. Please complete the payment request on your phone.';
+
         return $this->success(
             (new EnrollmentStatusResource($enrollment))->resolve(),
-            'Registration submitted. Please complete the payment request on your phone.',
-            201,
+            $message,
+            $result['resumed'] ? 200 : 201,
         );
     }
 
@@ -49,6 +58,7 @@ class EnrollmentController extends Controller
         if (
             $enrollment->status === Enrollment::STATUS_EXPIRED
             && ! $this->enrollmentStillRecoverable($enrollment)
+            && ! $this->enrollmentService->isResumable($enrollment)
         ) {
             return $this->error(
                 [
@@ -65,6 +75,8 @@ class EnrollmentController extends Controller
             $enrollment->status === Enrollment::STATUS_PAYMENT_FAILED => 'Payment was not successful. You may try again.',
             $enrollment->payments()->where('status', PlatformPayment::STATUS_PAID)->exists()
                 => 'Payment confirmed. Creating your account…',
+            $this->enrollmentService->isResumable($enrollment)
+                => 'Waiting for payment confirmation. You can resend the payment request if you missed it.',
             default => 'Waiting for payment confirmation.',
         };
 
@@ -104,29 +116,30 @@ class EnrollmentController extends Controller
             return false;
         }
 
-        $graceMinutes = max(0, (int) config('platform.enrollment_payment_grace_minutes', 60));
-
-        return now()->lessThanOrEqualTo(
-            $enrollment->expires_at->copy()->addMinutes($graceMinutes)
-        );
+        return $this->enrollmentService->withinPaymentGrace($enrollment);
     }
 
     public function retryPayment(RetryEnrollmentPaymentRequest $request, string $reference): JsonResponse
     {
         $enrollment = $this->enrollmentService->findByReferenceOrFail($reference);
 
-        if ($enrollment->status === Enrollment::STATUS_EXPIRED) {
-            return $this->error(
-                [
-                    'enrollment_reference' => $enrollment->reference,
-                    'enrollment_status' => 'expired',
-                ],
-                'The registration payment session has expired.',
-                410,
-            );
+        try {
+            $this->platformPaymentService->retryEnrollmentPayment($enrollment, $request->validated());
+        } catch (HttpException $e) {
+            if ($e->getStatusCode() === 410) {
+                return $this->error(
+                    [
+                        'enrollment_reference' => $enrollment->reference,
+                        'enrollment_status' => $enrollment->fresh()->status,
+                    ],
+                    $e->getMessage() ?: 'The registration payment session has expired.',
+                    410,
+                );
+            }
+
+            throw $e;
         }
 
-        $this->platformPaymentService->retryEnrollmentPayment($enrollment, $request->validated());
         $enrollment->refresh();
 
         return $this->success(

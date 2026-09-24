@@ -76,6 +76,76 @@ class EnrollmentTest extends TestCase
         ]))->assertStatus(422);
     }
 
+    public function test_missed_ussd_can_be_resent_via_retry_payment(): void
+    {
+        $reference = $this->postJson('/api/v1/auth/register', $this->enrollmentPayload())
+            ->assertCreated()
+            ->json('data.enrollment_reference');
+
+        $firstPaymentId = Enrollment::query()->where('reference', $reference)->firstOrFail()
+            ->payments()->latest('id')->value('id');
+
+        $this->postJson('/api/v1/auth/enrollments/'.$reference.'/retry-payment')
+            ->assertOk()
+            ->assertJsonPath('data.enrollment_reference', $reference)
+            ->assertJsonPath('data.payment_status', 'pending')
+            ->assertJsonPath('data.can_retry_payment', true)
+            ->assertJsonPath('data.next_action', 'retry_payment');
+
+        $enrollment = Enrollment::query()->where('reference', $reference)->firstOrFail();
+        $this->assertSame('pending_payment', $enrollment->status);
+        $this->assertTrue($enrollment->expires_at->greaterThan(now()->addMinutes(3)));
+        $this->assertDatabaseHas('platform_payments', [
+            'id' => $firstPaymentId,
+            'status' => 'cancelled',
+        ]);
+        $this->assertSame(2, $enrollment->payments()->count());
+    }
+
+    public function test_reregister_with_same_details_resends_ussd_instead_of_rejecting(): void
+    {
+        $first = $this->postJson('/api/v1/auth/register', $this->enrollmentPayload())
+            ->assertCreated()
+            ->json('data');
+
+        $second = $this->postJson('/api/v1/auth/register', $this->enrollmentPayload([
+            'payment_phone' => '0711987000',
+        ]))
+            ->assertOk()
+            ->assertJsonPath('data.enrollment_reference', $first['enrollment_reference'])
+            ->assertJsonPath('data.payment_phone', '0711987000')
+            ->assertJsonPath('data.can_retry_payment', true)
+            ->json('data');
+
+        $this->assertSame($first['enrollment_reference'], $second['enrollment_reference']);
+        $this->assertDatabaseCount('signup_intents', 1);
+        $this->assertSame(
+            2,
+            Enrollment::query()->where('reference', $first['enrollment_reference'])->firstOrFail()->payments()->count()
+        );
+    }
+
+    public function test_retry_payment_after_soft_expiry_within_grace_resends_ussd(): void
+    {
+        $reference = $this->postJson('/api/v1/auth/register', $this->enrollmentPayload())
+            ->assertCreated()
+            ->json('data.enrollment_reference');
+
+        Enrollment::query()->where('reference', $reference)->update([
+            'expires_at' => now()->subMinute(),
+            'status' => Enrollment::STATUS_EXPIRED,
+        ]);
+
+        $this->postJson('/api/v1/auth/enrollments/'.$reference.'/retry-payment')
+            ->assertOk()
+            ->assertJsonPath('data.enrollment_status', 'pending_payment')
+            ->assertJsonPath('data.payment_status', 'pending')
+            ->assertJsonPath('data.can_retry_payment', true);
+
+        $enrollment = Enrollment::query()->where('reference', $reference)->firstOrFail();
+        $this->assertTrue($enrollment->expires_at->isFuture());
+    }
+
     public function test_paid_callback_creates_user_company_and_allows_login(): void
     {
         Notification::fake();

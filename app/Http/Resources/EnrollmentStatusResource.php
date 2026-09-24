@@ -29,12 +29,15 @@ class EnrollmentStatusResource extends JsonResource
             'expires_at' => optional($enrollment->expires_at)?->toIso8601String(),
             'remaining_attempts' => $enrollment->remainingAttempts(),
             'payment_phone' => $enrollment->payment_phone,
+            'can_retry_payment' => app(\App\Services\EnrollmentService::class)->isResumable($enrollment),
         ];
 
         if ($enrollment->isCompleted()) {
             $payload['account_created'] = true;
             $payload['next_action'] = 'login';
             $payload['redirect_to'] = '/login';
+        } elseif (($payload['can_retry_payment'] ?? false) === true && ! $enrollment->isCompleted()) {
+            $payload['next_action'] = 'retry_payment';
         }
 
         if ($latestPayment) {

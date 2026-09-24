@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Company;
 use App\Models\Enrollment;
+use App\Models\PlatformPayment;
 use App\Models\User;
 use App\Support\PlatformPricing;
 use Illuminate\Support\Facades\Hash;
@@ -140,7 +141,99 @@ class EnrollmentService
         return $count;
     }
 
-    public function assertUsableForPayment(Enrollment $enrollment): void
+    /**
+     * Start a new enrollment, or resume an incomplete one for the same email so
+     * a missed USSD/STK push can be resent without forcing new registration details.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{enrollment: Enrollment, resumed: bool}
+     */
+    public function createOrResume(array $data): array
+    {
+        $email = Str::lower(trim((string) $data['email']));
+
+        $existing = Enrollment::query()
+            ->where('email', $email)
+            ->whereNull('user_id')
+            ->whereNotIn('status', [Enrollment::STATUS_COMPLETED, Enrollment::STATUS_CANCELLED])
+            ->latest('id')
+            ->first();
+
+        if ($existing && $this->isResumable($existing)) {
+            if ((string) $existing->phone !== (string) $data['phone']) {
+                throw ValidationException::withMessages([
+                    'email' => ['This email already has a pending registration with a different phone number.'],
+                ]);
+            }
+
+            $domainName = $this->normalizeDomainName($data['domain_name'] ?? $data['portal_subdomain'] ?? null);
+            if ($domainName) {
+                $this->assertDomainAvailable($domainName, $existing->id);
+            }
+
+            $existing->forceFill([
+                'business_name' => $data['business_name'],
+                'first_name' => $data['first_name'],
+                'last_name' => $data['last_name'],
+                'payment_phone' => $data['payment_phone'],
+                'address' => $data['address'],
+                'portal_subdomain' => $domainName ?? $existing->portal_subdomain,
+                'password_hash' => Hash::make((string) $data['password']),
+            ])->save();
+
+            $enrollment = $this->prepareForPaymentRetry($existing->fresh());
+
+            $this->auditLogger->log(
+                'enrollment_resumed_for_payment_retry',
+                null,
+                null,
+                Enrollment::class,
+                null,
+                newValues: [
+                    'enrollment_id' => $enrollment->id,
+                    'reference' => $enrollment->reference,
+                    'email' => $enrollment->email,
+                ],
+            );
+
+            return ['enrollment' => $enrollment, 'resumed' => true];
+        }
+
+        return ['enrollment' => $this->create($data), 'resumed' => false];
+    }
+
+    /**
+     * Whether the customer can resend a USSD/STK push on this enrollment.
+     */
+    public function isResumable(Enrollment $enrollment): bool
+    {
+        if ($enrollment->isCompleted()) {
+            return false;
+        }
+
+        if ($enrollment->payments()->where('status', PlatformPayment::STATUS_PAID)->exists()) {
+            return false;
+        }
+
+        if ($enrollment->remainingAttempts() <= 0) {
+            return false;
+        }
+
+        $this->syncExpiry($enrollment);
+        $enrollment->refresh();
+
+        if ($enrollment->canRetryPayment()) {
+            return true;
+        }
+
+        return $enrollment->status === Enrollment::STATUS_EXPIRED
+            && $this->withinPaymentGrace($enrollment);
+    }
+
+    /**
+     * Revive / extend an enrollment so another provider push can be initiated.
+     */
+    public function prepareForPaymentRetry(Enrollment $enrollment): Enrollment
     {
         $this->syncExpiry($enrollment);
         $enrollment->refresh();
@@ -151,14 +244,58 @@ class EnrollmentService
             ]);
         }
 
-        if ($enrollment->isExpired() || $enrollment->status === Enrollment::STATUS_EXPIRED) {
-            throw new HttpException(410, 'The registration payment session has expired.');
+        if ($enrollment->payments()->where('status', PlatformPayment::STATUS_PAID)->exists()) {
+            throw ValidationException::withMessages([
+                'enrollment' => ['Payment has already succeeded for this enrollment.'],
+            ]);
         }
 
         if ($enrollment->remainingAttempts() <= 0) {
             $this->invalidateAfterFailedAttempts($enrollment);
             throw new HttpException(410, 'Maximum payment attempts reached. Please register again.');
         }
+
+        if (
+            ! $enrollment->canRetryPayment()
+            && ! (
+                $enrollment->status === Enrollment::STATUS_EXPIRED
+                && $this->withinPaymentGrace($enrollment)
+            )
+        ) {
+            throw new HttpException(410, 'The registration payment session has expired.');
+        }
+
+        return $this->extendReservation($enrollment);
+    }
+
+    public function extendReservation(Enrollment $enrollment): Enrollment
+    {
+        $ttlMinutes = max(1, (int) config('platform.enrollment_ttl_minutes', 4));
+
+        $enrollment->forceFill([
+            'status' => Enrollment::STATUS_PENDING_PAYMENT,
+            'expires_at' => now()->addMinutes($ttlMinutes),
+        ])->save();
+
+        return $enrollment->fresh();
+    }
+
+    public function withinPaymentGrace(Enrollment $enrollment): bool
+    {
+        if (! $enrollment->expires_at) {
+            return true;
+        }
+
+        $graceMinutes = max(0, (int) config('platform.enrollment_payment_grace_minutes', 60));
+
+        return now()->lessThanOrEqualTo(
+            $enrollment->expires_at->copy()->addMinutes($graceMinutes)
+        );
+    }
+
+    public function assertUsableForPayment(Enrollment $enrollment): void
+    {
+        $this->prepareForPaymentRetry($enrollment);
     }
 
     public function invalidateAfterFailedAttempts(Enrollment $enrollment): Enrollment
