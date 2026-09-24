@@ -14,6 +14,7 @@ class AccessGrant extends Model
         'internet_plan_id',
         'payment_transaction_id',
         'voucher_id',
+        'offer_id',
         'network_station_id',
         'source',
         'starts_at',
@@ -58,6 +59,11 @@ class AccessGrant extends Model
     public function voucher(): BelongsTo
     {
         return $this->belongsTo(Voucher::class);
+    }
+
+    public function offer(): BelongsTo
+    {
+        return $this->belongsTo(Offer::class);
     }
 
     public function networkStation(): BelongsTo

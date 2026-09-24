@@ -1,0 +1,377 @@
+================================================================================
+WaiFai Engine - FREE OFFER (Captive Portal Promotions) - Analysis & Design
+================================================================================
+Status: ANALYSIS ONLY. No application code has been changed.
+Purpose: Describe how to add time-limited, owner-configured FREE WiFi offers to
+         the captive portal without breaking the existing structure.
+
+--------------------------------------------------------------------------------
+1. REQUIREMENT (as clarified by the owner)
+--------------------------------------------------------------------------------
+The company owner can create an "offer" (promotion). When an active offer exists
+and a customer opens the captive portal, they see a "claim free WiFi" action.
+Claiming it grants free internet for the offer's duration, starting immediately.
+
+Confirmed decisions:
+  - Audience: shown to EVERYONE who opens the captive portal (no targeting).
+  - Plan: BOTH supported -
+        (a) optional: attach an existing InternetPlan/package, OR
+        (b) standalone/custom duration defined on the offer.
+  - Scope: BOTH supported -
+        (a) company-wide (all routers), AND
+        (b) router-scoped (specific router(s)).
+  - Repeat-claim identity: PHONE + DEVICE MAC (one claim per person+device).
+  - "How long it holds": owner-configured duration. Claim starts the clock:
+        starts_at = now(), expires_at = now() + offer.duration.
+    When it expires the WiFi access closes and the customer CANNOT claim again;
+    they must buy a normal package to reconnect.
+
+--------------------------------------------------------------------------------
+2. WHAT ALREADY EXISTS (relevant building blocks)
+--------------------------------------------------------------------------------
+The feature is mostly a composition of existing concepts. Nothing needs to be
+reinvented.
+
+  * AccessGrant  (app/Models/AccessGrant.php)
+      - Represents granted access. Has company_id, customer_id, internet_plan_id,
+        source, starts_at, expires_at, status.
+      - source is currently 'voucher' or 'payment' (see VoucherService,
+        NetworkSessionService). We add source 'offer'.
+      - internet_plan_id is NOT NULL (composite FK) and NetworkSessionService
+        requires it -> an offer grant must reference a plan (see section 4).
+
+  * Voucher (app/Models/Voucher.php) + VoucherService
+      - Closest existing pattern: a claimable, capped, expiring free access that
+        produces an AccessGrant and (via CaptiveSession) authorizes the device.
+      - Has max_uses / uses_count / expires_at and links to access_grant_id.
+      - Limitation: it stores only the LAST customer_id, so it cannot enforce
+        "one claim per phone+mac". A dedicated claims table is required.
+
+  * CaptiveSession (app/Models/CaptiveSession.php) + CaptiveSessionService
+      - The per-client session created when the AP redirects to the portal.
+      - authenticate(session, data) creates a NetworkSession from an AccessGrant
+        and links it to the captive session, enabling the gateway auth redirect.
+      - resolveOrCreate(gateway, client) captures client_mac / client_ip.
+
+  * NetworkSessionService::create(company, data)
+      - Resolves an AccessGrant by access_grant_id (or paid payment), validates it
+        (assertGrantUsable: status 'active' + expires_at future), and creates the
+        NetworkSession. Uses the grant's expires_at as-is (does NOT recompute), so
+        an offer grant's expiry is respected.
+
+  * Portal (public, no auth):
+      - routes/Api/v1/portal.php  ->  /api/v1/portal/{subdomain}/...
+      - PortalController (app/Http/Controllers/Api/V1/Portal/PortalController.php)
+        has bootstrap, createPayment, showPayment, redeemVoucher, createSession,
+        restore. redeemVoucher is the exact template for claiming an offer.
+      - PortalService::bootstrap() returns company + packages to the portal.
+      - CaptivePortalController (Web) renders resources/views/captive/connect.blade.php
+        and injects $portal (business_name, packages, session_token, client_mac...).
+
+  * Owner-side CRUD pattern (Operations):
+      - Controller + Store*Request + *Service + *Resource, routes behind
+        auth:sanctum, active.user, company.context, company.required,
+        subscription.active, plus permission:<x>.
+      - See PackageController / StorePackageRequest / PackageService /
+        PackageResource and routes/Api/v1/packages.php.
+      - Permissions live in app/Support/Permissions.php; permission rows are added
+        by a migration (see 2026_08_30_110002_add_installation_request_permissions.php).
+
+  * Router scoping precedent:
+      - Voucher has a single network_device_id.
+      - InternetPlan <-> NetworkStation uses a pivot (station_plans).
+      - CaptivePortalController::plansFor() already filters station plans.
+
+  * Customer resolution (near-duplicate helpers today):
+      - VoucherService::resolveCustomer() and PaymentService::findOrCreateCustomer()
+      - OfferService should reuse/extract one of these.
+
+  * Duration math:
+      - VoucherService::expiresAtForPlan() and NetworkSessionService::expiresAtForPlan()
+
+--------------------------------------------------------------------------------
+3. DATA MODEL
+--------------------------------------------------------------------------------
+3.1 offers (new)
+    id
+    company_id              FK companies (restrictOnDelete)
+    title                   string
+    description             text nullable
+    starts_at               timestamp nullable   (availability window start)
+    ends_at                 timestamp nullable   (availability window end)
+    duration                unsigned int nullable (free-access length)
+    duration_unit           string nullable      HOURS|DAYS|WEEKS|MONTHS
+    max_claims              unsigned int nullable (null = unlimited; "first 5")
+    claims_count            unsigned int default 0
+    is_active               boolean default true
+    internet_plan_id        unsigned bigint nullable (optional existing plan)
+    created_by              FK users nullable
+    timestamps
+    unique (id, company_id)                       (composite FK convention)
+    index (company_id, is_active)
+    index (company_id, starts_at, ends_at)
+    FK (internet_plan_id, company_id) -> internet_plans(id, company_id) nullable
+
+3.2 offer_network_device (new pivot; empty = company-wide)
+    offer_id                FK offers
+    network_device_id       FK network_devices
+    unique (offer_id, network_device_id)
+    Rule: zero rows  => offer applies to ALL routers (company-wide).
+          one+ rows  => offer applies only to those routers (router-scoped).
+    This single table expresses BOTH requested scopes.
+
+3.3 offer_claims (new)
+    id
+    company_id              FK companies
+    offer_id                FK offers
+    customer_id             FK customers
+    access_grant_id         unsigned bigint nullable (FK access_grants)
+    captive_session_id      unsigned bigint nullable
+    customer_phone          string            (normalized, e.g. 0711...)
+    device_mac              string(32) nullable (normalized AA:BB:...)
+    claimed_at              timestamp
+    expires_at              timestamp
+    timestamps
+    unique (offer_id, customer_phone, device_mac)   <-- repeat-claim guard
+    index (company_id, offer_id)
+    index (company_id, customer_phone)
+    NOTE: MySQL treats NULLs as distinct in unique indexes. device_mac should be
+    normalized to a non-null sentinel (e.g. 'UNKNOWN') when the AP did not
+    provide a MAC, so the unique guard still works. See section 8.
+
+3.4 access_grants (small change)
+    + offer_id  unsigned bigint nullable  (traceability / reporting)
+    + FK (offer_id, company_id) -> offers(id, company_id) nullable
+    source gains the new value 'offer'.
+
+Why a claims table instead of counting grants:
+    Counting grants cannot answer "has THIS phone+mac already claimed THIS offer"
+    nor enforce a per-offer cap atomically. Voucher only remembers the last
+    customer. offer_claims is the durable, queryable record.
+
+--------------------------------------------------------------------------------
+4. SATISFYING THE NOT-NULL access_grants.internet_plan_id
+--------------------------------------------------------------------------------
+An offer grant must reference a plan. Two supported cases:
+
+  (a) Offer links an existing plan (offers.internet_plan_id set):
+      use that plan id for the grant. Session shows that package.
+
+  (b) Standalone/custom duration (internet_plan_id null OR duration override):
+      auto-create/reuse a hidden InternetPlan per offer:
+          name           = offer.title
+          slug           = "offer-{offer.id}"
+          duration/unit  = offer.duration / offer.duration_unit
+          price          = 0
+          status         = 'inactive'   <-- keeps it OUT of the portal package list
+      CaptivePortalController::plansFor() and PortalService::bootstrap() only
+      select status='active', so the hidden plan never appears as a paid package,
+      yet NetworkSessionService can still resolve it by id.
+
+  Duration precedence for the grant's expires_at:
+      1. offer.duration (+duration_unit) if set (custom),
+      2. else the linked plan's duration,
+      3. else null (unlimited) - normally avoid for offers.
+  IMPORTANT: set AccessGrant.expires_at explicitly from this precedence. Do NOT
+  rely on expiresAtForPlan(), and do NOT let the plan's duration override a
+  custom offer duration. NetworkSessionService uses the grant's expires_at as-is.
+
+  Alternative (not recommended): make access_grants.internet_plan_id nullable.
+  That touches the composite FK and several resources/assumptions; the hidden
+  plan avoids that risk entirely.
+
+--------------------------------------------------------------------------------
+5. BACKEND SERVICES & FLOW
+--------------------------------------------------------------------------------
+5.1 OfferService (new: app/Services/OfferService.php)
+    Methods:
+      - activeFor(Company, ?NetworkDevice $router = null, ?string $phone = null,
+                  ?string $mac = null): ?array
+            * is_active == true
+            * now within [starts_at, ends_at] (nulls = open ended)
+            * applies to router (pivot empty = all; else router id in pivot)
+            * claims_count < max_claims (or max_claims null)
+            * returns details + remaining + already_claimed (by phone+mac)
+      - claim(Company, Offer, array $data): array
+            DB::transaction + Offer::lockForUpdate() (same pattern as
+            VoucherService::performConsume):
+              1. re-validate active + window + remaining slots (inside lock)
+              2. normalize phone + mac
+              3. reject if offer_claims row exists for (offer, phone, mac)
+              4. resolve/create Customer by phone
+              5. resolve the plan (linked plan OR hidden offer plan)
+              6. create AccessGrant: source='offer', offer_id, starts_at=now(),
+                 expires_at=now()+duration (precedence in section 4)
+              7. offer.claims_count++ ; insert offer_claims row
+              8. AuditLogger->log('offer_claimed', ...)
+            Returns [offer, access_grant, customer].
+      - CRUD: create/update/destroy/activate/deactivate for the owner API.
+      - NO revenue recognition: do NOT call PaymentService::recognizePayment().
+        Offer grants must not create RevenueRecord / wallet credits.
+
+    Customer resolution: extract the shared logic currently duplicated in
+    VoucherService::resolveCustomer() and PaymentService::findOrCreateCustomer()
+    into a small resolver (optional but recommended) and reuse it.
+
+5.2 Portal flow (public)
+    PortalController::claimOffer(Company, data):
+      - validate (customer_phone required, optional customer_name,
+        optional captive_session token)
+      - $result = OfferService::claim(...)
+      - if captive_session provided -> reuse the same authorizeCaptiveSession()
+        helper used by redeemVoucher -> returns gateway_auth_url
+      - response mirrors redeemVoucher: customer, access_grant, package,
+        and captive{gateway_auth_url} when a session is present.
+
+    PortalService::bootstrap(Company) gains:
+        'offer' => OfferService::activeFor($company, $router)   // or null
+    The router is available from the captive session / query string.
+
+5.3 Owner flow (Operations)
+    OfferController (index/store/show/update/destroy/activate/deactivate)
+    -> OfferService CRUD -> OfferResource.
+    Validation in StoreOfferRequest:
+      - title required, description nullable
+      - starts_at/ends_at nullable dates, ends_at after starts_at
+      - duration required_unless an internet_plan_id is provided (custom vs plan)
+      - duration_unit in InternetPlan::DURATION_UNITS
+      - max_claims nullable integer min 1
+      - is_active boolean
+      - internet_plan_id nullable exists in this company
+      - router_ids array of this company's router ids (pivot sync)
+
+--------------------------------------------------------------------------------
+6. API ENDPOINTS
+--------------------------------------------------------------------------------
+Owner (Operations, auth + company context + subscription.active):
+    GET    /api/v1/offers
+    POST   /api/v1/offers
+    GET    /api/v1/offers/{offer}
+    PATCH  /api/v1/offers/{offer}
+    DELETE /api/v1/offers/{offer}
+    POST   /api/v1/offers/{offer}/activate
+    POST   /api/v1/offers/{offer}/deactivate
+    (permission:offers.view / offers.create / offers.update / offers.delete)
+
+Portal (public):
+    POST   /api/v1/portal/{subdomain}/offers/claim     (throttle:10,1)
+    GET    /api/v1/portal/{subdomain}                  (bootstrap now includes offer)
+
+--------------------------------------------------------------------------------
+7. CAPTIVE PORTAL UI (resources/views/captive/connect.blade.php)
+--------------------------------------------------------------------------------
+  - When PORTAL.offer is present, render a prominent banner/button on the
+    initial state, e.g.:
+        "Pata {duration} bure"  + description + remaining slots ("zimebaki 3")
+    Button goes to a new "offer" state.
+  - New state: phone input (+ optional name) and a submit button.
+  - submitOffer() POSTs to /portal/{subdomain}/offers/claim with
+    customer_phone, customer_name, captive_session = PORTAL.session_token.
+    On success with captive.gateway_auth_url -> goToGateway(url) (same as voucher).
+    If already claimed -> show a friendly message and route them to "Jiunge sasa"
+    (paid packages).
+  - When PORTAL.offer is absent, the portal is unchanged (normal behaviour).
+  - Reuse existing helpers: api(), setBusy(), setError(), goToGateway().
+
+--------------------------------------------------------------------------------
+8. BUSINESS RULES & EDGE CASES
+--------------------------------------------------------------------------------
+  - Claim starts the clock: starts_at = now, expires_at = now + duration.
+  - After expiry: grant becomes unusable (assertGrantUsable flips it to expired);
+    the WiFiDog session is no longer authorized; the customer must pay to reconnect.
+  - No re-claim: unique (offer_id, phone, mac). The portal should also hide/disable
+    the offer button once already_claimed is known (best-effort; the server is the
+    source of truth).
+  - Identity = phone + MAC. The captive session MAC may be missing (nullable).
+    Normalize MAC (uppercase colon format, reuse the existing normalizeMac helpers).
+    If MAC is missing, store the sentinel 'UNKNOWN' so the unique guard still works;
+    document that this degrades to phone-only for that claim.
+  - Concurrency / cap: lock the offer row; the unique index + claims_count check
+    inside the lock prevent exceeding max_claims.
+  - Scope: pivot empty = all routers; otherwise only listed routers. activeFor()
+    must receive the current router (from the captive session/query) to filter.
+  - Plan visibility: hidden offer plans must stay status='inactive'.
+  - No revenue: offers must never write RevenueRecord/wallet.
+  - Timezones: store timestamps in UTC; compare window using the company timezone
+    for display/entry. (Company has a timezone column.)
+  - Throttling: claim endpoint throttle:10,1 (matches voucher redeem).
+  - Audit: log offer_claimed (company, offer, customer, grant).
+  - Reporting: offer grants carry source='offer' and offer_id, so income/reporting
+    can exclude or break them out separately.
+  - Multiple offers: the schema supports many; bootstrap can return the single
+    best active offer (e.g. earliest ends_at) or a list. Recommend one primary.
+
+--------------------------------------------------------------------------------
+9. FILE-BY-FILE IMPLEMENTATION PLAN (when you approve)
+--------------------------------------------------------------------------------
+New files:
+    database/migrations/xxxx_create_offers_tables.php
+        (offers, offer_network_device, offer_claims, + access_grants.offer_id)
+    app/Models/Offer.php
+    app/Models/OfferClaim.php
+    app/Services/OfferService.php
+    app/Http/Controllers/Api/V1/Operations/OfferController.php
+    app/Http/Requests/Operations/StoreOfferRequest.php
+    app/Http/Resources/OfferResource.php
+    routes/Api/v1/offers.php
+    app/OpenApi/OfferDocumentation.php (Swagger)
+    tests/Feature/OfferTest.php (owner CRUD + portal claim + limits)
+
+Modified files:
+    app/Models/Company.php            + offers() / offerClaims() relations
+    app/Models/AccessGrant.php        + offer_id fillable + offer() relation
+    app/Http/Controllers/Api/V1/Portal/PortalController.php
+                                      + claimOffer() (mirrors redeemVoucher)
+    app/Services/PortalService.php    + 'offer' in bootstrap()
+    app/Http/Controllers/Web/CaptivePortalController.php
+                                      + pass offer into $portal (optional; bootstrap
+                                        already covers API; blade reads PORTAL.offer)
+    app/Support/Permissions.php       + OFFERS_VIEW/CREATE/UPDATE/DELETE
+    database/migrations/...add_offer_permissions... (or a seeder)
+    routes/Api/v1/portal.php          + offers/claim route
+    routes/api.php                    + require offers.php
+    resources/views/captive/connect.blade.php  + offer banner/state/JS
+    app/OpenApi/OpenApiDefinition.php + tag (optional)
+
+Reuse/extract (optional refactor):
+    A shared customer resolver used by VoucherService, PaymentService, OfferService.
+
+--------------------------------------------------------------------------------
+10. TESTING PLAN
+--------------------------------------------------------------------------------
+  - Owner can CRUD an offer; activate/deactivate; router scoping sync.
+  - Portal bootstrap includes offer only when active and within window.
+  - Claim creates an AccessGrant (source='offer'), an offer_claims row, and
+    increments claims_count; NO RevenueRecord/wallet entry is created.
+  - Claim with captive_session returns gateway_auth_url and authorizes the device.
+  - Repeat claim (same phone+mac) is rejected.
+  - max_claims cap: the (N+1)th claim is rejected; claims_count stops at max.
+  - Out-of-window / inactive offer cannot be claimed and is not shown.
+  - Router scoping: offer on router A is not offered on router B.
+  - Standalone offer (hidden plan) vs existing-plan offer both produce a valid
+    grant and session.
+  - After grant expiry, assertGrantUsable rejects and the portal shows paid options.
+
+--------------------------------------------------------------------------------
+11. ROLLOUT
+--------------------------------------------------------------------------------
+  - Additive migrations only (new tables + one nullable column) -> safe.
+  - Feature is inert until an owner creates and activates an offer.
+  - No changes to existing payment/voucher/enrollment flows.
+  - Swagger regenerated after docs are added.
+
+--------------------------------------------------------------------------------
+12. REMAINING ASSUMPTIONS (call out if any are wrong)
+--------------------------------------------------------------------------------
+  A. One claim per (offer, phone, mac) for the life of the offer. A NEW offer
+     (new row) is separately claimable.
+  B. MAC sentinel 'UNKNOWN' is acceptable when the AP provides no MAC.
+  C. Offers may run alongside an active paid package (shown to everyone);
+     claiming is only blocked by a prior claim of the SAME offer or the cap.
+  D. Multiple active offers: bootstrap surfaces one primary (recommend soonest
+     ends_at); the schema supports more.
+  E. Company timezone is used for entering/displaying the availability window.
+
+================================================================================
+END
+================================================================================

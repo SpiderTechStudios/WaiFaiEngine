@@ -9,6 +9,7 @@ use App\Models\InternetPlan;
 use App\Models\NetworkDevice;
 use App\Models\StationPlan;
 use App\Services\CaptiveSessionService;
+use App\Services\OfferService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
@@ -26,6 +27,7 @@ class CaptivePortalController extends Controller
 {
     public function __construct(
         private CaptiveSessionService $captiveSessionService,
+        private OfferService $offerService,
     ) {}
 
     public function show(Request $request): View
@@ -52,6 +54,12 @@ class CaptivePortalController extends Controller
                     ? $this->captiveSessionService->gatewayAuthRedirectUrl($session)
                     : null,
                 'packages' => $this->formatPackages($plans),
+                'offer' => $this->offerService->activeFor(
+                    $company,
+                    $router?->id,
+                    null,
+                    $session?->client_mac,
+                ),
             ],
         ]);
     }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Portal;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Portal\PortalClaimOfferRequest;
 use App\Http\Requests\Portal\PortalRedeemVoucherRequest;
 use App\Http\Requests\Portal\PortalRestoreRequest;
 use App\Http\Requests\Portal\PortalStorePaymentRequest;
@@ -10,9 +11,11 @@ use App\Http\Requests\Portal\PortalStoreSessionRequest;
 use App\Http\Resources\NetworkSessionResource;
 use App\Http\Resources\PortalPaymentResource;
 use App\Models\Company;
+use App\Models\Offer;
 use App\Models\PaymentTransaction;
 use App\Services\CaptiveSessionService;
 use App\Services\NetworkSessionService;
+use App\Services\OfferService;
 use App\Services\PaymentService;
 use App\Services\PortalService;
 use App\Services\VoucherService;
@@ -27,6 +30,7 @@ class PortalController extends Controller
         private PortalService $portalService,
         private PaymentService $paymentService,
         private VoucherService $voucherService,
+        private OfferService $offerService,
         private NetworkSessionService $networkSessionService,
         private CaptiveSessionService $captiveSessionService,
     ) {}
@@ -111,6 +115,77 @@ class PortalController extends Controller
         }
 
         return $this->success($payload, 'Voucher redeemed', 201);
+    }
+
+    public function claimOffer(PortalClaimOfferRequest $request): JsonResponse
+    {
+        $company = $this->portalCompany();
+        $validated = $request->validated();
+
+        $offer = Offer::query()
+            ->where('company_id', $company->id)
+            ->findOrFail($validated['offer_id']);
+
+        $captiveToken = $validated['captive_session'] ?? null;
+        $captive = null;
+
+        if ($captiveToken) {
+            $captive = $this->captiveSessionService->findByToken((string) $captiveToken);
+
+            if (! $captive || (int) $captive->company_id !== (int) $company->id) {
+                throw ValidationException::withMessages([
+                    'captive_session' => ['Captive session not found for this portal.'],
+                ]);
+            }
+        }
+
+        $mac = $validated['mac_address'] ?? $captive?->client_mac;
+
+        $result = $this->offerService->claim($company, $offer, [
+            ...$validated,
+            'captive_session_id' => $captive?->id,
+            'mac_address' => $mac,
+        ]);
+
+        $grant = $result['access_grant'];
+        $plan = $result['package'];
+
+        $payload = [
+            'customer' => [
+                'id' => $result['customer']->id,
+                'name' => $result['customer']->name,
+                'phone' => $result['customer']->phone,
+            ],
+            'access_grant' => [
+                'id' => $grant->id,
+                'status' => $grant->status,
+                'source' => $grant->source,
+                'starts_at' => $grant->starts_at,
+                'expires_at' => $grant->expires_at,
+            ],
+            'package' => $plan ? [
+                'id' => $plan->id,
+                'name' => $plan->name,
+                'duration' => $plan->duration,
+                'duration_unit' => $plan->duration_unit,
+            ] : null,
+            'offer' => [
+                'id' => $result['offer']->id,
+                'title' => $result['offer']->title,
+                'duration' => $result['offer']->duration,
+                'duration_unit' => $result['offer']->duration_unit,
+                'remaining_claims' => $result['offer']->remainingClaims(),
+            ],
+        ];
+
+        if ($captiveToken) {
+            $payload['captive'] = $this->authorizeCaptiveSession((string) $captiveToken, [
+                'access_grant_id' => $grant->id,
+                'mac_address' => $mac,
+            ]);
+        }
+
+        return $this->success($payload, 'Offer claimed', 201);
     }
 
     public function createSession(PortalStoreSessionRequest $request): JsonResponse

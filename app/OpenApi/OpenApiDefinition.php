@@ -29,6 +29,7 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: 'Routers', description: 'Hotspot routers')]
 #[OA\Tag(name: 'Packages', description: 'Internet packages')]
 #[OA\Tag(name: 'Vouchers', description: 'Prepaid voucher codes')]
+#[OA\Tag(name: 'Offers', description: 'Owner-configured free WiFi offers for the captive portal')]
 #[OA\Tag(name: 'Payments', description: 'Customer payments')]
 #[OA\Tag(name: 'Sessions', description: 'Hotspot sessions — list, inspect, and write after captive portal success')]
 #[OA\Tag(name: 'Customers', description: 'Hotspot customers')]

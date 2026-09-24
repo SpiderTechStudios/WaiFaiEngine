@@ -33,6 +33,7 @@ final class Permissions
     public const ROUTERS_UPDATE = 'routers.update';
 
     public const ROUTERS_DELETE = 'routers.delete';
+
     public const ROUTERS_SYNC = 'routers.sync';
 
     public const PACKAGES_VIEW = 'packages.view';
@@ -50,6 +51,14 @@ final class Permissions
     public const VOUCHERS_REVOKE = 'vouchers.revoke';
 
     public const VOUCHERS_CONSUME = 'vouchers.consume';
+
+    public const OFFERS_VIEW = 'offers.view';
+
+    public const OFFERS_CREATE = 'offers.create';
+
+    public const OFFERS_UPDATE = 'offers.update';
+
+    public const OFFERS_DELETE = 'offers.delete';
 
     public const PAYMENTS_VIEW = 'payments.view';
 

@@ -138,6 +138,21 @@
             color: var(--brand);
             border: 2px solid var(--brand);
         }
+        .btn-offer {
+            background: #0f9d58;
+            color: #fff;
+        }
+        .offer-banner {
+            border: 2px dashed color-mix(in srgb, var(--brand) 45%, #fff);
+            border-radius: 14px;
+            padding: 14px;
+            background: color-mix(in srgb, var(--brand) 7%, #fff);
+        }
+        .offer-banner .offer-title { margin: 0; font-size: 16px; font-weight: 700; }
+        .offer-banner .offer-desc { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+        .offer-banner .offer-meta { margin: 6px 0 0; color: var(--brand); font-size: 12px; font-weight: 700; }
+        .offer-banner .btn { margin-top: 12px; }
+        .offer-state-desc { margin: 0 0 4px; color: var(--muted); font-size: 13px; }
         .status-box {
             margin-top: 14px;
             padding: 12px 14px;
@@ -265,6 +280,12 @@
 
         {{-- INITIAL STATE --}}
         <section id="state-initial" class="card stack">
+            <div id="offerBanner" class="offer-banner hidden">
+                <p class="offer-title" id="offerTitle"></p>
+                <p class="offer-desc" id="offerDesc"></p>
+                <p class="offer-meta" id="offerMeta"></p>
+                <button type="button" class="btn btn-offer" data-go="offer">Chukua ofa sasa</button>
+            </div>
             <button type="button" class="btn btn-primary" data-go="subscribe">Jiunge sasa</button>
             <button type="button" class="btn btn-outline" data-go="voucher">Jiunge kwa vocha</button>
             <button type="button" class="btn btn-outline" data-go="redeem">Endeleza kifurushi</button>
@@ -312,6 +333,19 @@
             <button type="button" class="back" data-back>&larr; Rudi nyuma</button>
         </section>
 
+        {{-- OFFER STATE --}}
+        <section id="state-offer" class="card hidden">
+            <h2 class="section-title" id="offerStateTitle">Ofa ya bure</h2>
+            <p class="offer-state-desc" id="offerStateDesc"></p>
+
+            <label class="field-label" for="offerPhone">Number ya simu</label>
+            <input id="offerPhone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="Ingiza namba ya simu">
+
+            <p id="offerError" class="error"></p>
+            <button type="button" id="offerSubmit" class="btn btn-primary" style="margin-top:14px">Chukua ofa</button>
+            <button type="button" class="back" data-back>&larr; Rudi nyuma</button>
+        </section>
+
         <p class="footer">
             Powered by <a href="https://waifai.co.tz" rel="noopener">WaiFai</a>
         </p>
@@ -330,6 +364,16 @@
             subscribe: document.getElementById('state-subscribe'),
             voucher: document.getElementById('state-voucher'),
             redeem: document.getElementById('state-redeem'),
+            offer: document.getElementById('state-offer'),
+            offerBanner: document.getElementById('offerBanner'),
+            offerTitle: document.getElementById('offerTitle'),
+            offerDesc: document.getElementById('offerDesc'),
+            offerMeta: document.getElementById('offerMeta'),
+            offerPhone: document.getElementById('offerPhone'),
+            offerError: document.getElementById('offerError'),
+            offerSubmit: document.getElementById('offerSubmit'),
+            offerStateTitle: document.getElementById('offerStateTitle'),
+            offerStateDesc: document.getElementById('offerStateDesc'),
             grid: document.getElementById('packageGrid'),
             empty: document.getElementById('subscribeEmpty'),
             subscribePhone: document.getElementById('subscribePhone'),
@@ -347,7 +391,7 @@
             overlayText: document.getElementById('overlayText'),
         };
 
-        const states = { initial: els.initial, subscribe: els.subscribe, voucher: els.voucher, redeem: els.redeem };
+        const states = { initial: els.initial, subscribe: els.subscribe, voucher: els.voucher, redeem: els.redeem, offer: els.offer };
         const durationLabels = { HOURS: 'Saa', DAYS: 'Siku', WEEKS: 'Wiki', MONTHS: 'Miezi', UNLIMITED_DATA: 'Bila kikomo' };
 
         let selectedPlanId = null;
@@ -360,6 +404,7 @@
                 resetSubscribe();
                 resetVoucher();
                 resetRedeem();
+                resetOffer();
             }
         }
 
@@ -481,6 +526,39 @@
         }
         function resetVoucher() { els.voucherCode.value = ''; els.voucherPhone.value = ''; setError(els.voucherError, ''); }
         function resetRedeem() { els.redeemPhone.value = ''; setError(els.redeemError, ''); }
+        function resetOffer() { els.offerPhone.value = ''; setError(els.offerError, ''); }
+
+        function offerDurationText(offer) {
+            if (!offer) return '';
+            if (!offer.duration) return durationLabels[offer.duration_unit] || '';
+            const unit = durationLabels[offer.duration_unit] || offer.duration_unit || '';
+            return offer.duration + ' ' + unit;
+        }
+
+        function renderOffer() {
+            const offer = PORTAL.offer;
+            if (!offer || offer.claimed) {
+                els.offerBanner.classList.add('hidden');
+                return;
+            }
+
+            const duration = offerDurationText(offer);
+            els.offerBanner.classList.remove('hidden');
+            els.offerTitle.textContent = offer.title || 'Ofa ya bure';
+            els.offerDesc.textContent = offer.description || '';
+            els.offerDesc.classList.toggle('hidden', !offer.description);
+
+            let meta = duration ? ('Muda: ' + duration) : '';
+            if (offer.remaining_claims !== null && offer.remaining_claims !== undefined) {
+                meta += (meta ? ' · ' : '') + ('Zimebaki nafasi ' + offer.remaining_claims);
+            }
+            els.offerMeta.textContent = meta;
+            els.offerMeta.classList.toggle('hidden', !meta);
+
+            els.offerStateTitle.textContent = offer.title || 'Ofa ya bure';
+            els.offerStateDesc.textContent = (offer.description || '')
+                + (duration ? ((offer.description ? ' — ' : '') + duration + ' bure') : '');
+        }
 
         function setPaymentStatus(html, kind) {
             if (!html) {
@@ -652,6 +730,36 @@
             }
         }
 
+        // ---- offer ----
+        async function submitOffer() {
+            const offer = PORTAL.offer;
+            if (!offer) { setError(els.offerError, 'Hakuna ofa inayopatikana kwa sasa.'); return; }
+            const phone = normalizePhone(els.offerPhone.value);
+            if (phone === null) { setError(els.offerError, phoneError(els.offerPhone.value)); return; }
+            setError(els.offerError, '');
+
+            setBusy(els.offerSubmit, true);
+            showOverlay('Inachukua ofa yako...');
+            try {
+                const result = await api('POST', '/api/v1/portal/' + PORTAL.subdomain + '/offers/claim', {
+                    offer_id: offer.id,
+                    customer_phone: phone,
+                    customer_name: 'Mteja',
+                    captive_session: PORTAL.session_token || null,
+                    mac_address: PORTAL.client_mac || null,
+                });
+                const url = result.data && result.data.captive ? result.data.captive.gateway_auth_url : null;
+                if (url) { goToGateway(url); return; }
+                hideOverlay();
+                setBusy(els.offerSubmit, false);
+                setError(els.offerError, 'Ofa imechukuliwa. Tafadhali unganisha kifaa chako kwenye WiFi.');
+            } catch (error) {
+                hideOverlay();
+                setBusy(els.offerSubmit, false);
+                setError(els.offerError, errorMessage(error));
+            }
+        }
+
         // ---- wire up ----
         document.querySelectorAll('[data-go]').forEach((button) => {
             button.addEventListener('click', () => setState(button.dataset.go));
@@ -662,7 +770,9 @@
         els.subscribeSubmit.addEventListener('click', submitSubscribe);
         els.voucherSubmit.addEventListener('click', submitVoucher);
         els.redeemSubmit.addEventListener('click', submitRedeem);
+        els.offerSubmit.addEventListener('click', submitOffer);
 
+        renderOffer();
         renderPackages();
         setState('initial');
     </script>

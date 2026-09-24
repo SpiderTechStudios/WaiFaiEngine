@@ -122,6 +122,16 @@ class Company extends Model
         return $this->hasMany(Voucher::class);
     }
 
+    public function offers(): HasMany
+    {
+        return $this->hasMany(Offer::class);
+    }
+
+    public function offerClaims(): HasMany
+    {
+        return $this->hasMany(OfferClaim::class);
+    }
+
     public function paymentGateways(): HasMany
     {
         return $this->hasMany(PaymentGateway::class);

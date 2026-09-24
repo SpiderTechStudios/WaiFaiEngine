@@ -1,46 +1,7 @@
- 2. Web Authentication Flow Overview
-The flow follows the standard WiFiDog-compatible handshake:
+what if i want to put offers 
 
-Unauthenticated client tries to access the internet → AP intercepts and redirects to your Portal login page
-User authenticates on your Portal
-Portal sends token back to AP → AP validates token with Portal
-Portal replies with auth result → AP grants/denies internet access
-AP periodically sends heartbeat; Portal can force logout via auth:0
-🚀 3. Step-by-Step Integration
-✅ Step 1: AP Redirects Client to Your Portal Login
-When an unauthenticated client (e.g., browser opens http://www.google.com), the AP responds with:
-  HTTP/1.1 302 Redirect to login page
-  Location: http://portal.example.com:9000/login/?gw_id=4C2B48AC556A&gw_sn=ABC123456789&gw_address=192.168.1.1&gw_port=2060&url=http%3A%2F%2Fwww.google.com&ip=192.168.42.100&mac=00%3A11%3A22%3A33%3A44%3A55&ssid=MyWiFi&vlanid=10
-Your Portal must accept these parameters (gw_id, gw_sn, ip, mac, url, etc.) — especially gw_id (AP MAC in 12-char format) and mac (client MAC).
-✅ Step 2: User Logs In → Portal Generates Token
-After successful login (e.g., SMS OTP, social auth, account DB check), your Portal must:
-Generate a unique, short-lived token (e.g., J7aN70g58vQGOeUV154vw)
-Redirect user’s browser to the AP’s auth endpoint:
-    http://192.168.1.1:2060/wifidog/auth?token=J7aN70g58vQGOeUV154vw
-✅ Step 3: AP Validates Token with Your Portal
-The AP immediately calls your Portal’s /auth endpoint:
-  GET /auth/?gw_sn=ABC123456789&gw_id=4C2B48AC556A&stage=login&ip=192.168.42.100&mac=00%3A11%3A22%3A33%3A44%3A55&token=J7aN70g58vQGOeUV154vw&incoming=0&outgoing=0 HTTP/1.1
-  Host: portal.example.com:9000
-  User-Agent: AP 1.0.0
-Your Portal must respond with one of two formats (both supported):
-Simple Wifidog format (Type 1):
-HTTP/1.1 200 OK + body auth:1 (success) or auth:0 (fail)
-Extended JSON format (Type 2 — recommended):
-HTTP/1.1 200 OK + body
-    {"auth":1,"username":"13812345678","usergroup":"/guest","timeout":3600,"uplinklimit":512,"downlinklimit":2048}
-✅ Step 4: AP Grants Internet Access
-On auth:1, the AP:
-Allows traffic for that mac+ip
-Redirects client to your Portal’s welcome/portal page:
-    HTTP/1.1 302 Redirect to portal
-    Location: http://portal.example.com:9000/portal/?gw_sn=ABC123456789&gw_id=4C2B48AC556A&mac=00%3A11%3A22%3A33%3A44%3A55
-✅ Step 5: Maintain Session & Handle Logout
-AP sends periodic heartbeat (stage=counter) — your Portal may return {"auth":0} to terminate session early.
-AP sends logout notification (stage=logout) when client disconnects — your Portal should clean up session state.
-⚠️ Key Notes for RG-RAP6202(G)
-No CLI: All behavior is controlled via WiFiDog API interaction — no SSH/telnet or config file edits.
-MAC format matters:
-gw_id = AP MAC without colons → 4C2B48AC556A
-mac (client) = standard Linux format → 00:11:22:33:44:55
-Encoding: All URL parameters must be URL-encoded, and messages use ASCII encoding.
-Port & path: Default Wifidog port is 2060, base path is /Wifidog/. Confirm this is not blocked/firewalled.
+on my platform, i want users to be able to say. 
+from this time and this time. 
+i want to set up offers  for 3 hrs. so whoever connects wifi, they open up captive portal, and see offer, click here. if they open up, they get the 3 hrs offer. they use free wifi for 3 hours.they shouldn't be allowed to get the offer again. and if there is no offer set. it should just be a normal captive portal. 
+
+the owner of the company(service), specifies, when the offer should be availbel, how long does it hold, for hour much duration will the offer be, the description on the offer, active/inactive button, limit of number of people if it should be set the first 5 to join, somthing like that. i want to analyse the current code. see what to implement, how you are going to do it, not to break structure. 

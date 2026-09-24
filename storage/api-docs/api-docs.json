@@ -1306,7 +1306,7 @@
                     "Enrollment"
                 ],
                 "summary": "Start pay-first registration enrollment",
-                "description": "Creates a temporary enrollment (no user/company yet), creates a platform_subscription payment intent on the default collection provider, and initiates USSD/STK. Enrollment expires after PLATFORM_ENROLLMENT_TTL_MINUTES (default 4). Account creation happens only after a verified provider webhook.",
+                "description": "Creates a temporary enrollment (no user/company yet), creates a platform_subscription payment intent on the default collection provider, and initiates USSD/STK. If the same email already has an incomplete enrollment that can still accept payment, that enrollment is resumed and a new USSD/STK push is sent instead of rejecting the request. Enrollment expires after PLATFORM_ENROLLMENT_TTL_MINUTES (default 4). Account creation happens only after a verified provider webhook.",
                 "operationId": "registerEnrollment",
                 "requestBody": {
                     "required": true,
@@ -1401,7 +1401,7 @@
                     "Enrollment"
                 ],
                 "summary": "Retry enrollment platform subscription payment",
-                "description": "Allowed while enrollment is not expired and fewer than 3 failed attempts have occurred. Optionally updates payment_phone. Reuses the same enrollment; creates a new payment intent on the current default provider.",
+                "description": "Allowed while the enrollment can still accept payment (active or within the post-expiry grace window) and fewer than 3 failed attempts have occurred. Optionally updates payment_phone. Reuses the same enrollment, extends the reservation TTL, cancels any pending charge, and initiates a new USSD/STK push.",
                 "operationId": "retryEnrollmentPayment",
                 "parameters": [
                     {
@@ -2835,6 +2835,545 @@
                         "sanctum": []
                     }
                 ]
+            }
+        },
+        "/offers": {
+            "get": {
+                "tags": [
+                    "Offers"
+                ],
+                "summary": "List offers for the current company",
+                "operationId": "listOffers",
+                "parameters": [
+                    {
+                        "name": "is_active",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Offers",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedOffersResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Offers"
+                ],
+                "summary": "Create a free WiFi offer",
+                "description": "Define a time-limited free-access promotion. Provide a duration (standalone) or an internet_plan_id. router_ids empty = company-wide.",
+                "operationId": "createOffer",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreOfferRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Offer created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OfferResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/offers/{offer}": {
+            "get": {
+                "tags": [
+                    "Offers"
+                ],
+                "summary": "View an offer",
+                "operationId": "showOffer",
+                "parameters": [
+                    {
+                        "name": "offer",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Offer",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OfferResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Offers"
+                ],
+                "summary": "Delete an offer",
+                "description": "Deletes the offer, or deactivates it when it already has claims.",
+                "operationId": "deleteOffer",
+                "parameters": [
+                    {
+                        "name": "offer",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Offer deleted",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MessageResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Offers"
+                ],
+                "summary": "Update an offer",
+                "operationId": "updateOffer",
+                "parameters": [
+                    {
+                        "name": "offer",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreOfferRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Offer updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OfferResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/offers/{offer}/activate": {
+            "post": {
+                "tags": [
+                    "Offers"
+                ],
+                "summary": "Activate an offer",
+                "operationId": "activateOffer",
+                "parameters": [
+                    {
+                        "name": "offer",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Offer activated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OfferResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/offers/{offer}/deactivate": {
+            "post": {
+                "tags": [
+                    "Offers"
+                ],
+                "summary": "Deactivate an offer",
+                "operationId": "deactivateOffer",
+                "parameters": [
+                    {
+                        "name": "offer",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Offer deactivated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OfferResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/portal/{subdomain}/offers/claim": {
+            "post": {
+                "tags": [
+                    "Portal"
+                ],
+                "summary": "Claim a free WiFi offer",
+                "description": "Grants free access for the offer duration starting now. One claim per phone + device MAC. Free access never records revenue. When a captive_session is supplied the device is authorized and gateway_auth_url is returned.",
+                "operationId": "portalClaimOffer",
+                "parameters": [
+                    {
+                        "name": "subdomain",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PortalClaimOfferRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Offer claimed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PortalClaimOfferResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Portal or offer not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Offer unavailable, already claimed, or invalid input",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
         "/dashboard": {
@@ -10808,14 +11347,20 @@
                         "type": "string",
                         "example": "0686911251"
                     },
+                    "can_retry_payment": {
+                        "description": "True when the customer can resend a USSD/STK push for this enrollment",
+                        "type": "boolean",
+                        "example": true
+                    },
                     "account_created": {
                         "type": "boolean",
                         "example": true,
                         "nullable": true
                     },
                     "next_action": {
+                        "description": "retry_payment | login",
                         "type": "string",
-                        "example": "login",
+                        "example": "retry_payment",
                         "nullable": true
                     },
                     "redirect_to": {
@@ -11970,6 +12515,294 @@
                             },
                             "meta": {
                                 "$ref": "#/components/schemas/PaginationMeta"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "Offer": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "title": {
+                        "type": "string",
+                        "example": "3 Hours Free"
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "starts_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "ends_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "duration": {
+                        "type": "integer",
+                        "example": 3,
+                        "nullable": true
+                    },
+                    "duration_unit": {
+                        "type": "string",
+                        "example": "HOURS",
+                        "nullable": true,
+                        "enum": [
+                            "HOURS",
+                            "DAYS",
+                            "WEEKS",
+                            "MONTHS"
+                        ]
+                    },
+                    "max_claims": {
+                        "type": "integer",
+                        "example": 5,
+                        "nullable": true
+                    },
+                    "claims_count": {
+                        "type": "integer",
+                        "example": 0
+                    },
+                    "remaining_claims": {
+                        "type": "integer",
+                        "example": 5,
+                        "nullable": true
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "internet_plan_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "package": {
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "routers": {
+                        "description": "Empty = company-wide",
+                        "type": "array",
+                        "items": {
+                            "type": "object"
+                        }
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "StoreOfferRequest": {
+                "required": [
+                    "title"
+                ],
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "example": "3 Hours Free"
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "starts_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "ends_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "duration": {
+                        "description": "Required on create when no internet_plan_id is given",
+                        "type": "integer",
+                        "example": 3,
+                        "nullable": true
+                    },
+                    "duration_unit": {
+                        "type": "string",
+                        "example": "HOURS",
+                        "nullable": true,
+                        "enum": [
+                            "HOURS",
+                            "DAYS",
+                            "WEEKS",
+                            "MONTHS"
+                        ]
+                    },
+                    "max_claims": {
+                        "type": "integer",
+                        "example": 5,
+                        "nullable": true
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "internet_plan_id": {
+                        "description": "Optional existing package; otherwise a hidden zero-price plan is used",
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "router_ids": {
+                        "description": "Empty/omitted = company-wide",
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "OfferResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/Offer"
+                    }
+                },
+                "type": "object"
+            },
+            "PaginatedOffersResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 200
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Offers retrieved"
+                    },
+                    "data": {
+                        "properties": {
+                            "items": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/Offer"
+                                }
+                            },
+                            "meta": {
+                                "$ref": "#/components/schemas/PaginationMeta"
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "PortalClaimOfferRequest": {
+                "required": [
+                    "offer_id",
+                    "customer_phone"
+                ],
+                "properties": {
+                    "offer_id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "customer_phone": {
+                        "type": "string",
+                        "example": "0711987654"
+                    },
+                    "customer_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "captive_session": {
+                        "description": "32-char captive session token",
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "mac_address": {
+                        "type": "string",
+                        "example": "AA:BB:CC:DD:EE:FF",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "PortalClaimOfferResponse": {
+                "properties": {
+                    "status": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "code": {
+                        "type": "integer",
+                        "example": 201
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Offer claimed"
+                    },
+                    "data": {
+                        "properties": {
+                            "customer": {
+                                "type": "object"
+                            },
+                            "access_grant": {
+                                "properties": {
+                                    "id": {
+                                        "type": "integer"
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "example": "active"
+                                    },
+                                    "source": {
+                                        "type": "string",
+                                        "example": "offer"
+                                    },
+                                    "starts_at": {
+                                        "type": "string",
+                                        "format": "date-time"
+                                    },
+                                    "expires_at": {
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "package": {
+                                "type": "object",
+                                "nullable": true
+                            },
+                            "offer": {
+                                "type": "object"
+                            },
+                            "captive": {
+                                "description": "Present when captive_session is supplied",
+                                "type": "object",
+                                "nullable": true
                             }
                         },
                         "type": "object"
@@ -14155,6 +14988,10 @@
         {
             "name": "Vouchers",
             "description": "Prepaid voucher codes"
+        },
+        {
+            "name": "Offers",
+            "description": "Owner-configured free WiFi offers for the captive portal"
         },
         {
             "name": "Payments",

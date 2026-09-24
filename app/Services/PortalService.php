@@ -12,6 +12,8 @@ use Illuminate\Validation\ValidationException;
 
 class PortalService
 {
+    public function __construct(private OfferService $offerService) {}
+
     /**
      * @return array<string, mixed>
      */
@@ -33,6 +35,7 @@ class PortalService
                 'payment_method' => $company->payment_method,
             ],
             'packages' => PackageResource::collection($packages)->resolve(),
+            'offer' => $this->offerService->activeFor($company),
         ];
     }
 

@@ -18,6 +18,9 @@ Route::prefix('portal/{subdomain}')
         Route::post('/vouchers/redeem', [PortalController::class, 'redeemVoucher'])
             ->middleware('throttle:10,1');
 
+        Route::post('/offers/claim', [PortalController::class, 'claimOffer'])
+            ->middleware('throttle:10,1');
+
         Route::post('/sessions', [PortalController::class, 'createSession'])
             ->middleware('throttle:20,1');
 
