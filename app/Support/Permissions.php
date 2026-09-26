@@ -90,6 +90,14 @@ final class Permissions
 
     public const INSTALLATION_REQUESTS_CREATE = 'installation_requests.create';
 
+    public const EXPENSES_VIEW = 'expenses.view';
+
+    public const EXPENSES_CREATE = 'expenses.create';
+
+    public const EXPENSES_UPDATE = 'expenses.update';
+
+    public const EXPENSES_DELETE = 'expenses.delete';
+
     /**
      * @return list<string>
      */

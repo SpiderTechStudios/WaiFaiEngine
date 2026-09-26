@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call(PaymentProviderSeeder::class);
+        $this->call(ExpenseTypeSeeder::class);
 
         User::factory()->create([
             'first_name' => 'Test',

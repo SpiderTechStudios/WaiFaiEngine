@@ -24,6 +24,8 @@ class ApiErrorMessage
         \App\Models\Customer::class => 'Customer',
         \App\Models\CustomerDevice::class => 'Customer device',
         \App\Models\Enrollment::class => 'Enrollment',
+        \App\Models\Expense::class => 'Expense',
+        \App\Models\ExpenseType::class => 'Expense type',
         \App\Models\InstallationRequest::class => 'Installation request',
         \App\Models\InternetPlan::class => 'Package',
         \App\Models\Location::class => 'Branch',

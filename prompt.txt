@@ -1,7 +1,962 @@
-what if i want to put offers 
+You are working on the existing WaiFai Engine API.
 
-on my platform, i want users to be able to say. 
-from this time and this time. 
-i want to set up offers  for 3 hrs. so whoever connects wifi, they open up captive portal, and see offer, click here. if they open up, they get the 3 hrs offer. they use free wifi for 3 hours.they shouldn't be allowed to get the offer again. and if there is no offer set. it should just be a normal captive portal. 
+I want you to introduce a complete, production-ready **Expense Management module** into the existing API.
 
-the owner of the company(service), specifies, when the offer should be availbel, how long does it hold, for hour much duration will the offer be, the description on the offer, active/inactive button, limit of number of people if it should be set the first 5 to join, somthing like that. i want to analyse the current code. see what to implement, how you are going to do it, not to break structure. 
+IMPORTANT:
+
+* Do NOT create a separate application.
+* Do NOT break existing functionality.
+* First inspect the existing architecture, database schema, models, authentication, workspace/account structure, routers, subscriptions/platform payments, and existing financial/payment-related modules.
+* Reuse the existing architecture and naming conventions wherever appropriate.
+* Do not duplicate concepts that already exist.
+* Before implementing, understand how users/accounts/workspaces and routers are currently related.
+* The implementation must be multi-tenant and ensure one user/account cannot access another user's expenses.
+
+==================================================
+
+1. PURPOSE
+   ==================================================
+
+WaiFai users need to record the real expenses associated with operating their Wi-Fi business.
+
+Examples include:
+
+* Monthly WaiFai platform subscription/license
+* Internet bundles purchased for a router
+* Electricity
+* Router purchase
+* Access Point purchase
+* UPS purchase
+* Switch purchase
+* Ethernet cables
+* Installation costs
+* Router maintenance
+* AP maintenance
+* Repairs
+* Transport
+* Rent/site costs
+* Staff/technician payments
+* SIM/data costs
+* Replacement equipment
+* Other operational expenses
+
+The objective is for the user to know:
+
+1. How much they actually spent.
+2. What they spent it on.
+3. When they spent it.
+4. Who they paid.
+5. Which router/site/device the expense belongs to.
+6. Which expense category/type it belongs to.
+7. How much they spent on each router.
+8. How much they spent on operations overall.
+9. How much they spent on WaiFai platform-related expenses.
+10. How much they spent excluding platform expenses.
+
+==================================================
+2. IMPORTANT DISTINCTION: PLATFORM VS BUSINESS EXPENSE
+======================================================
+
+The system must distinguish between:
+
+A. PLATFORM EXPENSES
+
+Expenses paid by the user to WaiFai/platform.
+
+Examples:
+
+* WaiFai monthly subscription
+* Platform license
+* Platform service charges
+* Other future platform charges
+
+B. BUSINESS/OPERATIONAL EXPENSES
+
+Expenses incurred by the user while operating their Wi-Fi business.
+
+Examples:
+
+* Electricity
+* Internet bundle
+* Router purchase
+* AP purchase
+* UPS
+* Switch
+* Cables
+* Repairs
+* Installation
+* Transport
+* Technician payment
+* Site expenses
+* Other expenses
+
+The architecture must support filtering:
+
+* All expenses
+* Platform expenses only
+* Non-platform expenses only
+* Expenses for a specific router
+* Expenses for a specific expense type
+* Expenses within a date range
+* Expenses for a specific site/location if supported by the existing architecture
+
+Do NOT hard-code the platform subscription as the only platform expense. The data model should support future platform expense types.
+
+==================================================
+3. EXPENSE TYPES
+================
+
+Expense types/categories must be manageable by the ADMIN.
+
+The admin should be able to create, edit, activate/deactivate expense types.
+
+Examples:
+
+* Platform Subscription
+* Internet
+* Electricity
+* Router Purchase
+* Access Point Purchase
+* UPS Purchase
+* Switch Purchase
+* Cable/Accessories
+* Installation
+* Maintenance
+* Repair
+* Transport
+* Technician
+* Rent/Site
+* SIM/Data
+* Other
+
+Do not assume this list is permanent.
+
+The admin must be able to add new expense types in the future without requiring a code deployment.
+
+Each expense type should have enough information to determine whether it is:
+
+* platform expense
+  OR
+* business/operational expense.
+
+For example:
+
+expense_type:
+name: "Platform Subscription"
+category: "platform"
+
+expense_type:
+name: "Electricity"
+category: "operational"
+
+Use an appropriate enum/string structure consistent with the existing project architecture.
+
+==================================================
+4. EXPENSE RECORD
+=================
+
+Create a proper expense entity.
+
+At minimum an expense should support:
+
+* id
+* account/workspace/user ownership according to the existing architecture
+* router_id nullable
+* expense_type_id
+* description/particulars
+* amount
+* currency
+* paid_at
+* paid_to
+* reference/receipt number nullable
+* notes nullable
+* status if appropriate
+* created_by
+* updated_by
+* created_at
+* updated_at
+
+IMPORTANT:
+
+router_id MUST be nullable.
+
+Some expenses belong to a specific router:
+
+Example:
+"Bought 50GB internet bundle for Router #3"
+
+Other expenses may belong to the entire business:
+
+Example:
+"Office electricity bill"
+
+Therefore:
+
+router_id = null
+
+must be supported.
+
+==================================================
+5. PARTICULARS / DESCRIPTION
+============================
+
+The user must be able to enter a meaningful description of what they paid for.
+
+Examples:
+
+"Monthly internet bundle for Router #003"
+
+"Bought TP-Link access point for new customer site"
+
+"Electricity bill for Mbezi site - September"
+
+"Technician payment for Router #12 repair"
+
+Do not make the expense type itself the description.
+
+The expense type tells us WHAT CATEGORY it belongs to.
+
+The particulars/description tells us exactly WHAT was purchased or paid for.
+
+==================================================
+6. PAID TO
+==========
+
+The user must be able to specify who received the money.
+
+Examples:
+
+* Vodacom
+* Airtel
+* Tigo
+* TANESCO
+* Hardware supplier
+* Technician
+* Landlord
+* Internet provider
+* Individual person
+* Other business
+
+Initially this can simply be a string field:
+
+paid_to
+
+Do NOT create a complicated supplier/vendor module unless the existing architecture already has one.
+
+Design the database so that a proper vendor/supplier relationship can be introduced later without redesigning the expense system.
+
+==================================================
+7. ROUTER ASSOCIATION
+=====================
+
+An expense can optionally belong to a router.
+
+Examples:
+
+Router #1:
+
+* Internet
+* Electricity
+* Maintenance
+* Repair
+
+Router #2:
+
+* Internet
+* Electricity
+* Replacement AP
+
+Router #3:
+
+* Internet
+
+Some expenses can be business-wide and therefore have:
+
+router_id = null
+
+The API must validate that the selected router belongs to the authenticated user's account/workspace.
+
+Never allow a user to attach an expense to another user's router.
+
+==================================================
+8. CURRENCY AND AMOUNT
+======================
+
+Use the existing money/currency architecture in the project.
+
+Do NOT use floating-point values for financial amounts.
+
+Use the same money representation already used by existing payment/financial tables.
+
+If the existing system stores amounts as integer minor units, follow that convention.
+
+If the existing system already has a currency field, reuse the same approach.
+
+The system should be capable of supporting currencies beyond TZS even if WaiFai currently operates primarily in Tanzania.
+
+==================================================
+9. CRUD APIs
+============
+
+Create production-ready APIs for:
+
+CREATE
+
+POST /api/expenses
+
+Allows an authenticated user to create an expense.
+
+Example payload:
+
+{
+"router_id": 12,
+"expense_type_id": 4,
+"description": "Monthly internet bundle for Router #12",
+"amount": 50000,
+"currency": "TZS",
+"paid_at": "2026-09-25",
+"paid_to": "Airtel",
+"reference": "AIR-09252026",
+"notes": "Monthly data package"
+}
+
+router_id should be optional.
+
+==================================================
+
+GET LIST
+
+GET /api/expenses
+
+Return a paginated expense list.
+
+Support filtering and sorting.
+
+Required filters should include:
+
+* router_id
+* expense_type_id
+* category
+* from
+* to
+* paid_to
+* currency
+* search
+* sort
+* direction
+
+Category must support:
+
+all
+platform
+operational
+
+Example:
+
+GET /api/expenses?router_id=12
+
+GET /api/expenses?expense_type_id=4
+
+GET /api/expenses?category=platform
+
+GET /api/expenses?category=operational
+
+GET /api/expenses?from=2026-09-01&to=2026-09-30
+
+GET /api/expenses?router_id=12&from=2026-09-01&to=2026-09-30
+
+GET /api/expenses?category=operational&router_id=12
+
+GET /api/expenses?search=Airtel
+
+Do not implement filters only at controller level.
+
+Build the query/filter architecture cleanly so additional filters can be added later.
+
+==================================================
+10. GET SINGLE EXPENSE
+======================
+
+GET /api/expenses/{expense}
+
+Return complete expense information including:
+
+* expense details
+* expense type
+* category
+* router
+* creator
+* dates
+
+Ensure authorization.
+
+==================================================
+11. UPDATE EXPENSE
+==================
+
+PUT/PATCH /api/expenses/{expense}
+
+Allow authorized users to edit:
+
+* router
+* expense type
+* description
+* amount
+* currency
+* paid_at
+* paid_to
+* reference
+* notes
+
+Validate ownership and permissions.
+
+==================================================
+12. DELETE EXPENSE
+==================
+
+DELETE /api/expenses/{expense}
+
+Implement according to the existing deletion conventions.
+
+For financial records, strongly consider soft deletion instead of physically deleting records.
+
+If the existing application already has a financial/audit pattern, follow it.
+
+The API should not silently destroy financial history.
+
+==================================================
+13. EXPENSE TYPES APIs
+======================
+
+Create admin APIs for managing expense types.
+
+Examples:
+
+GET /api/admin/expense-types
+
+POST /api/admin/expense-types
+
+GET /api/admin/expense-types/{expenseType}
+
+PUT/PATCH /api/admin/expense-types/{expenseType}
+
+DELETE /api/admin/expense-types/{expenseType}
+
+At minimum an expense type should contain:
+
+* id
+* name
+* description nullable
+* category
+* active
+* created_at
+* updated_at
+
+Category:
+
+platform
+operational
+
+Do not allow normal users to create arbitrary expense types unless the existing business architecture explicitly supports that.
+
+Users should select from admin-defined expense types.
+
+Prevent deletion/deactivation from breaking existing historical expenses.
+
+If an expense type is already used by expenses, prefer deactivation over destructive deletion.
+
+==================================================
+14. EXPENSE SUMMARY API
+=======================
+
+Create an API specifically for reporting/summary.
+
+Example:
+
+GET /api/expenses/summary
+
+It should support the same major filters:
+
+* router_id
+* expense_type_id
+* category
+* from
+* to
+
+Return information such as:
+
+{
+"total": 350000,
+"currency": "TZS",
+"platform_total": 49999,
+"operational_total": 300001
+}
+
+If multiple currencies are possible, do NOT incorrectly combine currencies without conversion.
+
+Follow the project's existing currency/FX architecture.
+
+==================================================
+15. ROUTER EXPENSE SUMMARY
+==========================
+
+Create an API/report that allows the application to determine the total expenses associated with each router.
+
+Example:
+
+GET /api/routers/{router}/expenses
+
+This should return:
+
+* router
+* expenses
+* total expenses
+* total by expense type
+* total by date if appropriate
+
+Example conceptual response:
+
+{
+"router": {
+"id": 12,
+"name": "Mbezi Router"
+},
+"summary": {
+"total": 250000,
+"currency": "TZS"
+},
+"breakdown": [
+{
+"expense_type": "Internet",
+"total": 100000
+},
+{
+"expense_type": "Electricity",
+"total": 50000
+},
+{
+"expense_type": "Maintenance",
+"total": 100000
+}
+]
+}
+
+==================================================
+16. BUSINESS-WIDE EXPENSES
+==========================
+
+Support expenses that do not belong to a specific router.
+
+Example:
+
+Electricity bill for an office.
+
+These records must have:
+
+router_id = null
+
+The API should make it easy to retrieve:
+
+* router-specific expenses
+* business-wide expenses
+* all expenses
+
+For example:
+
+GET /api/expenses?router_id=null
+
+or use an explicit filter such as:
+
+GET /api/expenses?scope=business
+
+Choose the cleanest API design consistent with the existing project.
+
+==================================================
+17. PLATFORM EXPENSES
+=====================
+
+Be careful with platform subscription expenses.
+
+If the existing WaiFai payment/subscription system already records a successful subscription payment, DO NOT create a duplicate financial transaction just because we now have an expenses module.
+
+Instead, inspect the existing architecture.
+
+If the platform subscription is already represented by something like account_payments, determine whether the expense module should:
+
+A. reference that existing payment
+
+OR
+
+B. create a separate expense representation linked to the original payment.
+
+Do not duplicate money movements.
+
+The purpose of this module is to give the user an expense/accounting view while preserving the existing payment architecture.
+
+If appropriate, introduce:
+
+source_type
+source_id
+
+or another polymorphic/reference mechanism so an expense can originate from:
+
+* manual entry
+* platform subscription
+* future automated expense
+* other system-generated transaction
+
+Do this only if it fits the existing architecture.
+
+==================================================
+18. MANUAL VS SYSTEM-GENERATED EXPENSES
+=======================================
+
+The architecture should distinguish:
+
+manual expenses entered by the user
+
+from
+
+system-generated expenses.
+
+For example:
+
+manual:
+"Bought UPS from supplier"
+
+system:
+"WaiFai monthly subscription"
+
+Consider a field such as:
+
+source = manual | system
+
+or an equivalent design.
+
+Do not allow users to manually modify system-generated financial records if that would compromise the integrity of existing subscription/payment records.
+
+==================================================
+19. EXPENSE DASHBOARD DATA
+==========================
+
+Make the API architecture capable of supporting a frontend dashboard with:
+
+Total Expenses
+Platform Expenses
+Operational Expenses
+This Month
+This Year
+Expenses Per Router
+Expenses By Type
+Expenses Over Time
+Top Expense Types
+
+Do not necessarily build the frontend now.
+
+The API must expose enough structured information for a future dashboard.
+
+==================================================
+20. AUTHORIZATION / TENANCY
+===========================
+
+This is extremely important.
+
+Every expense must belong to the correct account/workspace/owner based on the existing WaiFai architecture.
+
+Users must NEVER be able to:
+
+* view another user's expenses
+* edit another user's expenses
+* delete another user's expenses
+* attach an expense to another user's router
+* use another workspace's expense type where that is not allowed
+
+Inspect the existing authorization/policy architecture and implement this consistently.
+
+Do not rely only on the frontend to hide records.
+
+Enforce ownership at API/database/query level.
+
+==================================================
+21. VALIDATION
+==============
+
+Validate:
+
+* expense type exists and is active where appropriate
+* router belongs to current account/workspace
+* amount is valid and positive
+* currency is valid according to existing currency architecture
+* paid_at is a valid date
+* description/particulars is required
+* paid_to is required unless there is a valid reason in the existing business rules
+* category should NOT be accepted blindly from the normal user if it can be derived from expense_type
+
+IMPORTANT:
+
+If expense_type_id = "Electricity" and Electricity is operational, the API should determine category from the expense type.
+
+Do not trust:
+
+{
+"category": "platform"
+}
+
+from the user when the selected expense type says otherwise.
+
+==================================================
+22. DATABASE DESIGN
+===================
+
+Inspect the existing database before deciding exact table names.
+
+Likely entities:
+
+expense_types
+expenses
+
+But reuse existing tables if equivalent functionality already exists.
+
+Add appropriate indexes for:
+
+* account/workspace ownership
+* router_id
+* expense_type_id
+* paid_at
+* category/source if stored
+* created_at
+
+The expense list will eventually contain many records, so queries must remain efficient.
+
+Consider composite indexes where appropriate based on the actual query patterns.
+
+==================================================
+23. API RESPONSE FORMAT
+=======================
+
+Follow the existing WaiFai Engine API response structure.
+
+Do not invent a completely different response format.
+
+Relationships should be returned consistently with the rest of the API.
+
+Pagination should use the project's existing pagination format.
+
+Validation errors should use the existing API error format.
+
+==================================================
+24. ADMIN SEED DATA
+===================
+
+Create seeders for the initial expense types.
+
+At minimum:
+
+Platform:
+
+* Platform Subscription
+
+Operational:
+
+* Internet
+* Electricity
+* Router Purchase
+* Access Point Purchase
+* UPS Purchase
+* Switch Purchase
+* Cable/Accessories
+* Installation
+* Maintenance
+* Repair
+* Transport
+* Technician
+* Rent/Site
+* SIM/Data
+* Other
+
+Use the project's existing seeding conventions.
+
+Make the seeder idempotent so it can safely be run more than once.
+
+==================================================
+25. TESTS
+=========
+
+Create comprehensive tests for:
+
+* create expense
+* list expenses
+* get expense
+* update expense
+* delete expense
+* filter by router
+* filter by expense type
+* filter platform expenses
+* filter operational expenses
+* filter date range
+* search
+* summary
+* router expense summary
+* business-wide expenses
+* unauthorized access
+* cross-workspace access
+* attaching expense to another user's router
+* inactive expense type
+* invalid amount
+* invalid currency
+* soft deletion if implemented
+* system-generated expense protection if implemented
+
+==================================================
+26. ARCHITECTURE QUALITY
+========================
+
+Do NOT put all logic inside controllers.
+
+Use the existing WaiFai architecture.
+
+Where appropriate use:
+
+* Form Requests / validation classes
+* Policies / authorization
+* Services
+* Query filters
+* API Resources
+* Models
+* Scopes
+* Enums
+* Events/listeners if appropriate
+* Database transactions where required
+
+Keep controllers thin.
+
+The filtering/reporting architecture should be reusable.
+
+==================================================
+27. DO NOT BREAK EXISTING PAYMENT ARCHITECTURE
+==============================================
+
+Before implementing, inspect:
+
+* account_payments
+* event_payments
+* payouts
+* subscriptions
+* router/device payment logic
+* any existing transaction/ledger implementation
+
+Do not create another competing financial system.
+
+Expenses are an accounting/operational view of money spent.
+
+Existing payment/transaction records remain the source of truth for actual platform/payment transactions.
+
+Where an expense originates from an existing transaction, create a safe relationship/reference rather than duplicating the transaction.
+
+==================================================
+28. FUTURE SUPPORT
+==================
+
+Design the module so it can later support:
+
+* expense receipts
+* receipt image/PDF upload
+* vendors/suppliers
+* recurring expenses
+* monthly recurring electricity
+* monthly internet expenses
+* automatic platform subscription expenses
+* expense approval
+* expense reports
+* export CSV/Excel/PDF
+* profit/loss reporting
+* router profitability
+* cost per router
+* revenue vs expenses
+* depreciation of equipment
+
+Do not implement all of these now unless the existing project already requires them.
+
+But do not design the current database in a way that makes these future capabilities unnecessarily difficult.
+
+==================================================
+29. IMPLEMENTATION PROCESS
+==========================
+
+Before changing code:
+
+1. Inspect the existing project structure.
+2. Identify authentication and tenancy model.
+3. Identify existing financial/payment tables.
+4. Identify router/device relationships.
+5. Identify existing admin authorization.
+6. Identify existing API response conventions.
+7. Identify existing migrations/model conventions.
+8. Identify whether an expenses table already exists.
+9. Identify whether transaction/ledger functionality already exists.
+
+Then produce a short implementation plan.
+
+After that:
+
+1. Create/update migrations.
+2. Create/update models.
+3. Create expense type management.
+4. Seed initial expense types.
+5. Implement authorization/policies.
+6. Implement validation.
+7. Implement CRUD.
+8. Implement filtering.
+9. Implement summary/reporting endpoints.
+10. Implement router expense endpoints.
+11. Add API resources.
+12. Add tests.
+13. Run migrations/tests.
+14. Fix failures.
+15. Verify existing functionality has not been broken.
+
+==================================================
+30. FINAL API CAPABILITY
+========================
+
+When complete, WaiFai Engine should be capable of answering questions such as:
+
+"How much have I spent in total?"
+
+"How much have I spent this month?"
+
+"How much have I spent on Router #12?"
+
+"How much have I spent on internet?"
+
+"How much did electricity cost me?"
+
+"How much did I spend on equipment?"
+
+"How much did I spend on platform subscriptions?"
+
+"How much did I spend excluding platform expenses?"
+
+"What expenses did I pay to Airtel?"
+
+"What did I spend between September 1 and September 30?"
+
+"What are my expenses for this router?"
+
+"What are my expenses by category?"
+
+"What are my expenses by router?"
+
+"Which expenses are business-wide and not associated with a router?"
+
+The API and database architecture must support all of these without requiring a redesign.
+
+IMPORTANT FINAL INSTRUCTION:
+
+Do not blindly implement based on this prompt.
+
+First inspect the existing WaiFai Engine codebase and adapt the design to the architecture that already exists.
+
+Avoid duplicate tables, duplicate financial concepts, duplicate authentication/authorization logic, and duplicate payment records.
+
+Implement this as a clean, production-ready module that becomes the foundation for future WaiFai financial reporting and router profitability analytics.

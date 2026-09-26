@@ -88,4 +88,9 @@ class NetworkDevice extends Model
     {
         return $this->hasMany(CaptiveSession::class);
     }
+
+    public function expenses(): HasMany
+    {
+        return $this->hasMany(Expense::class, 'router_id');
+    }
 }

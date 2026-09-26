@@ -197,6 +197,11 @@ class Company extends Model
         return $this->hasMany(Withdrawal::class);
     }
 
+    public function expenses(): HasMany
+    {
+        return $this->hasMany(Expense::class);
+    }
+
     public function auditLogs(): HasMany
     {
         return $this->hasMany(AuditLog::class);

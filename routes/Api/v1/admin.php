@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Admin\AdminDashboardController;
+use App\Http\Controllers\Api\V1\Admin\AdminExpenseTypeController;
 use App\Http\Controllers\Api\V1\Admin\AdminInstallationRequestController;
 use App\Http\Controllers\Api\V1\Admin\AdminRouterController;
 use App\Http\Controllers\Api\V1\Operations\PaymentController;
@@ -25,6 +26,15 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'active.user', 'platform.adm
     Route::get('/installation-requests/{installationRequest}', [AdminInstallationRequestController::class, 'show']);
     Route::patch('/installation-requests/{installationRequest}/fulfillment', [AdminInstallationRequestController::class, 'updateFulfillment']);
     Route::post('/installation-requests/{installationRequest}/updates', [AdminInstallationRequestController::class, 'addUpdate']);
+
+    Route::get('/expense-types', [AdminExpenseTypeController::class, 'index']);
+    Route::post('/expense-types', [AdminExpenseTypeController::class, 'store']);
+    Route::get('/expense-types/{expenseType}', [AdminExpenseTypeController::class, 'show']);
+    Route::patch('/expense-types/{expenseType}', [AdminExpenseTypeController::class, 'update']);
+    Route::put('/expense-types/{expenseType}', [AdminExpenseTypeController::class, 'update']);
+    Route::delete('/expense-types/{expenseType}', [AdminExpenseTypeController::class, 'destroy']);
+    Route::post('/expense-types/{expenseType}/activate', [AdminExpenseTypeController::class, 'activate']);
+    Route::post('/expense-types/{expenseType}/deactivate', [AdminExpenseTypeController::class, 'deactivate']);
 });
 
 Route::prefix('superadmin')->middleware(['auth:sanctum', 'active.user', 'superadmin'])->group(function () {
