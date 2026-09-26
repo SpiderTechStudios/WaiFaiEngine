@@ -71,12 +71,18 @@ class CustomerResource extends JsonResource
     private function resolveCurrentGrant(): ?AccessGrant
     {
         if ($this->relationLoaded('currentAccessGrant')) {
-            return $this->currentAccessGrant;
+            $grant = $this->currentAccessGrant;
+            if ($grant && $grant->status === 'active' && (! $grant->expires_at || $grant->expires_at->isFuture())) {
+                return $grant;
+            }
+
+            return null;
         }
 
         if ($this->relationLoaded('accessGrants')) {
             return $this->accessGrants
                 ->where('status', 'active')
+                ->filter(fn (AccessGrant $grant) => ! $grant->expires_at || $grant->expires_at->isFuture())
                 ->sortByDesc('id')
                 ->first();
         }
@@ -86,12 +92,21 @@ class CustomerResource extends JsonResource
 
     private function resolveLatestSession(): ?NetworkSession
     {
+        if ($this->relationLoaded('currentNetworkSession')) {
+            return $this->currentNetworkSession;
+        }
+
         if ($this->relationLoaded('latestNetworkSession')) {
-            return $this->latestNetworkSession;
+            $session = $this->latestNetworkSession;
+
+            return $session && $session->status === 'active' ? $session : null;
         }
 
         if ($this->relationLoaded('networkSessions')) {
-            return $this->networkSessions->sortByDesc('id')->first();
+            return $this->networkSessions
+                ->where('status', 'active')
+                ->sortByDesc('id')
+                ->first();
         }
 
         return null;

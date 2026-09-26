@@ -217,7 +217,7 @@ class NetworkSessionService
         }
 
         if ($grant->expires_at && $grant->expires_at->isPast()) {
-            $grant->forceFill(['status' => 'expired'])->save();
+            app(AccessExpiryService::class)->expireGrant($grant);
 
             throw ValidationException::withMessages([
                 'access_grant_id' => ['Access grant has expired.'],

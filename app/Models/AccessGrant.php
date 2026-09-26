@@ -85,4 +85,13 @@ class AccessGrant extends Model
     {
         return $this->hasMany(RevenueRecord::class);
     }
+
+    public function isUsable(): bool
+    {
+        if ($this->status !== 'active') {
+            return false;
+        }
+
+        return ! $this->expires_at || $this->expires_at->isFuture();
+    }
 }

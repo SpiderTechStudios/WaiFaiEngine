@@ -17,7 +17,7 @@ class CustomerController extends Controller
             ->with([
                 'currentAccessGrant.internetPlan',
                 'latestDevice',
-                'latestNetworkSession',
+                'currentNetworkSession',
             ])
             ->withSum([
                 'paymentTransactions as total_spent' => fn ($builder) => $builder->where('status', 'paid'),
@@ -55,7 +55,7 @@ class CustomerController extends Controller
         $customer->load([
             'currentAccessGrant.internetPlan',
             'latestDevice',
-            'latestNetworkSession',
+            'currentNetworkSession',
             'paymentTransactions' => fn ($query) => $query->where('status', 'paid')->latest('id'),
         ])->loadSum([
             'paymentTransactions as total_spent' => fn ($builder) => $builder->where('status', 'paid'),

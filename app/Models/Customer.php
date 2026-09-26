@@ -54,7 +54,11 @@ class Customer extends Model
     {
         return $this->hasOne(AccessGrant::class)->ofMany(
             ['id' => 'max'],
-            fn ($query) => $query->where('status', 'active'),
+            fn ($query) => $query->where('status', 'active')
+                ->where(function ($inner): void {
+                    $inner->whereNull('expires_at')
+                        ->orWhere('expires_at', '>', now());
+                }),
         );
     }
 
@@ -66,5 +70,23 @@ class Customer extends Model
     public function latestNetworkSession(): HasOne
     {
         return $this->hasOne(NetworkSession::class)->latestOfMany();
+    }
+
+    /**
+     * Live hotspot session only (ended/expired sessions are excluded).
+     */
+    public function currentNetworkSession(): HasOne
+    {
+        return $this->hasOne(NetworkSession::class)->ofMany(
+            ['id' => 'max'],
+            fn ($query) => $query->where('status', 'active')
+                ->whereHas('accessGrant', function ($grant): void {
+                    $grant->where('status', 'active')
+                        ->where(function ($inner): void {
+                            $inner->whereNull('expires_at')
+                                ->orWhere('expires_at', '>', now());
+                        });
+                }),
+        );
     }
 }

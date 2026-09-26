@@ -304,6 +304,17 @@ class CaptiveSessionService
         }
 
         if ($session->markExpiredIfNeeded() || ! $session->isAuthenticated()) {
+            if ($session->access_grant_id) {
+                $grant = AccessGrant::query()
+                    ->where('company_id', $session->company_id)
+                    ->whereKey($session->access_grant_id)
+                    ->first();
+
+                if ($grant && ! $grant->isUsable()) {
+                    app(AccessExpiryService::class)->expireGrant($grant);
+                }
+            }
+
             Log::channel('wifidog')->info('wifidog.auth_denied', [
                 'reason' => 'not_authenticated_or_expired',
                 'gw_id' => $session->gateway_id,
@@ -355,7 +366,13 @@ class CaptiveSessionService
                 ->whereKey($session->access_grant_id)
                 ->first();
 
-            if (! $grant || $grant->status !== 'active' || ($grant->expires_at && $grant->expires_at->isPast())) {
+            if (! $grant || ! $grant->isUsable()) {
+                if ($grant) {
+                    app(AccessExpiryService::class)->expireGrant($grant);
+                } elseif ($session->status === CaptiveSession::STATUS_AUTHENTICATED) {
+                    $session->forceFill(['status' => CaptiveSession::STATUS_EXPIRED])->save();
+                }
+
                 Log::channel('wifidog')->info('wifidog.auth_denied', [
                     'reason' => 'access_grant_invalid',
                     'gw_id' => $session->gateway_id,
