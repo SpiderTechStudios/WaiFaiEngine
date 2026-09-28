@@ -775,6 +775,10 @@
         renderOffer();
         renderPackages();
         setState('initial');
+
+        if (PORTAL.gateway_auth_url) {
+            goToGateway(PORTAL.gateway_auth_url);
+        }
     </script>
 </body>
 </html>

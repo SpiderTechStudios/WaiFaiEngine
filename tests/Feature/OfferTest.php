@@ -181,6 +181,171 @@ class OfferTest extends TestCase
         $this->assertSame(1, OfferClaim::query()->where('offer_id', $offer->id)->count());
     }
 
+    public function test_claim_blocks_same_phone_on_new_device_and_same_device_with_new_phone(): void
+    {
+        $owner = $this->createUser();
+        $company = $this->createCompanyFor($owner);
+        $offer = $this->makeOffer($company);
+        $url = '/api/v1/portal/'.$company->subdomain.'/offers/claim';
+
+        $this->postJson($url, [
+            'offer_id' => $offer->id,
+            'customer_phone' => '0711987654',
+            'mac_address' => 'AA:BB:CC:DD:EE:FF',
+        ])->assertCreated();
+
+        $this->postJson($url, [
+            'offer_id' => $offer->id,
+            'customer_phone' => '0711987654',
+            'mac_address' => '11:22:33:44:55:66',
+        ])->assertStatus(422)->assertJsonPath('data.offer.0', 'You have already claimed this offer.');
+
+        $this->postJson($url, [
+            'offer_id' => $offer->id,
+            'customer_phone' => '0799000111',
+            'mac_address' => 'AA:BB:CC:DD:EE:FF',
+        ])->assertStatus(422)->assertJsonPath('data.offer.0', 'You have already claimed this offer.');
+
+        $this->assertSame(1, $offer->fresh()->claims_count);
+    }
+
+    public function test_active_offer_is_marked_claimed_for_device_that_already_claimed(): void
+    {
+        $owner = $this->createUser();
+        $company = $this->createCompanyFor($owner);
+        $offer = $this->makeOffer($company);
+
+        $this->postJson('/api/v1/portal/'.$company->subdomain.'/offers/claim', [
+            'offer_id' => $offer->id,
+            'customer_phone' => '0711987654',
+            'mac_address' => 'AA:BB:CC:DD:EE:FF',
+        ])->assertCreated();
+
+        $service = app(OfferService::class);
+        $this->assertTrue($service->activeFor($company, null, null, 'aa-bb-cc-dd-ee-ff')['claimed']);
+        $this->assertFalse($service->activeFor($company, null, null, '11:22:33:44:55:66')['claimed']);
+    }
+
+    public function test_returning_device_is_resumed_straight_to_gateway(): void
+    {
+        [$company, $router] = $this->companyWithRuijieRouter();
+        $offer = $this->makeOffer($company);
+
+        $first = $this->pendingCaptive($company, $router, str_repeat('a', 32), 'AA:BB:CC:DD:EE:FF');
+
+        $this->postJson('/api/v1/portal/'.$company->subdomain.'/offers/claim', [
+            'offer_id' => $offer->id,
+            'customer_phone' => '0711987654',
+            'captive_session' => $first->token,
+        ])->assertCreated();
+
+        // Router logged the client out; they come back with a fresh pending session.
+        $first->forceFill(['status' => CaptiveSession::STATUS_DISCONNECTED])->save();
+        $second = $this->pendingCaptive($company, $router, str_repeat('b', 32), 'AA:BB:CC:DD:EE:FF');
+
+        $response = $this->get('/connect?subdomain='.$company->subdomain.'&session='.$second->token)->assertOk();
+
+        $portal = $response->viewData('portal');
+        $this->assertNotNull($portal['gateway_auth_url']);
+        $this->assertStringContainsString('token='.$second->token, $portal['gateway_auth_url']);
+        $this->assertTrue($portal['offer']['claimed']);
+        $this->assertSame(CaptiveSession::STATUS_AUTHENTICATED, $second->fresh()->status);
+    }
+
+    public function test_expired_offer_is_not_resumed(): void
+    {
+        [$company, $router] = $this->companyWithRuijieRouter();
+        $offer = $this->makeOffer($company);
+
+        $first = $this->pendingCaptive($company, $router, str_repeat('a', 32), 'AA:BB:CC:DD:EE:FF');
+
+        $this->postJson('/api/v1/portal/'.$company->subdomain.'/offers/claim', [
+            'offer_id' => $offer->id,
+            'customer_phone' => '0711987654',
+            'captive_session' => $first->token,
+        ])->assertCreated();
+
+        AccessGrant::query()->where('offer_id', $offer->id)->update(['expires_at' => now()->subMinute()]);
+        $first->forceFill(['status' => CaptiveSession::STATUS_DISCONNECTED])->save();
+        $second = $this->pendingCaptive($company, $router, str_repeat('b', 32), 'AA:BB:CC:DD:EE:FF');
+
+        $portal = $this->get('/connect?subdomain='.$company->subdomain.'&session='.$second->token)
+            ->assertOk()
+            ->viewData('portal');
+
+        $this->assertNull($portal['gateway_auth_url']);
+        $this->assertSame(CaptiveSession::STATUS_PENDING, $second->fresh()->status);
+    }
+
+    public function test_offer_grant_cannot_be_used_on_a_second_device(): void
+    {
+        [$company, $router] = $this->companyWithRuijieRouter();
+        $offer = $this->makeOffer($company);
+
+        $first = $this->pendingCaptive($company, $router, str_repeat('a', 32), 'AA:BB:CC:DD:EE:FF');
+
+        $grantId = $this->postJson('/api/v1/portal/'.$company->subdomain.'/offers/claim', [
+            'offer_id' => $offer->id,
+            'customer_phone' => '0711987654',
+            'captive_session' => $first->token,
+        ])->assertCreated()->json('data.access_grant.id');
+
+        $other = $this->pendingCaptive($company, $router, str_repeat('c', 32), '11:22:33:44:55:66');
+
+        $this->postJson('/api/v1/captive/sessions/'.$other->token.'/authorize', [
+            'access_grant_id' => $grantId,
+        ])->assertStatus(422);
+
+        $this->assertSame(CaptiveSession::STATUS_PENDING, $other->fresh()->status);
+    }
+
+    private function makeOffer(Company $company): Offer
+    {
+        return Offer::query()->create([
+            'company_id' => $company->id,
+            'title' => 'Free Hour',
+            'duration' => 1,
+            'duration_unit' => 'HOURS',
+            'is_active' => true,
+            'claims_count' => 0,
+        ]);
+    }
+
+    /**
+     * @return array{0: Company, 1: NetworkDevice}
+     */
+    private function companyWithRuijieRouter(): array
+    {
+        $owner = $this->createUser();
+        $company = $this->createCompanyFor($owner);
+
+        $routerId = $this->withHeaders($this->authHeaders($owner))->postJson('/api/v1/routers', [
+            'gateway_type' => 'ruijie',
+            'name' => 'Offer Router',
+            'lan_ip' => '192.168.88.1',
+            'gateway_id' => '58b4bb192d35',
+        ])->assertCreated()->json('data.id');
+
+        return [$company, NetworkDevice::query()->findOrFail($routerId)];
+    }
+
+    private function pendingCaptive(Company $company, NetworkDevice $router, string $token, string $mac): CaptiveSession
+    {
+        return CaptiveSession::query()->create([
+            'company_id' => $company->id,
+            'network_device_id' => $router->id,
+            'network_station_id' => $router->network_station_id,
+            'gateway_id' => (string) $router->gateway_id,
+            'client_mac' => $mac,
+            'client_ip' => '192.168.1.50',
+            'gw_address' => '192.168.88.1',
+            'gw_port' => 2060,
+            'token' => $token,
+            'status' => CaptiveSession::STATUS_PENDING,
+            'expires_at' => now()->addMinutes(30),
+        ]);
+    }
+
     public function test_offer_max_claims_is_enforced(): void
     {
         $owner = $this->createUser();

@@ -15,8 +15,10 @@ An offer is a **time-limited free-access promotion**. When a customer claims it:
 - They get an `access_grant` with `source: "offer"`
 - Duration starts **now** (offer duration, or from a linked package)
 - **No payment / no revenue** is recorded
-- Limit: **one claim per phone + device MAC** per offer
+- Limit: **one claim per phone and one claim per device MAC** per offer (either match blocks a repeat)
+- Offer access works on **one device only** — the device that claimed it (or the first device that starts a session). Using "Endelea" / captive authorize from another device returns 422
 - Optional: total claim cap (`max_claims`)
+- Returning device: if the device's offer is still running, `/connect` authorizes the new captive session automatically and sends the client straight to the gateway (no phone re-entry)
 
 The backend captive page (`/connect`) already shows and claims offers. The operator **dashboard** still needs UI to create/manage them.
 
@@ -126,7 +128,7 @@ Rules:
 - `router_ids` empty / omitted = **company-wide**
 - Non-empty `router_ids` = only those routers
 - `starts_at` / `ends_at` optional window; omit = always in window while active
-- `max_claims` null/omit = unlimited claims (still one per phone+MAC)
+- `max_claims` null/omit = unlimited claims (still one per phone and one per device)
 - `is_active` defaults to true if omitted
 
 Success: **201** + `Offer` in `data`.
@@ -283,7 +285,8 @@ Frontend action on success:
 | Offer not active | Deactivated | Hide claim |
 | Not available right now | Outside `starts_at`/`ends_at` | Hide / show “not yet” |
 | Fully claimed | `max_claims` reached | Hide claim |
-| Already claimed | Same phone+MAC | “You already used this offer” |
+| Already claimed | Same phone **or** same device MAC | “You already used this offer” |
+| `Ofa hii tayari inatumika kwenye kifaa kingine.` (`access_grant_id`) | Offer grant bound to another device | “This offer is in use on another device” |
 
 ---
 
@@ -294,8 +297,9 @@ The server-rendered captive page embeds:
 ```js
 PORTAL.offer = {
   id, title, description, duration, duration_unit,
-  remaining_claims, claimed
+  remaining_claims, claimed   // claimed = this device's MAC already claimed → banner hidden
 } | null
+PORTAL.gateway_auth_url       // set when the device still has active access → page redirects immediately
 ```
 
 Then claims via:
@@ -387,7 +391,8 @@ async function claimOffer(subdomain: string, body: {
 **Captive / claim**
 
 - [ ] Claim with phone + captive session → redirect to gateway auth  
-- [ ] Same phone+MAC claim twice → already claimed  
+- [ ] Same phone (any device) or same device (any phone) claims twice → already claimed
+- [ ] Reconnect with the offer still running → straight online, no portal form  
 - [ ] Different phone can still claim (until max)  
 - [ ] No payment / revenue created for offer claims  
 

@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Customer;
 use App\Models\InternetPlan;
 use App\Models\NetworkDevice;
+use App\Models\NetworkSession;
 use App\Models\Offer;
 use App\Models\OfferClaim;
 use App\Models\User;
@@ -41,14 +42,11 @@ class OfferService
             return null;
         }
 
-        $claimed = false;
-        if (filled($phone)) {
-            $claimed = OfferClaim::query()
-                ->where('offer_id', $offer->id)
-                ->where('customer_phone', $this->normalizePhone((string) $phone))
-                ->where('device_mac', $this->normalizeMac($mac))
-                ->exists();
-        }
+        $claimed = $this->hasClaimed(
+            $offer,
+            filled($phone) ? $this->normalizePhone((string) $phone) : null,
+            $this->normalizeMac($mac),
+        );
 
         return [
             'id' => $offer->id,
@@ -98,13 +96,7 @@ class OfferService
             $phone = $this->normalizePhone((string) $data['customer_phone']);
             $mac = $this->normalizeMac($data['mac_address'] ?? null);
 
-            $alreadyClaimed = OfferClaim::query()
-                ->where('offer_id', $offer->id)
-                ->where('customer_phone', $phone)
-                ->where('device_mac', $mac)
-                ->exists();
-
-            if ($alreadyClaimed) {
+            if ($this->hasClaimed($offer, $phone, $mac)) {
                 throw ValidationException::withMessages([
                     'offer' => ['You have already claimed this offer.'],
                 ]);
@@ -263,6 +255,68 @@ class OfferService
     /**
      * @param  list<int|string>  $routerIds
      */
+    /**
+     * One claim per phone and one claim per device: either match blocks a
+     * repeat claim.
+     */
+    private function hasClaimed(Offer $offer, ?string $phone, string $mac): bool
+    {
+        $knownMac = $mac !== OfferClaim::UNKNOWN_MAC;
+
+        if (! $phone && ! $knownMac) {
+            return false;
+        }
+
+        return OfferClaim::query()
+            ->where('offer_id', $offer->id)
+            ->where(function ($query) use ($phone, $mac, $knownMac): void {
+                if ($phone) {
+                    $query->orWhere('customer_phone', $phone);
+                }
+                if ($knownMac) {
+                    $query->orWhere('device_mac', $mac);
+                }
+            })
+            ->exists();
+    }
+
+    /**
+     * Offer access is bound to a single device. The first device to start a
+     * session on the grant becomes the bound device when the claim had no MAC.
+     */
+    public function assertDeviceAllowed(AccessGrant $grant, ?string $mac): void
+    {
+        if ($grant->source !== 'offer' || ! $mac) {
+            return;
+        }
+
+        $mac = $this->normalizeMac($mac);
+        if ($mac === OfferClaim::UNKNOWN_MAC) {
+            return;
+        }
+
+        $claim = OfferClaim::query()->where('access_grant_id', $grant->id)->lockForUpdate()->first();
+        $boundMac = $claim && $claim->device_mac !== OfferClaim::UNKNOWN_MAC ? $claim->device_mac : null;
+
+        if (! $boundMac) {
+            $boundMac = NetworkSession::query()
+                ->where('access_grant_id', $grant->id)
+                ->whereNotNull('mac_address')
+                ->orderBy('id')
+                ->value('mac_address');
+        }
+
+        if ($boundMac && strcasecmp($boundMac, $mac) !== 0) {
+            throw ValidationException::withMessages([
+                'access_grant_id' => ['Ofa hii tayari inatumika kwenye kifaa kingine.'],
+            ]);
+        }
+
+        if ($claim && $claim->device_mac === OfferClaim::UNKNOWN_MAC) {
+            $claim->forceFill(['device_mac' => $mac])->save();
+        }
+    }
+
     private function syncRouters(Offer $offer, Company $company, array $routerIds): void
     {
         $ids = NetworkDevice::query()

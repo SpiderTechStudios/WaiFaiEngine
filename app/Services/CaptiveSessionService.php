@@ -231,6 +231,67 @@ class CaptiveSessionService
     }
 
     /**
+     * Returning device: if this MAC still has an active hotspot session on a
+     * usable grant, authenticate the captive session with that grant so the
+     * portal can send the client straight back to the gateway.
+     *
+     * Returns the gateway auth URL when the client can go straight online.
+     */
+    public function resumeForReturningDevice(CaptiveSession $session): ?string
+    {
+        if ($session->isAuthenticated()) {
+            $grant = $session->access_grant_id
+                ? AccessGrant::query()->whereKey($session->access_grant_id)->first()
+                : null;
+
+            return (! $session->access_grant_id || $grant?->isUsable())
+                ? $this->gatewayAuthRedirectUrl($session)
+                : null;
+        }
+
+        if ($session->status !== CaptiveSession::STATUS_PENDING || blank($session->client_mac)) {
+            return null;
+        }
+
+        $previous = NetworkSession::query()
+            ->with('accessGrant')
+            ->where('company_id', $session->company_id)
+            ->where('mac_address', $session->client_mac)
+            ->where('status', 'active')
+            ->whereNotNull('access_grant_id')
+            ->latest('id')
+            ->get()
+            ->first(fn (NetworkSession $candidate) => $candidate->accessGrant?->isUsable());
+
+        if (! $previous) {
+            return null;
+        }
+
+        try {
+            $session = $this->authenticate($session, [
+                'access_grant_id' => $previous->access_grant_id,
+                'mac_address' => $session->client_mac,
+            ]);
+        } catch (ValidationException $e) {
+            Log::channel('wifidog')->info('wifidog.captive_resume_skipped', [
+                'captive_session_id' => $session->id,
+                'client_mac' => $session->client_mac,
+                'errors' => $e->errors(),
+            ]);
+
+            return null;
+        }
+
+        Log::channel('wifidog')->info('wifidog.captive_session_resumed', [
+            'captive_session_id' => $session->id,
+            'client_mac' => $session->client_mac,
+            'access_grant_id' => $previous->access_grant_id,
+        ]);
+
+        return $this->gatewayAuthRedirectUrl($session);
+    }
+
+    /**
      * Link an already-created hotspot NetworkSession to the captive session.
      */
     public function linkHotspotSession(CaptiveSession $session, NetworkSession $hotspotSession): CaptiveSession

@@ -50,8 +50,8 @@ class CaptivePortalController extends Controller
                 'router_name' => $router?->name,
                 'session_token' => $session?->token,
                 'client_mac' => $session?->client_mac,
-                'gateway_auth_url' => $session?->isAuthenticated()
-                    ? $this->captiveSessionService->gatewayAuthRedirectUrl($session)
+                'gateway_auth_url' => $session
+                    ? $this->captiveSessionService->resumeForReturningDevice($session)
                     : null,
                 'packages' => $this->formatPackages($plans),
                 'offer' => $this->offerService->activeFor(

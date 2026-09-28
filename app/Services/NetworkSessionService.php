@@ -25,7 +25,10 @@ class NetworkSessionService
         'paymentTransaction',
     ];
 
-    public function __construct(private AuditLogger $auditLogger) {}
+    public function __construct(
+        private AuditLogger $auditLogger,
+        private OfferService $offerService,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $data
@@ -43,6 +46,7 @@ class NetworkSessionService
             }
 
             $mac = isset($data['mac_address']) ? $this->normalizeMac((string) $data['mac_address']) : null;
+            $this->offerService->assertDeviceAllowed($grant, $mac);
             $device = $mac ? $this->findOrCreateDevice($company, $grant->customer_id, $mac) : null;
 
             $routerId = $data['router_id'] ?? $data['network_device_id'] ?? null;
