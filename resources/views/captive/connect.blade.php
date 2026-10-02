@@ -286,8 +286,12 @@
                 <p class="offer-meta" id="offerMeta"></p>
                 <button type="button" class="btn btn-offer" data-go="offer">Chukua ofa sasa</button>
             </div>
-            <button type="button" class="btn btn-primary" data-go="subscribe">Jiunge sasa</button>
-            <button type="button" class="btn btn-outline" data-go="voucher">Jiunge kwa vocha</button>
+            @if ($portal['allows_mobile_money'])
+                <button type="button" class="btn btn-primary" data-go="subscribe">Jiunge sasa</button>
+            @endif
+            @if ($portal['allows_voucher'])
+                <button type="button" class="btn {{ $portal['allows_mobile_money'] ? 'btn-outline' : 'btn-primary' }}" data-go="voucher">Jiunge kwa vocha</button>
+            @endif
             <button type="button" class="btn btn-outline" data-go="redeem">Endeleza kifurushi</button>
         </section>
 

@@ -45,6 +45,8 @@ class PortalController extends Controller
 
     public function createPayment(PortalStorePaymentRequest $request): JsonResponse
     {
+        $this->ensurePaymentMethodAllowed('mobile_money', 'internet_plan_id', 'Malipo kwa simu hayapatikani kwenye mtandao huu.');
+
         $payment = $this->paymentService->createForPortal(
             $this->portalCompany(),
             $request->validated(),
@@ -74,6 +76,8 @@ class PortalController extends Controller
 
     public function redeemVoucher(PortalRedeemVoucherRequest $request): JsonResponse
     {
+        $this->ensurePaymentMethodAllowed('voucher', 'code', 'Vocha hazipokelewi kwenye mtandao huu.');
+
         $validated = $request->validated();
         $result = $this->voucherService->redeemByCode(
             $this->portalCompany(),
@@ -263,6 +267,13 @@ class PortalController extends Controller
             $this->portalService->restore($this->portalCompany(), $request->validated()),
             'Access restored',
         );
+    }
+
+    private function ensurePaymentMethodAllowed(string $method, string $field, string $message): void
+    {
+        if (! $this->portalCompany()->allowsPortalPaymentMethod($method)) {
+            throw ValidationException::withMessages([$field => [$message]]);
+        }
     }
 
     private function portalCompany(): Company

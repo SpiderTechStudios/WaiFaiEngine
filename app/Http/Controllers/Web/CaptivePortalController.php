@@ -47,6 +47,8 @@ class CaptivePortalController extends Controller
                 'brand_color' => filled($company->primary_color) ? $company->primary_color : '#0F4C81',
                 'logo_url' => filled($company->logo_url) ? $company->logo_url : null,
                 'subdomain' => $company->subdomain,
+                'allows_mobile_money' => $company->allowsPortalPaymentMethod('mobile_money'),
+                'allows_voucher' => $company->allowsPortalPaymentMethod('voucher'),
                 'router_name' => $router?->name,
                 'session_token' => $session?->token,
                 'client_mac' => $session?->client_mac,

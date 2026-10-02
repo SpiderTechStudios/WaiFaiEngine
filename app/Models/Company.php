@@ -50,6 +50,21 @@ class Company extends Model
         ];
     }
 
+    /**
+     * Whether the captive portal accepts this method ('mobile_money' or 'voucher').
+     * Empty / unknown settings fall back to accepting both.
+     */
+    public function allowsPortalPaymentMethod(string $method): bool
+    {
+        $setting = strtolower((string) $this->payment_method);
+
+        if (! in_array($setting, ['mobile_money', 'voucher'], true)) {
+            return true;
+        }
+
+        return $setting === $method;
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

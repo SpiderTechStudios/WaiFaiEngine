@@ -196,7 +196,7 @@ class PortalTest extends TestCase
     public function test_portal_voucher_redeem_by_code(): void
     {
         $owner = $this->createUser();
-        $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'voucher-cafe']);
+        $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'voucher-cafe', 'payment_method' => 'both']);
         $headers = $this->authHeaders($owner);
 
         $router = $this->withHeaders($headers)->postJson('/api/v1/routers', [
@@ -304,7 +304,7 @@ class PortalTest extends TestCase
     public function test_portal_restore_by_phone(): void
     {
         $owner = $this->createUser();
-        $this->createCompanyFor($owner, 'owner', ['subdomain' => 'restore-cafe']);
+        $this->createCompanyFor($owner, 'owner', ['subdomain' => 'restore-cafe', 'payment_method' => 'both']);
         $headers = $this->authHeaders($owner);
 
         $router = $this->withHeaders($headers)->postJson('/api/v1/routers', [
@@ -368,7 +368,7 @@ class PortalTest extends TestCase
     public function test_portal_rejects_invalid_voucher_code(): void
     {
         $owner = $this->createUser();
-        $this->createCompanyFor($owner, 'owner', ['subdomain' => 'invalid-voucher']);
+        $this->createCompanyFor($owner, 'owner', ['subdomain' => 'invalid-voucher', 'payment_method' => 'both']);
 
         $this->postJson('/api/v1/portal/invalid-voucher/vouchers/redeem', [
             'code' => 'NOPE99',
@@ -376,5 +376,51 @@ class PortalTest extends TestCase
             'customer_phone' => '0700111222',
         ])->assertStatus(422)
             ->assertJsonPath('data.code.0', 'Invalid voucher code.');
+    }
+
+    public function test_mobile_money_only_hides_voucher_on_connect_and_rejects_redeem(): void
+    {
+        $owner = $this->createUser();
+        $this->createCompanyFor($owner, 'owner', ['subdomain' => 'momo-only', 'payment_method' => 'mobile_money']);
+
+        $this->get('/connect?subdomain=momo-only')
+            ->assertOk()
+            ->assertSee('data-go="subscribe"', false)
+            ->assertDontSee('data-go="voucher"', false);
+
+        $this->postJson('/api/v1/portal/momo-only/vouchers/redeem', [
+            'code' => 'ABC123',
+            'customer_name' => 'Guest',
+            'customer_phone' => '0700111222',
+        ])->assertStatus(422)
+            ->assertJsonPath('data.code.0', 'Vocha hazipokelewi kwenye mtandao huu.');
+    }
+
+    public function test_voucher_only_hides_mobile_money_on_connect_and_rejects_payment(): void
+    {
+        $owner = $this->createUser();
+        $this->createCompanyFor($owner, 'owner', ['subdomain' => 'voucher-only', 'payment_method' => 'voucher']);
+
+        $this->get('/connect?subdomain=voucher-only')
+            ->assertOk()
+            ->assertSee('data-go="voucher"', false)
+            ->assertDontSee('data-go="subscribe"', false);
+
+        $this->postJson('/api/v1/portal/voucher-only/payments', [
+            'internet_plan_id' => 1,
+            'customer_phone' => '0700111222',
+        ])->assertStatus(422)
+            ->assertJsonPath('data.internet_plan_id.0', 'Malipo kwa simu hayapatikani kwenye mtandao huu.');
+    }
+
+    public function test_both_shows_both_options_on_connect(): void
+    {
+        $owner = $this->createUser();
+        $this->createCompanyFor($owner, 'owner', ['subdomain' => 'both-cafe', 'payment_method' => 'both']);
+
+        $this->get('/connect?subdomain=both-cafe')
+            ->assertOk()
+            ->assertSee('data-go="subscribe"', false)
+            ->assertSee('data-go="voucher"', false);
     }
 }
