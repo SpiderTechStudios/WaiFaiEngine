@@ -49,6 +49,17 @@ class WithdrawalController extends Controller
         return $this->success((new WithdrawalResource($withdrawal))->resolve(), 'Withdrawal retrieved');
     }
 
+    public function cancel(Request $request, Withdrawal $withdrawal): JsonResponse
+    {
+        if ($withdrawal->company_id !== $this->currentCompany()->id) {
+            abort(404);
+        }
+
+        $withdrawal = $this->withdrawalService->cancel($withdrawal, $request->user());
+
+        return $this->success((new WithdrawalResource($withdrawal))->resolve(), 'Withdrawal cancelled');
+    }
+
     public function stats(): JsonResponse
     {
         $company = $this->currentCompany();
@@ -64,6 +75,7 @@ class WithdrawalController extends Controller
         $pending = $byStatus->get('pending');
         $completed = $byStatus->get('completed') ?? $byStatus->get('paid') ?? $byStatus->get('success');
         $failed = $byStatus->get('failed');
+        $cancelled = $byStatus->get('cancelled');
 
         return $this->success([
             'currency' => 'TZS',
@@ -74,6 +86,8 @@ class WithdrawalController extends Controller
             'completed_amount' => (float) ($completed?->amount ?? 0),
             'failed_count' => (int) ($failed?->total ?? 0),
             'failed_amount' => (float) ($failed?->amount ?? 0),
+            'cancelled_count' => (int) ($cancelled?->total ?? 0),
+            'cancelled_amount' => (float) ($cancelled?->amount ?? 0),
             'total_count' => (int) Withdrawal::query()->where('company_id', $company->id)->count(),
             'total_amount' => (float) Withdrawal::query()->where('company_id', $company->id)->sum('amount'),
         ], 'Withdrawal stats retrieved');

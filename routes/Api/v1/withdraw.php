@@ -11,6 +11,7 @@ Route::middleware(['auth:sanctum', 'active.user', 'company.context', 'company.re
     Route::get('/withdrawals', [WithdrawalController::class, 'index'])->middleware('permission:' . Permissions::WITHDRAWALS_VIEW);
     Route::post('/withdrawals', [WithdrawalController::class, 'store'])->middleware('permission:' . Permissions::WITHDRAWALS_CREATE);
     Route::get('/withdrawals/{withdrawal}', [WithdrawalController::class, 'show'])->middleware('permission:' . Permissions::WITHDRAWALS_VIEW);
+    Route::delete('/withdrawals/{withdrawal}', [WithdrawalController::class, 'cancel'])->middleware('permission:' . Permissions::WITHDRAWALS_CREATE);
 
 
 });

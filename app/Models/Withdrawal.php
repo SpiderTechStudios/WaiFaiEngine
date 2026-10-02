@@ -24,9 +24,15 @@ class Withdrawal extends Model
         'requested_at',
         'processed_at',
         'failed_at',
+        'cancelled_at',
+        'cancelled_by',
         'failure_reason',
         'metadata',
     ];
+
+    public const STATUS_PENDING = 'pending';
+
+    public const STATUS_CANCELLED = 'cancelled';
 
     /**
      * @return array<string, string>
@@ -38,6 +44,7 @@ class Withdrawal extends Model
             'requested_at' => 'datetime',
             'processed_at' => 'datetime',
             'failed_at' => 'datetime',
+            'cancelled_at' => 'datetime',
             'metadata' => 'array',
         ];
     }

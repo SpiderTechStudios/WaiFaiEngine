@@ -614,6 +614,24 @@ class OperationsDocumentation
     )]
     public function showWithdrawal(): void {}
 
+    #[OA\Delete(
+        path: '/withdrawals/{withdrawal}',
+        operationId: 'cancelWithdrawal',
+        tags: ['Withdrawals'],
+        summary: 'Cancel a pending withdrawal',
+        description: 'Only `pending` withdrawals can be cancelled. The amount is returned to the company wallet and the row is kept with status `cancelled`.',
+        security: [['sanctum' => []]],
+        parameters: [new OA\Parameter(name: 'withdrawal', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        responses: [
+            new OA\Response(response: 200, description: 'Cancelled', content: new OA\JsonContent(ref: '#/components/schemas/WithdrawalResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 404, description: 'Not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
+            new OA\Response(response: 422, description: 'Withdrawal is not pending (data.withdrawal[0])', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
+        ]
+    )]
+    public function cancelWithdrawal(): void {}
+
     #[OA\Get(
         path: '/settings',
         operationId: 'showSettings',

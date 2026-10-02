@@ -63,4 +63,46 @@ class WithdrawalService
             return $withdrawal->load('wallet');
         });
     }
+
+    /**
+     * Cancel a pending withdrawal and return the held amount to the wallet it
+     * was debited from. The row is kept for history with status "cancelled".
+     */
+    public function cancel(Withdrawal $withdrawal, User $actor): Withdrawal
+    {
+        return DB::transaction(function () use ($withdrawal, $actor) {
+            $withdrawal = Withdrawal::query()->whereKey($withdrawal->id)->lockForUpdate()->firstOrFail();
+
+            if ($withdrawal->status !== Withdrawal::STATUS_PENDING) {
+                throw ValidationException::withMessages([
+                    'withdrawal' => ['Only pending withdrawals can be cancelled.'],
+                ]);
+            }
+
+            $wallet = Wallet::query()->whereKey($withdrawal->wallet_id)->lockForUpdate()->firstOrFail();
+            $before = $wallet->balance;
+            $wallet->forceFill(['balance' => $wallet->balance + $withdrawal->amount])->save();
+
+            $withdrawal->forceFill([
+                'status' => Withdrawal::STATUS_CANCELLED,
+                'cancelled_at' => now(),
+                'cancelled_by' => $actor->id,
+            ])->save();
+
+            WalletTransaction::query()->create([
+                'wallet_id' => $wallet->id,
+                'type' => 'credit',
+                'amount' => $withdrawal->amount,
+                'balance_before' => $before,
+                'balance_after' => $wallet->balance,
+                'reference_type' => Withdrawal::class,
+                'reference_id' => $withdrawal->id,
+                'description' => 'Withdrawal cancelled '.$withdrawal->reference,
+            ]);
+
+            $this->auditLogger->log('withdrawal_cancelled', $actor, $withdrawal->company_id, Withdrawal::class, $withdrawal->id);
+
+            return $withdrawal->load('wallet');
+        });
+    }
 }
