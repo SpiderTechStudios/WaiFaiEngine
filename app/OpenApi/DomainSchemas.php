@@ -219,15 +219,63 @@ use OpenApi\Attributes as OA;
     ]
 )]
 #[OA\Schema(
+    schema: 'DashboardRevenuePeriod',
+    description: 'Recognized revenue for a period. Voucher revenue is counted once per voucher, at first redemption, at the package price (cash collected by the operator; never credited to the wallet).',
+    properties: [
+        new OA\Property(property: 'total', type: 'number', example: 4000),
+        new OA\Property(property: 'mobile_money', type: 'number', example: 1000),
+        new OA\Property(property: 'voucher', type: 'number', example: 3000),
+        new OA\Property(property: 'mobile_money_count', type: 'integer', example: 1),
+        new OA\Property(property: 'voucher_count', type: 'integer', example: 2),
+    ]
+)]
+#[OA\Schema(
     schema: 'DashboardData',
     properties: [
         new OA\Property(property: 'currency', type: 'string', example: 'TZS'),
-        new OA\Property(property: 'today_revenue', type: 'number', example: 15000),
-        new OA\Property(property: 'today_payments', type: 'integer', example: 12),
-        new OA\Property(property: 'total_revenue', type: 'number', example: 250000),
-        new OA\Property(property: 'active_sessions', type: 'integer', example: 8),
-        new OA\Property(property: 'routers_online', type: 'integer', example: 3),
-        new OA\Property(property: 'routers_total', type: 'integer', example: 4),
+        new OA\Property(property: 'timezone', type: 'string', example: 'Africa/Dar_es_Salaam', description: 'Timezone used for today / this month boundaries'),
+        new OA\Property(property: 'generated_at', type: 'string', format: 'date-time'),
+        new OA\Property(property: 'revenue', properties: [
+            new OA\Property(property: 'today', ref: '#/components/schemas/DashboardRevenuePeriod'),
+            new OA\Property(property: 'yesterday', ref: '#/components/schemas/DashboardRevenuePeriod'),
+            new OA\Property(property: 'this_month', ref: '#/components/schemas/DashboardRevenuePeriod'),
+            new OA\Property(property: 'last_month', ref: '#/components/schemas/DashboardRevenuePeriod'),
+            new OA\Property(property: 'all_time', ref: '#/components/schemas/DashboardRevenuePeriod'),
+        ], type: 'object'),
+        new OA\Property(property: 'sales_today', properties: [
+            new OA\Property(property: 'mobile_money_payments', type: 'integer', example: 1),
+            new OA\Property(property: 'vouchers_sold', type: 'integer', example: 2),
+            new OA\Property(property: 'offers_claimed', type: 'integer', example: 0),
+        ], type: 'object'),
+        new OA\Property(property: 'sessions', properties: [
+            new OA\Property(property: 'active', type: 'integer', example: 8),
+            new OA\Property(property: 'customers_with_active_access', type: 'integer', example: 6),
+            new OA\Property(property: 'expiring_within_hour', type: 'integer', example: 2),
+        ], type: 'object'),
+        new OA\Property(property: 'customers', properties: [
+            new OA\Property(property: 'total', type: 'integer', example: 120),
+            new OA\Property(property: 'new_today', type: 'integer', example: 3),
+            new OA\Property(property: 'new_this_month', type: 'integer', example: 40),
+        ], type: 'object'),
+        new OA\Property(property: 'vouchers', properties: [
+            new OA\Property(property: 'unused', type: 'integer', example: 25),
+            new OA\Property(property: 'sold_this_month', type: 'integer', example: 30),
+        ], type: 'object'),
+        new OA\Property(property: 'wallet', properties: [
+            new OA\Property(property: 'balance', type: 'number', example: 1000),
+            new OA\Property(property: 'pending_withdrawals_count', type: 'integer', example: 0),
+            new OA\Property(property: 'pending_withdrawals_amount', type: 'number', example: 0),
+        ], type: 'object'),
+        new OA\Property(
+            property: 'top_packages_this_month',
+            type: 'array',
+            items: new OA\Items(properties: [
+                new OA\Property(property: 'package_id', type: 'integer', example: 3),
+                new OA\Property(property: 'name', type: 'string', example: 'Daily'),
+                new OA\Property(property: 'sales', type: 'integer', example: 12),
+                new OA\Property(property: 'revenue', type: 'number', example: 18000),
+            ], type: 'object')
+        ),
         new OA\Property(
             property: 'recent_sessions',
             type: 'array',
@@ -235,9 +283,16 @@ use OpenApi\Attributes as OA;
                 new OA\Property(property: 'id', type: 'integer', example: 1),
                 new OA\Property(property: 'mac_address', type: 'string', example: 'AA:BB:CC:DD:EE:FF'),
                 new OA\Property(property: 'status', type: 'string', example: 'active'),
+                new OA\Property(property: 'customer', type: 'string', nullable: true, example: 'Mteja'),
+                new OA\Property(property: 'package', type: 'string', nullable: true, example: 'Daily'),
+                new OA\Property(property: 'started_at', type: 'string', format: 'date-time', nullable: true),
                 new OA\Property(property: 'description', type: 'string', example: 'Walk in - ABC Internet'),
             ], type: 'object')
         ),
+        new OA\Property(property: 'today_revenue', type: 'number', example: 4000, description: 'Legacy: same as revenue.today.total'),
+        new OA\Property(property: 'today_payments', type: 'integer', example: 1, description: 'Legacy: same as revenue.today.mobile_money_count'),
+        new OA\Property(property: 'total_revenue', type: 'number', example: 250000, description: 'Legacy: same as revenue.all_time.total'),
+        new OA\Property(property: 'active_sessions', type: 'integer', example: 8, description: 'Legacy: same as sessions.active'),
     ]
 )]
 #[OA\Schema(

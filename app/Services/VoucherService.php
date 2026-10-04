@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Customer;
 use App\Models\InternetPlan;
 use App\Models\NetworkDevice;
+use App\Models\RevenueRecord;
 use App\Models\User;
 use App\Models\Voucher;
 use Illuminate\Database\Eloquent\Collection;
@@ -184,6 +185,10 @@ class VoucherService
             'status' => 'active',
         ]);
 
+        if ($voucher->uses_count === 0) {
+            $this->recognizeSale($voucher, $plan, $grant);
+        }
+
         $voucher->forceFill([
             'uses_count' => $voucher->uses_count + 1,
             'customer_id' => $customer->id,
@@ -197,6 +202,32 @@ class VoucherService
             'access_grant' => $grant,
             'customer' => $customer,
         ];
+    }
+
+    /**
+     * A voucher is sold once (cash, offline) and counted as revenue at first
+     * redemption at the package price. It is never credited to the wallet:
+     * the platform did not collect that money, so it is not withdrawable.
+     */
+    private function recognizeSale(Voucher $voucher, InternetPlan $plan, AccessGrant $grant): void
+    {
+        if ((float) $plan->price <= 0) {
+            return;
+        }
+
+        RevenueRecord::query()->create([
+            'company_id' => $voucher->company_id,
+            'network_station_id' => $voucher->router?->network_station_id,
+            'wallet_id' => null,
+            'source' => 'voucher',
+            'voucher_id' => $voucher->id,
+            'access_grant_id' => $grant->id,
+            'amount' => $plan->price,
+            'currency' => (string) config('platform.currency', 'TZS'),
+            'status' => 'recognized',
+            'recognized_at' => now(),
+            'description' => 'Voucher '.$voucher->code,
+        ]);
     }
 
     /**

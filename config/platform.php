@@ -3,6 +3,12 @@
 return [
     'currency' => env('PLATFORM_CURRENCY', 'TZS'),
 
+    /*
+     * Timezone for "today" / "this month" reporting when a company has no
+     * timezone of its own (or is still on the UTC default).
+     */
+    'reporting_timezone' => env('PLATFORM_REPORTING_TIMEZONE', 'Africa/Dar_es_Salaam'),
+
     'subscription_monthly' => (int) env('PLATFORM_SUBSCRIPTION_MONTHLY', 10000),
 
     'subscription_grace_days' => (int) env('PLATFORM_SUBSCRIPTION_GRACE_DAYS', 7),
