@@ -11,4 +11,7 @@ Route::middleware(['auth:sanctum', 'active.user', 'company.context', 'company.re
 
     Route::get('/income', [IncomeController::class, 'index'])
         ->middleware('permission:'.Permissions::INCOME_VIEW);
+
+    Route::get('/income/export', [IncomeController::class, 'export'])
+        ->middleware('permission:'.Permissions::INCOME_VIEW);
 });

@@ -22,7 +22,7 @@ class DashboardController extends Controller
     public function show(Request $request): JsonResponse
     {
         $company = $this->currentCompany();
-        $timezone = $this->reportingTimezone($company);
+        $timezone = $company->reportingTimezone();
         $currency = (string) config('platform.currency', 'TZS');
 
         $now = Carbon::now($timezone);
@@ -198,16 +198,5 @@ class DashboardController extends Controller
             ])
             ->values()
             ->all();
-    }
-
-    private function reportingTimezone(Company $company): string
-    {
-        $timezone = (string) $company->timezone;
-
-        if ($timezone === '' || strtoupper($timezone) === 'UTC' || ! in_array($timezone, timezone_identifiers_list(), true)) {
-            return (string) config('platform.reporting_timezone', 'Africa/Dar_es_Salaam');
-        }
-
-        return $timezone;
     }
 }

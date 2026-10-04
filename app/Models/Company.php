@@ -65,6 +65,21 @@ class Company extends Model
         return $setting === $method;
     }
 
+    /**
+     * Timezone for "today" / date-range reporting. Companies still on the UTC
+     * default report in the platform reporting timezone.
+     */
+    public function reportingTimezone(): string
+    {
+        $timezone = (string) $this->timezone;
+
+        if ($timezone === '' || strtoupper($timezone) === 'UTC' || ! in_array($timezone, timezone_identifiers_list(), true)) {
+            return (string) config('platform.reporting_timezone', 'Africa/Dar_es_Salaam');
+        }
+
+        return $timezone;
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

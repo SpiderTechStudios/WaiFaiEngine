@@ -24,15 +24,45 @@ class OperationsDocumentation
         path: '/income',
         operationId: 'income',
         tags: ['Income'],
-        summary: 'Income by source and last 14 days',
+        summary: 'Income report for a date range',
         security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'from', in: 'query', required: false, description: 'Y-m-d, default today − 13 days', schema: new OA\Schema(type: 'string', format: 'date')),
+            new OA\Parameter(name: 'to', in: 'query', required: false, description: 'Y-m-d, default today, not in the future, max range 366 days', schema: new OA\Schema(type: 'string', format: 'date')),
+            new OA\Parameter(name: 'compare', in: 'query', required: false, description: '1 = include previous period of same length', schema: new OA\Schema(type: 'boolean')),
+            new OA\Parameter(name: 'branch_id', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'router_id', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
+        ],
         responses: [
             new OA\Response(response: 200, description: 'Income', content: new OA\JsonContent(ref: '#/components/schemas/IncomeResponse')),
             new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
             new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 422, description: 'Invalid range or filter', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
         ]
     )]
     public function income(): void {}
+
+    #[OA\Get(
+        path: '/income/export',
+        operationId: 'incomeExport',
+        tags: ['Income'],
+        summary: 'Download the income report as CSV or PDF',
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'format', in: 'query', required: true, schema: new OA\Schema(type: 'string', enum: ['csv', 'pdf'])),
+            new OA\Parameter(name: 'from', in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date')),
+            new OA\Parameter(name: 'to', in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'date')),
+            new OA\Parameter(name: 'branch_id', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'router_id', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'File download (text/csv or application/pdf)'),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 422, description: 'Invalid range, filter or format', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
+        ]
+    )]
+    public function incomeExport(): void {}
 
     #[OA\Get(
         path: '/routers',
