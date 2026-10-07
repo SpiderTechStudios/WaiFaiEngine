@@ -690,4 +690,122 @@ class PaymentProviderTest extends TestCase
             ])
             ->assertForbidden();
     }
+
+    public function test_palmpesa_reconcile_survives_provider_outage(): void
+    {
+        config([
+            'services.palmpesa.api_token' => 'test-palmpesa-token',
+            'services.palmpesa.base_url' => 'https://palmpesa.drmlelwa.co.tz',
+        ]);
+
+        $palmpesa = PaymentProvider::query()->where('slug', PaymentProvider::SLUG_PALMPESA)->firstOrFail();
+        $palmpesa->forceFill([
+            'credentials' => [],
+            'is_active' => true,
+            'supports_payments' => true,
+        ])->save();
+
+        app(PaymentProviderService::class)->setDefaultForPayments($palmpesa->fresh());
+
+        Http::fake([
+            '*/api/palmpesa/initiate' => Http::response([
+                'message' => 'Payment initiated.',
+                'order_id' => 'PALMPESA-OUTAGE-001',
+            ], 200),
+            // Provider down: the old code threw an uncaught ConnectionException and the
+            // scheduled reconcile command failed every minute.
+            '*/api/order-status' => fn () => throw new \Illuminate\Http\Client\ConnectionException('cURL error 28: Operation timed out'),
+        ]);
+
+        $reference = $this->postJson('/api/v1/auth/register', $this->enrollmentPayload())
+            ->assertCreated()
+            ->json('data.enrollment_reference');
+
+        $payment = Enrollment::query()->where('reference', $reference)->firstOrFail()
+            ->payments()->latest('id')->firstOrFail();
+
+        $payment->forceFill(['initiated_at' => now()->subMinutes(5)])->save();
+
+        $this->artisan('payments:reconcile-palmpesa')->assertSuccessful();
+
+        $this->assertSame('pending', $payment->fresh()->status);
+    }
+
+    public function test_palmpesa_reconcile_keeps_payment_pending_on_provider_503(): void
+    {
+        config([
+            'services.palmpesa.api_token' => 'test-palmpesa-token',
+            'services.palmpesa.base_url' => 'https://palmpesa.drmlelwa.co.tz',
+        ]);
+
+        $palmpesa = PaymentProvider::query()->where('slug', PaymentProvider::SLUG_PALMPESA)->firstOrFail();
+        $palmpesa->forceFill([
+            'credentials' => [],
+            'is_active' => true,
+            'supports_payments' => true,
+        ])->save();
+
+        app(PaymentProviderService::class)->setDefaultForPayments($palmpesa->fresh());
+
+        Http::fake([
+            '*/api/palmpesa/initiate' => Http::response([
+                'message' => 'Payment initiated.',
+                'order_id' => 'PALMPESA-503-001',
+            ], 200),
+            '*/api/order-status' => Http::response(
+                '<!doctype html><html><head><title>Service Unavailable</title></head><body></body></html>',
+                503,
+            ),
+        ]);
+
+        $reference = $this->postJson('/api/v1/auth/register', $this->enrollmentPayload())
+            ->assertCreated()
+            ->json('data.enrollment_reference');
+
+        $payment = Enrollment::query()->where('reference', $reference)->firstOrFail()
+            ->payments()->latest('id')->firstOrFail();
+
+        $payment->forceFill(['initiated_at' => now()->subMinutes(5)])->save();
+
+        $this->artisan('payments:reconcile-palmpesa')->assertSuccessful();
+
+        $this->assertSame('pending', $payment->fresh()->status);
+    }
+
+    public function test_palmpesa_initiate_reports_clean_error_when_provider_unavailable(): void
+    {
+        config([
+            'services.palmpesa.api_token' => 'test-palmpesa-token',
+            'services.palmpesa.base_url' => 'https://palmpesa.drmlelwa.co.tz',
+        ]);
+
+        $superadmin = User::factory()->create(['is_superadmin' => true]);
+
+        $palmpesa = PaymentProvider::query()->where('slug', PaymentProvider::SLUG_PALMPESA)->firstOrFail();
+        $palmpesa->forceFill([
+            'credentials' => [],
+            'is_active' => true,
+            'supports_payments' => true,
+        ])->save();
+
+        Http::fake([
+            '*/api/palmpesa/initiate' => Http::response(
+                '<!doctype html><html><head><title>Service Unavailable</title></head><body></body></html>',
+                503,
+            ),
+        ]);
+
+        $this->withHeaders($this->authHeaders($superadmin))
+            ->postJson('/api/v1/test/payments/palmpesa', [
+                'phone' => '0711987654',
+                'amount' => 500,
+                'currency' => 'TZS',
+                'name' => 'Test Customer',
+            ])
+            ->assertStatus(422)
+            ->assertJsonPath(
+                'data.payment.0',
+                'Unable to initiate PalmPesa payment: Service Unavailable (HTTP 503)',
+            );
+    }
 }

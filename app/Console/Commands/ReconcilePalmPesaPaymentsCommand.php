@@ -6,6 +6,7 @@ use App\Models\PaymentProvider;
 use App\Models\PlatformPayment;
 use App\Services\PlatformPaymentService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
 
 class ReconcilePalmPesaPaymentsCommand extends Command
 {
@@ -32,15 +33,30 @@ class ReconcilePalmPesaPaymentsCommand extends Command
             ->get();
 
         $reconciled = 0;
+        $skipped = 0;
 
         foreach ($payments as $payment) {
-            $updated = $platformPaymentService->reconcileProviderPayment($payment);
-            if ($updated->status !== PlatformPayment::STATUS_PENDING) {
-                $reconciled++;
+            try {
+                $updated = $platformPaymentService->reconcileProviderPayment($payment);
+                if ($updated->status !== PlatformPayment::STATUS_PENDING) {
+                    $reconciled++;
+                }
+            } catch (\Throwable $e) {
+                // Provider outage / bad response: keep the payment pending and try again later.
+                $skipped++;
+                Log::warning('PalmPesa reconcile skipped', [
+                    'payment_id' => $payment->id,
+                    'reference' => $payment->reference,
+                    'error' => $e->getMessage(),
+                ]);
             }
         }
 
-        $this->info("Checked {$payments->count()} PalmPesa payment(s); resolved {$reconciled}.");
+        $message = "Checked {$payments->count()} PalmPesa payment(s); resolved {$reconciled}.";
+        if ($skipped > 0) {
+            $message .= " Skipped {$skipped} awaiting provider availability.";
+        }
+        $this->info($message);
 
         return self::SUCCESS;
     }

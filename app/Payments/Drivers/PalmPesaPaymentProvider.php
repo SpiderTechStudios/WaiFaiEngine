@@ -7,6 +7,7 @@ use App\Models\PlatformPayment;
 use App\Payments\PaymentProviderDriver;
 use App\Payments\ProviderChargeResult;
 use App\Payments\ProviderVerificationResult;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -69,10 +70,22 @@ class PalmPesaPaymentProvider implements PaymentProviderDriver
                 ?: rtrim((string) config('app.url'), '/').'/api/v1/webhooks/payments/'.$this->provider->slug),
         ];
 
-        $response = Http::withToken($token)
-            ->acceptJson()
-            ->timeout(30)
-            ->post($baseUrl.'/api/palmpesa/initiate', $body);
+        try {
+            $response = Http::withToken($token)
+                ->acceptJson()
+                ->timeout(30)
+                ->post($baseUrl.'/api/palmpesa/initiate', $body);
+        } catch (ConnectionException $e) {
+            Log::warning('PalmPesa initiate unreachable', [
+                'error' => $e->getMessage(),
+                'platform_payment_id' => $payment->id,
+                'reference' => $payment->reference,
+            ]);
+
+            throw ValidationException::withMessages([
+                'payment' => ['PalmPesa is temporarily unavailable. Please try again in a moment.'],
+            ]);
+        }
 
         if (! $response->successful()) {
             $providerMessage = $this->extractProviderError($response);
@@ -222,12 +235,40 @@ class PalmPesaPaymentProvider implements PaymentProviderDriver
 
         // Keep this short: the provider requires webhooks to answer within 10s and
         // verification runs inline before acknowledging the callback.
-        $response = Http::withToken($this->apiToken())
-            ->acceptJson()
-            ->timeout(max(2, (int) config('services.palmpesa.status_timeout', 8)))
-            ->post($this->baseUrl().'/api/order-status', [
+        try {
+            $response = Http::withToken($this->apiToken())
+                ->acceptJson()
+                ->timeout(max(2, (int) config('services.palmpesa.status_timeout', 8)))
+                ->post($this->baseUrl().'/api/order-status', [
+                    'order_id' => $orderId,
+                ]);
+        } catch (ConnectionException $e) {
+            Log::warning('PalmPesa order-status unreachable', [
+                'error' => $e->getMessage(),
                 'order_id' => $orderId,
+                'reference' => $payment->reference,
             ]);
+
+            return $this->pendingVerification($payment, $orderId, [
+                'mode' => 'provider_unavailable',
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        // A provider outage (503/5xx) must not fail the payment or the scheduler;
+        // leave it pending so the next reconcile run can confirm it.
+        if ($response->serverError()) {
+            Log::warning('PalmPesa order-status unavailable', [
+                'status' => $response->status(),
+                'order_id' => $orderId,
+                'reference' => $payment->reference,
+            ]);
+
+            return $this->pendingVerification($payment, $orderId, [
+                'mode' => 'provider_unavailable',
+                'status' => $response->status(),
+            ]);
+        }
 
         if (! $response->successful()) {
             throw ValidationException::withMessages([
@@ -375,7 +416,23 @@ class PalmPesaPaymentProvider implements PaymentProviderDriver
         if (! is_array($json)) {
             $body = trim((string) $response->body());
 
-            return $body !== '' ? $body : 'HTTP '.$response->status();
+            if ($body === '') {
+                return 'HTTP '.$response->status();
+            }
+
+            // Never surface a raw HTML error page to the client.
+            if (preg_match('/<(?:!doctype|html|head|body)\b/i', $body) === 1) {
+                if (preg_match('/<title[^>]*>(.*?)<\/title>/is', $body, $match) === 1) {
+                    $title = trim(html_entity_decode(strip_tags($match[1])));
+                    if ($title !== '') {
+                        return $title.' (HTTP '.$response->status().')';
+                    }
+                }
+
+                return 'Service unavailable (HTTP '.$response->status().')';
+            }
+
+            return Str::limit($body, 200);
         }
 
         foreach (['message', 'respMsg', 'error', 'error_message'] as $key) {
@@ -392,6 +449,21 @@ class PalmPesaPaymentProvider implements PaymentProviderDriver
         }
 
         return 'HTTP '.$response->status().': '.json_encode($json);
+    }
+
+    /**
+     * @param  array<string, mixed>  $raw
+     */
+    private function pendingVerification(PlatformPayment $payment, string $orderId, array $raw): ProviderVerificationResult
+    {
+        return new ProviderVerificationResult(
+            status: 'pending',
+            txRef: $payment->reference,
+            amount: (float) $payment->amount,
+            currency: $payment->currency,
+            providerReference: $orderId,
+            raw: $raw,
+        );
     }
 
     /**
