@@ -183,6 +183,148 @@ class OperationsDocumentation
     public function syncRouter(): void {}
 
     #[OA\Get(
+        path: '/routers/summary',
+        operationId: 'routerSummary',
+        tags: ['Routers'],
+        summary: 'Header totals for the routers page (all routers, ignores list filters)',
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Summary', content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'status', type: 'boolean', example: true),
+                new OA\Property(property: 'code', type: 'integer', example: 200),
+                new OA\Property(property: 'message', type: 'string', example: 'Router summary retrieved'),
+                new OA\Property(property: 'data', properties: [
+                    new OA\Property(property: 'total', type: 'integer', example: 4),
+                    new OA\Property(property: 'online', type: 'integer', example: 3),
+                    new OA\Property(property: 'offline', type: 'integer', example: 1),
+                    new OA\Property(property: 'clients_now', type: 'integer', example: 12),
+                    new OA\Property(property: 'revenue_today', type: 'number', example: 32000),
+                    new OA\Property(property: 'currency', type: 'string', example: 'TZS'),
+                    new OA\Property(property: 'branches', type: 'integer', example: 2),
+                    new OA\Property(property: 'generated_at', type: 'string', format: 'date-time'),
+                ], type: 'object'),
+            ])),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+        ]
+    )]
+    public function routerSummary(): void {}
+
+    #[OA\Get(
+        path: '/routers/{router}/events',
+        operationId: 'routerEvents',
+        tags: ['Routers'],
+        summary: 'Router activity: ongoing offline event plus the audit trail',
+        security: [['sanctum' => []]],
+        parameters: [new OA\Parameter(name: 'router', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        responses: [
+            new OA\Response(response: 200, description: 'Events', content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'status', type: 'boolean', example: true),
+                new OA\Property(property: 'code', type: 'integer', example: 200),
+                new OA\Property(property: 'message', type: 'string', example: 'Router events retrieved'),
+                new OA\Property(property: 'data', type: 'array', items: new OA\Items(properties: [
+                    new OA\Property(property: 'type', type: 'string', example: 'offline', description: 'offline | created | updated | synced | rebooted | deleted'),
+                    new OA\Property(property: 'at', type: 'string', format: 'date-time'),
+                    new OA\Property(property: 'duration_seconds', type: 'integer', nullable: true),
+                    new OA\Property(property: 'ongoing', type: 'boolean', example: true),
+                    new OA\Property(property: 'description', type: 'string'),
+                    new OA\Property(property: 'by', type: 'string', nullable: true),
+                ], type: 'object')),
+            ])),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 404, description: 'Not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
+        ]
+    )]
+    public function routerEvents(): void {}
+
+    #[OA\Post(
+        path: '/routers/{router}/test',
+        operationId: 'testRouter',
+        tags: ['Routers'],
+        summary: 'Test the connection to a router (TCP reachability or Ruijie Cloud)',
+        security: [['sanctum' => []]],
+        parameters: [new OA\Parameter(name: 'router', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        responses: [
+            new OA\Response(response: 200, description: 'Test result', content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'status', type: 'boolean', example: true),
+                new OA\Property(property: 'code', type: 'integer', example: 200),
+                new OA\Property(property: 'message', type: 'string', example: 'Router connection tested'),
+                new OA\Property(property: 'data', properties: [
+                    new OA\Property(property: 'gateway_type', type: 'string', example: 'mikrotik'),
+                    new OA\Property(property: 'reachable', type: 'boolean', example: true),
+                    new OA\Property(property: 'latency_ms', type: 'integer', example: 42),
+                    new OA\Property(property: 'host', type: 'string', nullable: true, example: '192.168.88.1'),
+                    new OA\Property(property: 'port', type: 'integer', nullable: true, example: 443),
+                    new OA\Property(property: 'message', type: 'string', example: 'Router address is reachable.'),
+                ], type: 'object'),
+            ])),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 404, description: 'Not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
+            new OA\Response(response: 422, description: 'Missing address or Ruijie Cloud credentials', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
+        ]
+    )]
+    public function testRouter(): void {}
+
+    #[OA\Post(
+        path: '/routers/{router}/reboot',
+        operationId: 'rebootRouter',
+        tags: ['Routers'],
+        summary: 'Reboot a MikroTik router through the RouterOS REST API',
+        security: [['sanctum' => []]],
+        parameters: [new OA\Parameter(name: 'router', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        responses: [
+            new OA\Response(response: 200, description: 'Reboot accepted', content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'status', type: 'boolean', example: true),
+                new OA\Property(property: 'code', type: 'integer', example: 200),
+                new OA\Property(property: 'message', type: 'string', example: 'Reboot requested'),
+                new OA\Property(property: 'data', properties: [
+                    new OA\Property(property: 'requested', type: 'boolean', example: true),
+                    new OA\Property(property: 'message', type: 'string', example: 'Reboot command accepted by the router.'),
+                ], type: 'object'),
+            ])),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 404, description: 'Not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
+            new OA\Response(response: 422, description: 'Unsupported gateway or missing API credentials', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
+            new OA\Response(response: 502, description: 'Router API unreachable or rejected the command', content: new OA\JsonContent(ref: '#/components/schemas/ErrorResponse')),
+        ]
+    )]
+    public function rebootRouter(): void {}
+
+    #[OA\Get(
+        path: '/routers/{router}/setup',
+        operationId: 'routerSetup',
+        tags: ['Routers'],
+        summary: 'Connection guide for this router (portal URL, API host, commands)',
+        security: [['sanctum' => []]],
+        parameters: [new OA\Parameter(name: 'router', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        responses: [
+            new OA\Response(response: 200, description: 'Setup guide', content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'status', type: 'boolean', example: true),
+                new OA\Property(property: 'code', type: 'integer', example: 200),
+                new OA\Property(property: 'message', type: 'string', example: 'Router setup retrieved'),
+                new OA\Property(property: 'data', properties: [
+                    new OA\Property(property: 'type', type: 'string', example: 'mikrotik'),
+                    new OA\Property(property: 'portal_url', type: 'string', example: 'https://api.waifai.co.tz/connect?subdomain=abc'),
+                    new OA\Property(property: 'server_host', type: 'string', example: 'api.waifai.co.tz'),
+                    new OA\Property(property: 'steps', type: 'array', items: new OA\Items(properties: [
+                        new OA\Property(property: 'title', type: 'string'),
+                        new OA\Property(property: 'description', type: 'string'),
+                        new OA\Property(property: 'commands', type: 'array', items: new OA\Items(type: 'string')),
+                    ], type: 'object')),
+                    new OA\Property(property: 'commands', type: 'array', items: new OA\Items(type: 'string')),
+                ], type: 'object'),
+            ])),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 404, description: 'Not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
+        ]
+    )]
+    public function routerSetup(): void {}
+
+    #[OA\Get(
         path: '/packages',
         operationId: 'listPackages',
         tags: ['Packages'],

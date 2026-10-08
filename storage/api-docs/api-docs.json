@@ -4620,8 +4620,55 @@
                 "tags": [
                     "Income"
                 ],
-                "summary": "Income by source and last 14 days",
+                "summary": "Income report for a date range",
                 "operationId": "income",
+                "parameters": [
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "description": "Y-m-d, default today − 13 days",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "description": "Y-m-d, default today, not in the future, max range 366 days",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "compare",
+                        "in": "query",
+                        "description": "1 = include previous period of same length",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "branch_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "router_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Income",
@@ -4649,6 +4696,113 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid range or filter",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/income/export": {
+            "get": {
+                "tags": [
+                    "Income"
+                ],
+                "summary": "Download the income report as CSV or PDF",
+                "operationId": "incomeExport",
+                "parameters": [
+                    {
+                        "name": "format",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "csv",
+                                "pdf"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "branch_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "router_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "File download (text/csv or application/pdf)"
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid range, filter or format",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
                                 }
                             }
                         }
@@ -5196,6 +5350,572 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/routers/summary": {
+            "get": {
+                "tags": [
+                    "Routers"
+                ],
+                "summary": "Header totals for the routers page (all routers, ignores list filters)",
+                "operationId": "routerSummary",
+                "responses": {
+                    "200": {
+                        "description": "Summary",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "code": {
+                                            "type": "integer",
+                                            "example": 200
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Router summary retrieved"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer",
+                                                    "example": 4
+                                                },
+                                                "online": {
+                                                    "type": "integer",
+                                                    "example": 3
+                                                },
+                                                "offline": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "clients_now": {
+                                                    "type": "integer",
+                                                    "example": 12
+                                                },
+                                                "revenue_today": {
+                                                    "type": "number",
+                                                    "example": 32000
+                                                },
+                                                "currency": {
+                                                    "type": "string",
+                                                    "example": "TZS"
+                                                },
+                                                "branches": {
+                                                    "type": "integer",
+                                                    "example": 2
+                                                },
+                                                "generated_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/routers/{router}/events": {
+            "get": {
+                "tags": [
+                    "Routers"
+                ],
+                "summary": "Router activity: ongoing offline event plus the audit trail",
+                "operationId": "routerEvents",
+                "parameters": [
+                    {
+                        "name": "router",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Events",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "code": {
+                                            "type": "integer",
+                                            "example": 200
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Router events retrieved"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "type": {
+                                                        "description": "offline | created | updated | synced | rebooted | deleted",
+                                                        "type": "string",
+                                                        "example": "offline"
+                                                    },
+                                                    "at": {
+                                                        "type": "string",
+                                                        "format": "date-time"
+                                                    },
+                                                    "duration_seconds": {
+                                                        "type": "integer",
+                                                        "nullable": true
+                                                    },
+                                                    "ongoing": {
+                                                        "type": "boolean",
+                                                        "example": true
+                                                    },
+                                                    "description": {
+                                                        "type": "string"
+                                                    },
+                                                    "by": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/routers/{router}/test": {
+            "post": {
+                "tags": [
+                    "Routers"
+                ],
+                "summary": "Test the connection to a router (TCP reachability or Ruijie Cloud)",
+                "operationId": "testRouter",
+                "parameters": [
+                    {
+                        "name": "router",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Test result",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "code": {
+                                            "type": "integer",
+                                            "example": 200
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Router connection tested"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "gateway_type": {
+                                                    "type": "string",
+                                                    "example": "mikrotik"
+                                                },
+                                                "reachable": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                },
+                                                "latency_ms": {
+                                                    "type": "integer",
+                                                    "example": 42
+                                                },
+                                                "host": {
+                                                    "type": "string",
+                                                    "example": "192.168.88.1",
+                                                    "nullable": true
+                                                },
+                                                "port": {
+                                                    "type": "integer",
+                                                    "example": 443,
+                                                    "nullable": true
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Router address is reachable."
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Missing address or Ruijie Cloud credentials",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/routers/{router}/reboot": {
+            "post": {
+                "tags": [
+                    "Routers"
+                ],
+                "summary": "Reboot a MikroTik router through the RouterOS REST API",
+                "operationId": "rebootRouter",
+                "parameters": [
+                    {
+                        "name": "router",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Reboot accepted",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "code": {
+                                            "type": "integer",
+                                            "example": 200
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Reboot requested"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "requested": {
+                                                    "type": "boolean",
+                                                    "example": true
+                                                },
+                                                "message": {
+                                                    "type": "string",
+                                                    "example": "Reboot command accepted by the router."
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Unsupported gateway or missing API credentials",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "Router API unreachable or rejected the command",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/routers/{router}/setup": {
+            "get": {
+                "tags": [
+                    "Routers"
+                ],
+                "summary": "Connection guide for this router (portal URL, API host, commands)",
+                "operationId": "routerSetup",
+                "parameters": [
+                    {
+                        "name": "router",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Setup guide",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "code": {
+                                            "type": "integer",
+                                            "example": 200
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Router setup retrieved"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "type": {
+                                                    "type": "string",
+                                                    "example": "mikrotik"
+                                                },
+                                                "portal_url": {
+                                                    "type": "string",
+                                                    "example": "https://api.waifai.co.tz/connect?subdomain=abc"
+                                                },
+                                                "server_host": {
+                                                    "type": "string",
+                                                    "example": "api.waifai.co.tz"
+                                                },
+                                                "steps": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "title": {
+                                                                "type": "string"
+                                                            },
+                                                            "description": {
+                                                                "type": "string"
+                                                            },
+                                                            "commands": {
+                                                                "type": "array",
+                                                                "items": {
+                                                                    "type": "string"
+                                                                }
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "commands": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
                                 }
                             }
                         }
@@ -7105,6 +7825,81 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Withdrawals"
+                ],
+                "summary": "Cancel a pending withdrawal",
+                "description": "Only `pending` withdrawals can be cancelled. The amount is returned to the company wallet and the row is kept with status `cancelled`.",
+                "operationId": "cancelWithdrawal",
+                "parameters": [
+                    {
+                        "name": "withdrawal",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Cancelled",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WithdrawalResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Withdrawal is not pending (data.withdrawal[0])",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
                                 }
                             }
                         }
@@ -11262,6 +12057,12 @@
                         "type": "string",
                         "example": "MikroTik-Hotspot"
                     },
+                    "model": {
+                        "description": "Filled from Ruijie Cloud sync when available",
+                        "type": "string",
+                        "example": "RB750Gr3",
+                        "nullable": true
+                    },
                     "lan_ip": {
                         "type": "string",
                         "example": "192.168.88.1",
@@ -11295,6 +12096,17 @@
                         "type": "string",
                         "nullable": true
                     },
+                    "firmware": {
+                        "description": "Filled from Ruijie Cloud sync when available",
+                        "type": "string",
+                        "example": "6.49.17",
+                        "nullable": true
+                    },
+                    "mac_address": {
+                        "description": "Filled from Ruijie Cloud sync when available",
+                        "type": "string",
+                        "nullable": true
+                    },
                     "wifidog_port": {
                         "type": "integer",
                         "example": 2060,
@@ -11305,12 +12117,59 @@
                         "example": "active"
                     },
                     "online": {
+                        "description": "Last heartbeat within 10 minutes",
                         "type": "boolean",
                         "example": true
                     },
                     "last_seen_at": {
                         "type": "string",
                         "format": "date-time",
+                        "nullable": true
+                    },
+                    "clients_now": {
+                        "description": "Present on list rows and detail",
+                        "type": "integer",
+                        "example": 8,
+                        "nullable": true
+                    },
+                    "revenue_today": {
+                        "description": "Recognised revenue today (present on list rows and detail)",
+                        "type": "number",
+                        "example": 12000,
+                        "nullable": true
+                    },
+                    "payments_today": {
+                        "description": "Recognised sales count today",
+                        "type": "integer",
+                        "example": 6,
+                        "nullable": true
+                    },
+                    "uptime_seconds": {
+                        "description": "Null until the router reports uptime",
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "revenue": {
+                        "description": "Present on the detail endpoint",
+                        "properties": {
+                            "today": {
+                                "type": "number",
+                                "example": 12000
+                            },
+                            "week": {
+                                "type": "number",
+                                "example": 45000
+                            },
+                            "month": {
+                                "type": "number",
+                                "example": 180000
+                            },
+                            "currency": {
+                                "type": "string",
+                                "example": "TZS"
+                            }
+                        },
+                        "type": "object",
                         "nullable": true
                     },
                     "branch": {
@@ -12019,35 +12878,171 @@
                 },
                 "type": "object"
             },
+            "DashboardRevenuePeriod": {
+                "description": "Recognized revenue for a period. Voucher revenue is counted once per voucher, at first redemption, at the package price (cash collected by the operator; never credited to the wallet).",
+                "properties": {
+                    "total": {
+                        "type": "number",
+                        "example": 4000
+                    },
+                    "mobile_money": {
+                        "type": "number",
+                        "example": 1000
+                    },
+                    "voucher": {
+                        "type": "number",
+                        "example": 3000
+                    },
+                    "mobile_money_count": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "voucher_count": {
+                        "type": "integer",
+                        "example": 2
+                    }
+                },
+                "type": "object"
+            },
             "DashboardData": {
                 "properties": {
                     "currency": {
                         "type": "string",
                         "example": "TZS"
                     },
-                    "today_revenue": {
-                        "type": "number",
-                        "example": 15000
+                    "timezone": {
+                        "description": "Timezone used for today / this month boundaries",
+                        "type": "string",
+                        "example": "Africa/Dar_es_Salaam"
                     },
-                    "today_payments": {
-                        "type": "integer",
-                        "example": 12
+                    "generated_at": {
+                        "type": "string",
+                        "format": "date-time"
                     },
-                    "total_revenue": {
-                        "type": "number",
-                        "example": 250000
+                    "revenue": {
+                        "properties": {
+                            "today": {
+                                "$ref": "#/components/schemas/DashboardRevenuePeriod"
+                            },
+                            "yesterday": {
+                                "$ref": "#/components/schemas/DashboardRevenuePeriod"
+                            },
+                            "this_month": {
+                                "$ref": "#/components/schemas/DashboardRevenuePeriod"
+                            },
+                            "last_month": {
+                                "$ref": "#/components/schemas/DashboardRevenuePeriod"
+                            },
+                            "all_time": {
+                                "$ref": "#/components/schemas/DashboardRevenuePeriod"
+                            }
+                        },
+                        "type": "object"
                     },
-                    "active_sessions": {
-                        "type": "integer",
-                        "example": 8
+                    "sales_today": {
+                        "properties": {
+                            "mobile_money_payments": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "vouchers_sold": {
+                                "type": "integer",
+                                "example": 2
+                            },
+                            "offers_claimed": {
+                                "type": "integer",
+                                "example": 0
+                            }
+                        },
+                        "type": "object"
                     },
-                    "routers_online": {
-                        "type": "integer",
-                        "example": 3
+                    "sessions": {
+                        "properties": {
+                            "active": {
+                                "type": "integer",
+                                "example": 8
+                            },
+                            "customers_with_active_access": {
+                                "type": "integer",
+                                "example": 6
+                            },
+                            "expiring_within_hour": {
+                                "type": "integer",
+                                "example": 2
+                            }
+                        },
+                        "type": "object"
                     },
-                    "routers_total": {
-                        "type": "integer",
-                        "example": 4
+                    "customers": {
+                        "properties": {
+                            "total": {
+                                "type": "integer",
+                                "example": 120
+                            },
+                            "new_today": {
+                                "type": "integer",
+                                "example": 3
+                            },
+                            "new_this_month": {
+                                "type": "integer",
+                                "example": 40
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "vouchers": {
+                        "properties": {
+                            "unused": {
+                                "type": "integer",
+                                "example": 25
+                            },
+                            "sold_this_month": {
+                                "type": "integer",
+                                "example": 30
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "wallet": {
+                        "properties": {
+                            "balance": {
+                                "type": "number",
+                                "example": 1000
+                            },
+                            "pending_withdrawals_count": {
+                                "type": "integer",
+                                "example": 0
+                            },
+                            "pending_withdrawals_amount": {
+                                "type": "number",
+                                "example": 0
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "top_packages_this_month": {
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "package_id": {
+                                    "type": "integer",
+                                    "example": 3
+                                },
+                                "name": {
+                                    "type": "string",
+                                    "example": "Daily"
+                                },
+                                "sales": {
+                                    "type": "integer",
+                                    "example": 12
+                                },
+                                "revenue": {
+                                    "type": "number",
+                                    "example": 18000
+                                }
+                            },
+                            "type": "object"
+                        }
                     },
                     "recent_sessions": {
                         "type": "array",
@@ -12065,6 +13060,21 @@
                                     "type": "string",
                                     "example": "active"
                                 },
+                                "customer": {
+                                    "type": "string",
+                                    "example": "Mteja",
+                                    "nullable": true
+                                },
+                                "package": {
+                                    "type": "string",
+                                    "example": "Daily",
+                                    "nullable": true
+                                },
+                                "started_at": {
+                                    "type": "string",
+                                    "format": "date-time",
+                                    "nullable": true
+                                },
                                 "description": {
                                     "type": "string",
                                     "example": "Walk in - ABC Internet"
@@ -12072,6 +13082,26 @@
                             },
                             "type": "object"
                         }
+                    },
+                    "today_revenue": {
+                        "description": "Legacy: same as revenue.today.total",
+                        "type": "number",
+                        "example": 4000
+                    },
+                    "today_payments": {
+                        "description": "Legacy: same as revenue.today.mobile_money_count",
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "total_revenue": {
+                        "description": "Legacy: same as revenue.all_time.total",
+                        "type": "number",
+                        "example": 250000
+                    },
+                    "active_sessions": {
+                        "description": "Legacy: same as sessions.active",
+                        "type": "integer",
+                        "example": 8
                     }
                 },
                 "type": "object"
@@ -12223,12 +13253,340 @@
                 "type": "object"
             },
             "IncomeData": {
+                "description": "Revenue rules match /dashboard: mobile money counts when paid, a voucher counts once at first redemption at its package price. Range fields use the company reporting timezone.",
                 "properties": {
+                    "range": {
+                        "properties": {
+                            "from": {
+                                "type": "string",
+                                "format": "date",
+                                "example": "2026-09-01"
+                            },
+                            "to": {
+                                "type": "string",
+                                "format": "date",
+                                "example": "2026-09-30"
+                            },
+                            "timezone": {
+                                "type": "string",
+                                "example": "Africa/Dar_es_Salaam"
+                            },
+                            "currency": {
+                                "type": "string",
+                                "example": "TZS"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "generated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "totals": {
+                        "properties": {
+                            "gross": {
+                                "type": "number",
+                                "example": 100000
+                            },
+                            "fees": {
+                                "description": "Always 0: companies are credited the full amount paid",
+                                "type": "number",
+                                "example": 0
+                            },
+                            "net": {
+                                "type": "number",
+                                "example": 100000
+                            },
+                            "mobile_money": {
+                                "type": "number",
+                                "example": 80000
+                            },
+                            "vouchers": {
+                                "type": "number",
+                                "example": 20000
+                            },
+                            "pending": {
+                                "type": "number",
+                                "example": 2000
+                            },
+                            "refunds": {
+                                "type": "number",
+                                "example": 0
+                            },
+                            "paid_out": {
+                                "description": "Withdrawals completed in range (company-wide)",
+                                "type": "number",
+                                "example": 50000
+                            },
+                            "available_balance": {
+                                "description": "Current wallet balance (company-wide)",
+                                "type": "number",
+                                "example": 26500
+                            },
+                            "pending_withdrawals": {
+                                "description": "Current pending withdrawals (company-wide)",
+                                "type": "number",
+                                "example": 5000
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "counts": {
+                        "properties": {
+                            "paid": {
+                                "type": "integer",
+                                "example": 62
+                            },
+                            "mobile_money_paid": {
+                                "type": "integer",
+                                "example": 50
+                            },
+                            "vouchers_sold": {
+                                "type": "integer",
+                                "example": 12
+                            },
+                            "pending": {
+                                "type": "integer",
+                                "example": 3
+                            },
+                            "failed": {
+                                "type": "integer",
+                                "example": 9
+                            },
+                            "initiated": {
+                                "type": "integer",
+                                "example": 62
+                            },
+                            "avg_ticket": {
+                                "type": "integer",
+                                "example": 1613
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "previous": {
+                        "description": "Only when compare=1",
+                        "properties": {
+                            "from": {
+                                "type": "string",
+                                "format": "date"
+                            },
+                            "to": {
+                                "type": "string",
+                                "format": "date"
+                            },
+                            "gross": {
+                                "type": "number"
+                            },
+                            "net": {
+                                "type": "number"
+                            },
+                            "mobile_money": {
+                                "type": "number"
+                            },
+                            "vouchers": {
+                                "type": "number"
+                            },
+                            "paid": {
+                                "type": "integer"
+                            },
+                            "daily": {
+                                "type": "array",
+                                "items": {
+                                    "properties": {
+                                        "date": {
+                                            "type": "string",
+                                            "format": "date"
+                                        },
+                                        "total": {
+                                            "type": "number"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "daily": {
+                        "description": "One row per day in range, zero days included",
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "date": {
+                                    "type": "string",
+                                    "format": "date",
+                                    "example": "2026-09-01"
+                                },
+                                "mobile_money": {
+                                    "type": "number",
+                                    "example": 3000
+                                },
+                                "vouchers": {
+                                    "type": "number",
+                                    "example": 1000
+                                },
+                                "total": {
+                                    "type": "number",
+                                    "example": 4000
+                                },
+                                "count": {
+                                    "type": "integer",
+                                    "example": 5
+                                }
+                            },
+                            "type": "object"
+                        }
+                    },
+                    "by_provider": {
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "provider": {
+                                    "type": "string",
+                                    "enum": [
+                                        "mpesa",
+                                        "mixx",
+                                        "tigo",
+                                        "airtel",
+                                        "halopesa",
+                                        "ttcl",
+                                        "other"
+                                    ]
+                                },
+                                "amount": {
+                                    "type": "number",
+                                    "example": 52000
+                                },
+                                "count": {
+                                    "type": "integer",
+                                    "example": 30
+                                }
+                            },
+                            "type": "object"
+                        }
+                    },
+                    "by_package": {
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "package_id": {
+                                    "type": "integer",
+                                    "example": 3
+                                },
+                                "name": {
+                                    "type": "string",
+                                    "example": "Daily"
+                                },
+                                "amount": {
+                                    "type": "number",
+                                    "example": 45000
+                                },
+                                "count": {
+                                    "type": "integer",
+                                    "example": 30
+                                },
+                                "mobile_money": {
+                                    "type": "number",
+                                    "example": 30000
+                                },
+                                "vouchers": {
+                                    "type": "number",
+                                    "example": 15000
+                                }
+                            },
+                            "type": "object"
+                        }
+                    },
+                    "by_router": {
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "router_id": {
+                                    "type": "integer",
+                                    "example": 4
+                                },
+                                "name": {
+                                    "type": "string",
+                                    "example": "Kariakoo AP"
+                                },
+                                "branch_id": {
+                                    "type": "integer",
+                                    "example": 2,
+                                    "nullable": true
+                                },
+                                "branch": {
+                                    "type": "string",
+                                    "example": "Kariakoo",
+                                    "nullable": true
+                                },
+                                "amount": {
+                                    "type": "number",
+                                    "example": 40000
+                                },
+                                "count": {
+                                    "type": "integer",
+                                    "example": 25
+                                }
+                            },
+                            "type": "object"
+                        }
+                    },
+                    "by_hour": {
+                        "description": "24 rows, hour 0-23 in the reporting timezone",
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "hour": {
+                                    "type": "integer",
+                                    "example": 20
+                                },
+                                "amount": {
+                                    "type": "number",
+                                    "example": 9000
+                                },
+                                "count": {
+                                    "type": "integer",
+                                    "example": 7
+                                }
+                            },
+                            "type": "object"
+                        }
+                    },
+                    "customers": {
+                        "properties": {
+                            "new": {
+                                "type": "integer",
+                                "example": 12
+                            },
+                            "returning": {
+                                "type": "integer",
+                                "example": 30
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "vouchers": {
+                        "properties": {
+                            "used": {
+                                "type": "integer",
+                                "example": 12
+                            },
+                            "unused": {
+                                "type": "integer",
+                                "example": 25
+                            }
+                        },
+                        "type": "object"
+                    },
                     "currency": {
+                        "description": "Legacy",
                         "type": "string",
                         "example": "TZS"
                     },
                     "by_source": {
+                        "description": "Legacy (all-time)",
                         "properties": {
                             "mobile_money": {
                                 "type": "number",

@@ -6,9 +6,16 @@ use App\Support\Permissions;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:sanctum', 'active.user', 'company.context', 'company.required', 'subscription.active'])->group(function () {
+    // Declared before /routers/{router} so "summary" is not bound as a router.
+    Route::get('/routers/summary', [RouterController::class, 'summary'])->middleware('permission:'.Permissions::ROUTERS_VIEW);
+
     Route::get('/routers', [RouterController::class, 'index'])->middleware('permission:'.Permissions::ROUTERS_VIEW);
     Route::post('/routers', [RouterController::class, 'store'])->middleware('permission:'.Permissions::ROUTERS_CREATE);
     Route::get('/routers/{router}/expenses', [RouterExpenseController::class, 'index'])->middleware('permission:'.Permissions::EXPENSES_VIEW);
+    Route::get('/routers/{router}/events', [RouterController::class, 'events'])->middleware('permission:'.Permissions::ROUTERS_VIEW);
+    Route::get('/routers/{router}/setup', [RouterController::class, 'setup'])->middleware('permission:'.Permissions::ROUTERS_VIEW);
+    Route::post('/routers/{router}/test', [RouterController::class, 'test'])->middleware('permission:'.Permissions::ROUTERS_VIEW);
+    Route::post('/routers/{router}/reboot', [RouterController::class, 'reboot'])->middleware('permission:'.Permissions::ROUTERS_UPDATE);
     Route::get('/routers/{router}', [RouterController::class, 'show'])->middleware('permission:'.Permissions::ROUTERS_VIEW);
     Route::patch('/routers/{router}', [RouterController::class, 'update'])->middleware('permission:'.Permissions::ROUTERS_UPDATE);
     Route::delete('/routers/{router}', [RouterController::class, 'destroy'])->middleware('permission:'.Permissions::ROUTERS_DELETE);

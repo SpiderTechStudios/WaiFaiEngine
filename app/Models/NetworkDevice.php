@@ -11,6 +11,9 @@ class NetworkDevice extends Model
 {
     use SoftDeletes;
 
+    /** A router is considered online when it checked in within this window. */
+    public const ONLINE_WINDOW_MINUTES = 10;
+
     public const GATEWAY_MIKROTIK = 'mikrotik';
 
     public const GATEWAY_RUIJIE = 'ruijie';
@@ -29,6 +32,7 @@ class NetworkDevice extends Model
         'type',
         'gateway_type',
         'name',
+        'model',
         'lan_ip',
         'api_host',
         'api_port',
@@ -36,6 +40,8 @@ class NetworkDevice extends Model
         'api_password',
         'gateway_id',
         'serial_number',
+        'firmware',
+        'mac_address',
         'wifidog_port',
         'source',
         'installation_request_id',
@@ -62,6 +68,12 @@ class NetworkDevice extends Model
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function isOnline(): bool
+    {
+        return $this->last_seen_at !== null
+            && $this->last_seen_at->gt(now()->subMinutes(self::ONLINE_WINDOW_MINUTES));
     }
 
     public function networkStation(): BelongsTo
