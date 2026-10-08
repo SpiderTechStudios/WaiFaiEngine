@@ -124,6 +124,12 @@ class RouterApiTest extends TestCase
         $this->assertContains('created', $types);
         $this->assertContains('offline', $types);
 
+        $created = collect($events)->firstWhere('type', 'created');
+        $this->assertSame(
+            trim($this->owner->first_name.' '.$this->owner->last_name),
+            $created['by'],
+        );
+
         $offline = collect($events)->firstWhere('type', 'offline');
         $this->assertTrue($offline['ongoing']);
         $this->assertGreaterThan(0, $offline['duration_seconds']);

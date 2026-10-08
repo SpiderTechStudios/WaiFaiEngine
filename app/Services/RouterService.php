@@ -117,7 +117,7 @@ class RouterService
         }
 
         AuditLog::query()
-            ->with('user:id,name')
+            ->with('user:id,first_name,last_name')
             ->where('entity_type', NetworkDevice::class)
             ->where('entity_id', $router->id)
             ->orderByDesc('id')
