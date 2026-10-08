@@ -21,13 +21,26 @@ class StorePackageRequest extends FormRequest
     {
         $requiredOnCreate = $this->isMethod('post') ? 'required' : 'sometimes';
 
+        $durationRules = ['nullable', 'integer', 'min:1'];
+        if ($this->isMethod('post')) {
+            // A duration is needed to know when access ends, unless the data is unlimited.
+            $durationRules[] = 'required_unless:duration_unit,UNLIMITED_DATA';
+        }
+
         return [
             'name' => [$requiredOnCreate, 'string', 'max:255'],
             'price' => [$requiredOnCreate, 'numeric', 'min:0'],
-            'duration' => ['nullable', 'integer', 'min:1', 'required_unless:duration_unit,UNLIMITED_DATA'],
+            'duration' => $durationRules,
             'duration_unit' => [$requiredOnCreate, 'string', Rule::in(InternetPlan::DURATION_UNITS)],
             'badge' => ['nullable', 'string', 'max:50'],
             'description' => ['nullable', 'string'],
+            'status' => ['nullable', 'string', Rule::in(InternetPlan::STATUSES)],
+            'speed_download_mbps' => ['nullable', 'integer', 'min:0', 'max:100000'],
+            'speed_upload_mbps' => ['nullable', 'integer', 'min:0', 'max:100000'],
+            'data_cap_mb' => ['nullable', 'integer', 'min:0'],
+            'devices_allowed' => ['nullable', 'integer', 'min:0', 'max:10000'],
+            'visible_on_portal' => ['nullable', 'boolean'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
         ];
     }
 

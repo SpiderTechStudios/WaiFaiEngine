@@ -76,7 +76,7 @@ class CaptivePortalController extends Controller
     {
         $query = InternetPlan::query()
             ->where('company_id', $company->id)
-            ->where('status', 'active');
+            ->visibleOnPortal();
 
         if ($router && $router->network_station_id) {
             $stationPlanIds = StationPlan::query()
@@ -90,7 +90,7 @@ class CaptivePortalController extends Controller
             }
         }
 
-        return $query->orderBy('price')->get();
+        return $query->ordered()->get();
     }
 
     /**

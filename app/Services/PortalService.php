@@ -21,8 +21,8 @@ class PortalService
     {
         $packages = InternetPlan::query()
             ->where('company_id', $company->id)
-            ->where('status', 'active')
-            ->orderBy('price')
+            ->visibleOnPortal()
+            ->ordered()
             ->get();
 
         return [

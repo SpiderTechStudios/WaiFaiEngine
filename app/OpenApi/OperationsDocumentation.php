@@ -328,7 +328,14 @@ class OperationsDocumentation
         path: '/packages',
         operationId: 'listPackages',
         tags: ['Packages'],
+        summary: 'List packages ordered for the portal, with all-time sales metrics',
         security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'status', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['all', 'active', 'inactive', 'draft'])),
+            new OA\Parameter(name: 'search', in: 'query', required: false, schema: new OA\Schema(type: 'string'), description: 'Matches name, badge and description'),
+            new OA\Parameter(name: 'per_page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', example: 15)),
+            new OA\Parameter(name: 'page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', example: 1)),
+        ],
         responses: [
             new OA\Response(response: 200, description: 'Packages', content: new OA\JsonContent(ref: '#/components/schemas/PackageListResponse')),
             new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
@@ -336,6 +343,70 @@ class OperationsDocumentation
         ]
     )]
     public function listPackages(): void {}
+
+    #[OA\Get(
+        path: '/packages/summary',
+        operationId: 'packageSummary',
+        tags: ['Packages'],
+        summary: 'Package header totals and period sales',
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'period', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['today', '7d', '30d', '90d', 'all'], default: '30d')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Summary', content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'status', type: 'boolean', example: true),
+                new OA\Property(property: 'code', type: 'integer', example: 200),
+                new OA\Property(property: 'message', type: 'string', example: 'Package summary retrieved'),
+                new OA\Property(property: 'data', properties: [
+                    new OA\Property(property: 'period', type: 'string', example: '30d'),
+                    new OA\Property(property: 'range', type: 'object', properties: [
+                        new OA\Property(property: 'from', type: 'string', nullable: true, example: '2026-09-09'),
+                        new OA\Property(property: 'to', type: 'string', nullable: true, example: '2026-10-08'),
+                        new OA\Property(property: 'timezone', type: 'string', example: 'Africa/Dar_es_Salaam'),
+                    ]),
+                    new OA\Property(property: 'total', type: 'integer', example: 4),
+                    new OA\Property(property: 'active', type: 'integer', example: 3),
+                    new OA\Property(property: 'inactive', type: 'integer', example: 1),
+                    new OA\Property(property: 'draft', type: 'integer', example: 0),
+                    new OA\Property(property: 'average_price', type: 'integer', nullable: true, example: 1500),
+                    new OA\Property(property: 'lowest_price', type: 'integer', nullable: true, example: 500),
+                    new OA\Property(property: 'highest_price', type: 'integer', nullable: true, example: 5000),
+                    new OA\Property(property: 'best_seller', type: 'object', nullable: true, properties: [
+                        new OA\Property(property: 'id', type: 'integer', example: 3),
+                        new OA\Property(property: 'name', type: 'string', example: 'Daily'),
+                        new OA\Property(property: 'sold', type: 'integer', example: 42),
+                        new OA\Property(property: 'revenue', type: 'number', example: 42000),
+                    ]),
+                    new OA\Property(property: 'revenue', type: 'number', example: 182000),
+                    new OA\Property(property: 'previous_revenue', type: 'number', example: 150000),
+                    new OA\Property(property: 'currency', type: 'string', example: 'TZS'),
+                    new OA\Property(property: 'generated_at', type: 'string', format: 'date-time'),
+                ], type: 'object'),
+            ])),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+        ]
+    )]
+    public function packageSummary(): void {}
+
+    #[OA\Put(
+        path: '/packages/order',
+        operationId: 'reorderPackages',
+        tags: ['Packages'],
+        summary: 'Set the portal order for packages',
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(required: ['ids'], properties: [
+            new OA\Property(property: 'ids', type: 'array', example: [3, 1, 2], items: new OA\Items(type: 'integer')),
+        ])),
+        responses: [
+            new OA\Response(response: 200, description: 'Order updated (returns the full ordered list)', content: new OA\JsonContent(ref: '#/components/schemas/PackageListResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 422, description: 'Invalid ids or packages from another company', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
+        ]
+    )]
+    public function reorderPackages(): void {}
 
     #[OA\Post(
         path: '/packages',
@@ -349,6 +420,13 @@ class OperationsDocumentation
             new OA\Property(property: 'duration_unit', type: 'string', enum: ['HOURS', 'DAYS', 'WEEKS', 'MONTHS', 'UNLIMITED_DATA'], example: 'HOURS'),
             new OA\Property(property: 'badge', type: 'string', nullable: true, example: 'Popular'),
             new OA\Property(property: 'description', type: 'string', nullable: true, example: 'Fast hourly access'),
+            new OA\Property(property: 'status', type: 'string', nullable: true, enum: ['active', 'inactive', 'draft'], example: 'active'),
+            new OA\Property(property: 'speed_download_mbps', type: 'integer', nullable: true, example: 10),
+            new OA\Property(property: 'speed_upload_mbps', type: 'integer', nullable: true, example: 5),
+            new OA\Property(property: 'data_cap_mb', type: 'integer', nullable: true, example: 2048, description: 'Null = unlimited'),
+            new OA\Property(property: 'devices_allowed', type: 'integer', nullable: true, example: 2, description: 'Null = unlimited'),
+            new OA\Property(property: 'visible_on_portal', type: 'boolean', nullable: true, example: true),
+            new OA\Property(property: 'sort_order', type: 'integer', nullable: true, example: 1),
         ])),
         responses: [
             new OA\Response(response: 201, description: 'Created', content: new OA\JsonContent(ref: '#/components/schemas/PackageCreatedResponse')),
@@ -387,6 +465,13 @@ class OperationsDocumentation
             new OA\Property(property: 'duration_unit', type: 'string', enum: ['HOURS', 'DAYS', 'WEEKS', 'MONTHS', 'UNLIMITED_DATA'], example: 'HOURS'),
             new OA\Property(property: 'badge', type: 'string', nullable: true, example: 'Popular'),
             new OA\Property(property: 'description', type: 'string', nullable: true, example: 'Fast hourly access'),
+            new OA\Property(property: 'status', type: 'string', nullable: true, enum: ['active', 'inactive', 'draft'], description: 'Activate / deactivate a package'),
+            new OA\Property(property: 'speed_download_mbps', type: 'integer', nullable: true),
+            new OA\Property(property: 'speed_upload_mbps', type: 'integer', nullable: true),
+            new OA\Property(property: 'data_cap_mb', type: 'integer', nullable: true, description: 'Null = unlimited'),
+            new OA\Property(property: 'devices_allowed', type: 'integer', nullable: true, description: 'Null = unlimited'),
+            new OA\Property(property: 'visible_on_portal', type: 'boolean', nullable: true),
+            new OA\Property(property: 'sort_order', type: 'integer', nullable: true),
         ])),
         responses: [
             new OA\Response(response: 200, description: 'Updated', content: new OA\JsonContent(ref: '#/components/schemas/PackageResponse')),
@@ -398,10 +483,27 @@ class OperationsDocumentation
     )]
     public function updatePackage(): void {}
 
+    #[OA\Post(
+        path: '/packages/{package}/duplicate',
+        operationId: 'duplicatePackage',
+        tags: ['Packages'],
+        summary: 'Duplicate a package (copy starts inactive and hidden from the portal)',
+        security: [['sanctum' => []]],
+        parameters: [new OA\Parameter(name: 'package', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        responses: [
+            new OA\Response(response: 201, description: 'Duplicated', content: new OA\JsonContent(ref: '#/components/schemas/PackageCreatedResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 404, description: 'Not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
+        ]
+    )]
+    public function duplicatePackage(): void {}
+
     #[OA\Delete(
         path: '/packages/{package}',
         operationId: 'deletePackage',
         tags: ['Packages'],
+        summary: 'Delete a package. Returns 409 with payment/voucher counts when it has history — deactivate it instead.',
         security: [['sanctum' => []]],
         parameters: [new OA\Parameter(name: 'package', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
         responses: [
@@ -409,6 +511,15 @@ class OperationsDocumentation
             new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
             new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
             new OA\Response(response: 404, description: 'Not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
+            new OA\Response(response: 409, description: 'Package has payments/vouchers', content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'status', type: 'boolean', example: false),
+                new OA\Property(property: 'code', type: 'integer', example: 409),
+                new OA\Property(property: 'message', type: 'string', example: 'Package has 12 payments and 8 vouchers. Deactivate it instead.'),
+                new OA\Property(property: 'data', type: 'object', properties: [
+                    new OA\Property(property: 'payments', type: 'integer', example: 12),
+                    new OA\Property(property: 'vouchers', type: 'integer', example: 8),
+                ]),
+            ])),
         ]
     )]
     public function deletePackage(): void {}

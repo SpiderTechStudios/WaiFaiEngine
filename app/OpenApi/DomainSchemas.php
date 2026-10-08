@@ -61,7 +61,16 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'duration', type: 'integer', nullable: true, example: 1),
         new OA\Property(property: 'duration_unit', type: 'string', enum: ['HOURS', 'DAYS', 'WEEKS', 'MONTHS', 'UNLIMITED_DATA'], example: 'HOURS'),
         new OA\Property(property: 'price', type: 'number', format: 'float', example: 1000),
-        new OA\Property(property: 'status', type: 'string', example: 'active'),
+        new OA\Property(property: 'speed_download_mbps', type: 'integer', nullable: true, example: 10),
+        new OA\Property(property: 'speed_upload_mbps', type: 'integer', nullable: true, example: 5),
+        new OA\Property(property: 'data_cap_mb', type: 'integer', nullable: true, example: 2048, description: 'Null = unlimited'),
+        new OA\Property(property: 'devices_allowed', type: 'integer', nullable: true, example: 2, description: 'Null = unlimited'),
+        new OA\Property(property: 'status', type: 'string', enum: ['active', 'inactive', 'draft'], example: 'active'),
+        new OA\Property(property: 'sort_order', type: 'integer', example: 1, description: 'Portal ordering (ascending)'),
+        new OA\Property(property: 'visible_on_portal', type: 'boolean', example: true),
+        new OA\Property(property: 'sold', type: 'integer', example: 42, nullable: true, description: 'Present on list rows: recognised sales, all time'),
+        new OA\Property(property: 'revenue', type: 'number', example: 42000, nullable: true, description: 'Present on list rows: recognised revenue, all time'),
+        new OA\Property(property: 'last_sold_at', type: 'string', format: 'date-time', nullable: true, description: 'Present on list rows'),
         new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
     ]
 )]
