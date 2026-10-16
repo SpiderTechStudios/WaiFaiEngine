@@ -248,9 +248,19 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'mobile_money', type: 'number', example: 1000),
         new OA\Property(property: 'voucher', type: 'number', example: 3000),
         new OA\Property(property: 'mobile_money_count', type: 'integer', example: 1),
-        new OA\Property(property: 'voucher_count', type: 'integer', example: 2),
-    ]
-)]
+            new OA\Property(property: 'voucher_count', type: 'integer', example: 2),
+        ]
+    )]
+    #[OA\Schema(
+        schema: 'DashboardProfitPeriod',
+        description: 'Income − recorded expenses for the period, in the platform currency.',
+        properties: [
+            new OA\Property(property: 'income', type: 'number', example: 4000),
+            new OA\Property(property: 'expenses', type: 'number', example: 5000),
+            new OA\Property(property: 'net', type: 'number', example: -1000),
+            new OA\Property(property: 'margin', type: 'number', nullable: true, example: -25),
+        ]
+    )]
 #[OA\Schema(
     schema: 'DashboardData',
     properties: [
@@ -268,6 +278,14 @@ use OpenApi\Attributes as OA;
             new OA\Property(property: 'mobile_money_payments', type: 'integer', example: 1),
             new OA\Property(property: 'vouchers_sold', type: 'integer', example: 2),
             new OA\Property(property: 'offers_claimed', type: 'integer', example: 0),
+        ], type: 'object'),
+        new OA\Property(property: 'expenses', properties: [
+            new OA\Property(property: 'today', type: 'number', example: 5000),
+            new OA\Property(property: 'this_month', type: 'number', example: 45000),
+        ], type: 'object'),
+        new OA\Property(property: 'profit', properties: [
+            new OA\Property(property: 'today', ref: '#/components/schemas/DashboardProfitPeriod'),
+            new OA\Property(property: 'this_month', ref: '#/components/schemas/DashboardProfitPeriod'),
         ], type: 'object'),
         new OA\Property(property: 'sessions', properties: [
             new OA\Property(property: 'active', type: 'integer', example: 8),
@@ -395,6 +413,8 @@ use OpenApi\Attributes as OA;
             new OA\Property(property: 'paid_out', type: 'number', example: 50000, description: 'Withdrawals completed in range (company-wide)'),
             new OA\Property(property: 'available_balance', type: 'number', example: 26500, description: 'Current wallet balance (company-wide)'),
             new OA\Property(property: 'pending_withdrawals', type: 'number', example: 5000, description: 'Current pending withdrawals (company-wide)'),
+            new OA\Property(property: 'expenses', type: 'number', example: 35000, description: 'Recorded expenses in range (platform currency)'),
+            new OA\Property(property: 'profit', type: 'number', example: 65000, description: 'gross − expenses'),
         ]),
         new OA\Property(property: 'counts', type: 'object', properties: [
             new OA\Property(property: 'paid', type: 'integer', example: 62),
@@ -404,6 +424,26 @@ use OpenApi\Attributes as OA;
             new OA\Property(property: 'failed', type: 'integer', example: 9),
             new OA\Property(property: 'initiated', type: 'integer', example: 62),
             new OA\Property(property: 'avg_ticket', type: 'integer', example: 1613),
+            new OA\Property(property: 'expenses', type: 'integer', example: 3),
+        ]),
+        new OA\Property(property: 'expenses', type: 'object', description: 'Costs in the range, in the report currency', properties: [
+            new OA\Property(property: 'currency', type: 'string', example: 'TZS'),
+            new OA\Property(property: 'total', type: 'number', example: 35000),
+            new OA\Property(property: 'platform', type: 'number', example: 10000),
+            new OA\Property(property: 'operational', type: 'number', example: 25000),
+            new OA\Property(property: 'count', type: 'integer', example: 3),
+            new OA\Property(property: 'by_currency', type: 'array', items: new OA\Items(properties: [
+                new OA\Property(property: 'currency', type: 'string', example: 'TZS'),
+                new OA\Property(property: 'total', type: 'number', example: 35000),
+                new OA\Property(property: 'count', type: 'integer', example: 3),
+            ], type: 'object'), description: 'Other currencies are listed here, never added to the total'),
+        ]),
+        new OA\Property(property: 'profit', type: 'object', properties: [
+            new OA\Property(property: 'income', type: 'number', example: 100000),
+            new OA\Property(property: 'expenses', type: 'number', example: 35000),
+            new OA\Property(property: 'net', type: 'number', example: 65000),
+            new OA\Property(property: 'margin', type: 'number', nullable: true, example: 65, description: 'net ÷ income × 100'),
+            new OA\Property(property: 'net_excluding_platform', type: 'number', example: 75000, description: 'Income minus operational expenses only'),
         ]),
         new OA\Property(property: 'previous', type: 'object', nullable: true, description: 'Only when compare=1', properties: [
             new OA\Property(property: 'from', type: 'string', format: 'date'),
@@ -413,9 +453,13 @@ use OpenApi\Attributes as OA;
             new OA\Property(property: 'mobile_money', type: 'number'),
             new OA\Property(property: 'vouchers', type: 'number'),
             new OA\Property(property: 'paid', type: 'integer'),
+            new OA\Property(property: 'expenses', type: 'number', example: 30000),
+            new OA\Property(property: 'profit', type: 'number', example: 45000),
             new OA\Property(property: 'daily', type: 'array', items: new OA\Items(properties: [
                 new OA\Property(property: 'date', type: 'string', format: 'date'),
                 new OA\Property(property: 'total', type: 'number'),
+                new OA\Property(property: 'expenses', type: 'number'),
+                new OA\Property(property: 'net', type: 'number'),
             ], type: 'object')),
         ]),
         new OA\Property(property: 'daily', type: 'array', description: 'One row per day in range, zero days included', items: new OA\Items(properties: [
@@ -424,6 +468,8 @@ use OpenApi\Attributes as OA;
             new OA\Property(property: 'vouchers', type: 'number', example: 1000),
             new OA\Property(property: 'total', type: 'number', example: 4000),
             new OA\Property(property: 'count', type: 'integer', example: 5),
+            new OA\Property(property: 'expenses', type: 'number', example: 1200),
+            new OA\Property(property: 'net', type: 'number', example: 2800),
         ], type: 'object')),
         new OA\Property(property: 'by_provider', type: 'array', items: new OA\Items(properties: [
             new OA\Property(property: 'provider', type: 'string', enum: ['mpesa', 'mixx', 'tigo', 'airtel', 'halopesa', 'ttcl', 'other']),
@@ -445,6 +491,15 @@ use OpenApi\Attributes as OA;
             new OA\Property(property: 'branch', type: 'string', nullable: true, example: 'Kariakoo'),
             new OA\Property(property: 'amount', type: 'number', example: 40000),
             new OA\Property(property: 'count', type: 'integer', example: 25),
+            new OA\Property(property: 'expenses', type: 'number', example: 15000),
+            new OA\Property(property: 'net', type: 'number', example: 25000),
+        ], type: 'object')),
+        new OA\Property(property: 'by_expense_type', type: 'array', items: new OA\Items(properties: [
+            new OA\Property(property: 'expense_type_id', type: 'integer', example: 2),
+            new OA\Property(property: 'name', type: 'string', example: 'Internet'),
+            new OA\Property(property: 'category', type: 'string', enum: ['platform', 'operational'], example: 'operational'),
+            new OA\Property(property: 'total', type: 'number', example: 15000),
+            new OA\Property(property: 'count', type: 'integer', example: 2),
         ], type: 'object')),
         new OA\Property(property: 'by_hour', type: 'array', description: '24 rows, hour 0-23 in the reporting timezone', items: new OA\Items(properties: [
             new OA\Property(property: 'hour', type: 'integer', example: 20),

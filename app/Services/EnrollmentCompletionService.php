@@ -110,6 +110,10 @@ class EnrollmentCompletionService
 
             $payment->forceFill(['company_id' => $company->id])->save();
 
+            // The enrollment subscription is a platform cost: record it as a system
+            // expense (idempotent per payment) once the company exists.
+            app(ExpenseService::class)->recordFromPlatformPayment($company, $payment);
+
             $enrollment->forceFill([
                 'status' => Enrollment::STATUS_COMPLETED,
                 'user_id' => $user->id,

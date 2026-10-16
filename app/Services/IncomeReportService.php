@@ -24,6 +24,8 @@ class IncomeReportService
 
     private const FAILED_PAYMENT_STATUSES = ['failed', 'expired', 'cancelled'];
 
+    public function __construct(private ExpenseService $expenses) {}
+
     /**
      * @param  array{branch_id?: ?int, router_id?: ?int}  $filters
      * @return array<string, mixed>
@@ -31,10 +33,18 @@ class IncomeReportService
     public function build(Company $company, Carbon $from, Carbon $to, bool $compare, array $filters = []): array
     {
         $timezone = $company->reportingTimezone();
-        $currency = (string) config('platform.currency', 'TZS');
+        $currency = strtoupper((string) ($filters['currency'] ?? config('platform.currency', 'TZS')));
+        $salesFilters = [...$filters, 'currency' => $currency];
 
-        $sales = $this->sales($company, $from, $to, $timezone, $filters);
+        $expenseFilters = [
+            'currency' => $currency,
+            'router_id' => $filters['router_id'] ?? null,
+            'branch_id' => $filters['branch_id'] ?? null,
+        ];
+
+        $sales = $this->sales($company, $from, $to, $timezone, $salesFilters);
         $payments = $this->paymentAttempts($company, $from, $to, $filters);
+        $expenses = $this->expenses->report($company, $from, $to, $expenseFilters);
 
         $mobileMoney = $sales->where('source', 'mobile_money');
         $vouchers = $sales->where('source', 'voucher');
@@ -45,6 +55,11 @@ class IncomeReportService
         $fees = 0.0;
         $refunds = $this->refunds($company, $from, $to, $timezone);
         $paidCount = $sales->count();
+
+        $expensesTotal = round((float) ($expenses['total'] ?? 0), 2);
+        $expensesOperational = round((float) ($expenses['operational_total'] ?? 0), 2);
+        $expensesPlatform = round((float) ($expenses['platform_total'] ?? 0), 2);
+        $net = round($gross - $expensesTotal, 2);
 
         $wallet = Wallet::query()->where('company_id', $company->id)->where('currency', $currency)->first();
 
@@ -71,6 +86,9 @@ class IncomeReportService
                     ->where('company_id', $company->id)
                     ->where('status', Withdrawal::STATUS_PENDING)
                     ->sum('amount'),
+                // Costs and the resulting profit (income − expenses).
+                'expenses' => $expensesTotal,
+                'profit' => $net,
             ],
 
             'counts' => [
@@ -81,6 +99,25 @@ class IncomeReportService
                 'failed' => $payments->whereIn('status', self::FAILED_PAYMENT_STATUSES)->count(),
                 'initiated' => $payments->count(),
                 'avg_ticket' => $paidCount > 0 ? (int) round($gross / $paidCount) : 0,
+                'expenses' => (int) ($expenses['count'] ?? 0),
+            ],
+
+            'expenses' => [
+                'currency' => $currency,
+                'total' => $expensesTotal,
+                'platform' => $expensesPlatform,
+                'operational' => $expensesOperational,
+                'count' => (int) ($expenses['count'] ?? 0),
+                'by_currency' => $expenses['by_currency'] ?? [],
+            ],
+
+            'profit' => [
+                'income' => $gross,
+                'expenses' => $expensesTotal,
+                'net' => $net,
+                'margin' => $gross > 0 ? round(($net / $gross) * 100, 2) : null,
+                // Profit before platform (WaiFai) costs.
+                'net_excluding_platform' => round($gross - $expensesOperational, 2),
             ],
         ];
 
@@ -88,9 +125,11 @@ class IncomeReportService
             $days = (int) $from->diffInDays($to) + 1;
             $previousTo = $from->copy()->subDay();
             $previousFrom = $previousTo->copy()->subDays($days - 1);
-            $previousSales = $this->sales($company, $previousFrom, $previousTo, $timezone, $filters);
+            $previousSales = $this->sales($company, $previousFrom, $previousTo, $timezone, $salesFilters);
             $previousGross = round((float) $previousSales->sum('amount'), 2);
             $previousRefunds = $this->refunds($company, $previousFrom, $previousTo, $timezone);
+            $previousExpenses = $this->expenses->report($company, $previousFrom, $previousTo, $expenseFilters);
+            $previousExpensesTotal = round((float) ($previousExpenses['total'] ?? 0), 2);
 
             $report['previous'] = [
                 'from' => $previousFrom->toDateString(),
@@ -100,19 +139,22 @@ class IncomeReportService
                 'mobile_money' => round((float) $previousSales->where('source', 'mobile_money')->sum('amount'), 2),
                 'vouchers' => round((float) $previousSales->where('source', 'voucher')->sum('amount'), 2),
                 'paid' => $previousSales->count(),
-                'daily' => collect($this->daily($previousSales, $previousFrom, $previousTo))
-                    ->map(fn (array $day) => ['date' => $day['date'], 'total' => $day['total']])
+                'expenses' => $previousExpensesTotal,
+                'profit' => round($previousGross - $previousExpensesTotal, 2),
+                'daily' => collect($this->daily($previousSales, $previousFrom, $previousTo, $previousExpenses['daily'] ?? []))
+                    ->map(fn (array $day) => ['date' => $day['date'], 'total' => $day['total'], 'expenses' => $day['expenses'], 'net' => $day['net']])
                     ->values()
                     ->all(),
             ];
         }
 
-        $report['daily'] = $this->daily($sales, $from, $to);
+        $report['daily'] = $this->daily($sales, $from, $to, $expenses['daily'] ?? []);
         $report['by_provider'] = $this->byProvider($mobileMoney);
         $report['by_package'] = $this->byPackage($sales);
-        $report['by_router'] = $this->byRouter($sales);
+        $report['by_router'] = $this->byRouter($sales, $expenses['by_router'] ?? []);
+        $report['by_expense_type'] = $expenses['by_type'] ?? [];
         $report['by_hour'] = $this->byHour($sales);
-        $report['customers'] = $this->customers($company, $sales, $from, $timezone);
+        $report['customers'] = $this->customers($company, $sales, $from, $timezone, $currency);
         $report['vouchers'] = [
             'used' => $vouchers->count(),
             'unused' => Voucher::query()
@@ -132,7 +174,7 @@ class IncomeReportService
      * @param  Collection<int, array<string, mixed>>  $sales
      * @return list<array{date: string, mobile_money: float, vouchers: float, total: float, count: int}>
      */
-    public function daily(Collection $sales, Carbon $from, Carbon $to): array
+    public function daily(Collection $sales, Carbon $from, Carbon $to, array $expenseDaily = []): array
     {
         $byDay = $sales->groupBy('date');
         $rows = [];
@@ -142,13 +184,17 @@ class IncomeReportService
             $daySales = $byDay->get($date, collect());
             $mobileMoney = round((float) $daySales->where('source', 'mobile_money')->sum('amount'), 2);
             $vouchers = round((float) $daySales->where('source', 'voucher')->sum('amount'), 2);
+            $income = round($mobileMoney + $vouchers, 2);
+            $expenses = round((float) ($expenseDaily[$date]['total'] ?? 0), 2);
 
             $rows[] = [
                 'date' => $date,
                 'mobile_money' => $mobileMoney,
                 'vouchers' => $vouchers,
-                'total' => round($mobileMoney + $vouchers, 2),
+                'total' => $income,
                 'count' => $daySales->count(),
+                'expenses' => $expenses,
+                'net' => round($income - $expenses, 2),
             ];
         }
 
@@ -166,12 +212,17 @@ class IncomeReportService
     {
         [$fromUtc, $toUtc] = $this->utcBounds($from, $to, $timezone);
 
+        // Revenue is reported in one currency (platform default). Other currencies
+        // are never silently added together.
+        $currency = strtoupper((string) ($filters['currency'] ?? config('platform.currency', 'TZS')));
+
         $rows = DB::table('revenue_records as rr')
             ->leftJoin('payment_transactions as pt', 'pt.id', '=', 'rr.payment_transaction_id')
             ->leftJoin('vouchers as v', 'v.id', '=', 'rr.voucher_id')
             ->leftJoin('access_grants as ag', 'ag.id', '=', 'rr.access_grant_id')
             ->where('rr.company_id', $company->id)
             ->where('rr.status', 'recognized')
+            ->where('rr.currency', $currency)
             ->whereIn('rr.source', ['mobile_money', 'voucher'])
             ->where('rr.recognized_at', '>=', $fromUtc)
             ->where('rr.recognized_at', '<=', $toUtc)
@@ -426,22 +477,48 @@ class IncomeReportService
      * @param  Collection<int, array<string, mixed>>  $sales
      * @return list<array<string, mixed>>
      */
-    private function byRouter(Collection $sales): array
+    private function byRouter(Collection $sales, array $expenseByRouter = []): array
     {
-        return $sales
-            ->filter(fn (array $sale) => $sale['router_id'] !== null)
-            ->groupBy('router_id')
-            ->map(function (Collection $rows, $routerId): array {
-                $first = $rows->first();
+        $rows = [];
 
-                return [
-                    'router_id' => (int) $routerId,
-                    'name' => $first['router_name'] ?? 'Router #'.$routerId,
-                    'branch_id' => $first['branch_id'],
-                    'branch' => $first['branch_name'],
-                    'amount' => round((float) $rows->sum('amount'), 2),
-                    'count' => $rows->count(),
-                ];
+        foreach ($sales->filter(fn (array $sale) => $sale['router_id'] !== null)->groupBy('router_id') as $routerId => $group) {
+            $first = $group->first();
+
+            $rows[(int) $routerId] = [
+                'router_id' => (int) $routerId,
+                'name' => $first['router_name'] ?? 'Router #'.$routerId,
+                'branch_id' => $first['branch_id'],
+                'branch' => $first['branch_name'],
+                'amount' => round((float) $group->sum('amount'), 2),
+                'count' => $group->count(),
+                'expenses' => 0.0,
+            ];
+        }
+
+        foreach ($expenseByRouter as $row) {
+            $id = $row['router_id'] ?? null;
+            if ($id === null) {
+                continue;
+            }
+
+            $rows[$id] ??= [
+                'router_id' => $id,
+                'name' => $row['name'],
+                'branch_id' => null,
+                'branch' => null,
+                'amount' => 0.0,
+                'count' => 0,
+                'expenses' => 0.0,
+            ];
+
+            $rows[$id]['expenses'] = round((float) $row['total'], 2);
+        }
+
+        return collect($rows)
+            ->map(function (array $row): array {
+                $row['net'] = round($row['amount'] - $row['expenses'], 2);
+
+                return $row;
             })
             ->sortByDesc('amount')
             ->values()
@@ -472,7 +549,7 @@ class IncomeReportService
      * @param  Collection<int, array<string, mixed>>  $sales
      * @return array{new: int, returning: int}
      */
-    private function customers(Company $company, Collection $sales, Carbon $from, string $timezone): array
+    private function customers(Company $company, Collection $sales, Carbon $from, string $timezone, string $currency): array
     {
         $customerIds = $sales->pluck('customer_id')->filter()->unique()->values()->all();
 
@@ -488,6 +565,7 @@ class IncomeReportService
             ->leftJoin('access_grants as ag', 'ag.id', '=', 'rr.access_grant_id')
             ->where('rr.company_id', $company->id)
             ->where('rr.status', 'recognized')
+            ->where('rr.currency', $currency)
             ->where('rr.recognized_at', '<', $fromUtc)
             ->whereIn($customerExpression, $customerIds)
             ->distinct()

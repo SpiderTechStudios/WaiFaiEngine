@@ -32,6 +32,7 @@ class OperationsDocumentation
             new OA\Parameter(name: 'compare', in: 'query', required: false, description: '1 = include previous period of same length', schema: new OA\Schema(type: 'boolean')),
             new OA\Parameter(name: 'branch_id', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
             new OA\Parameter(name: 'router_id', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'currency', in: 'query', required: false, description: 'Report currency, defaults to the platform currency. Other currencies are listed but never added.', schema: new OA\Schema(type: 'string', example: 'TZS')),
         ],
         responses: [
             new OA\Response(response: 200, description: 'Income', content: new OA\JsonContent(ref: '#/components/schemas/IncomeResponse')),

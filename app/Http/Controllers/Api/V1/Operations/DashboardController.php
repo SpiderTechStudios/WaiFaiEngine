@@ -11,6 +11,7 @@ use App\Models\RevenueRecord;
 use App\Models\Voucher;
 use App\Models\Wallet;
 use App\Models\Withdrawal;
+use App\Services\ExpenseService;
 use Carbon\CarbonInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,6 +20,8 @@ use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
+    public function __construct(private ExpenseService $expenseService) {}
+
     public function show(Request $request): JsonResponse
     {
         $company = $this->currentCompany();
@@ -34,6 +37,9 @@ class DashboardController extends Controller
         $today = $this->revenueBetween($company, $todayStart, $now);
         $thisMonth = $this->revenueBetween($company, $monthStart, $now);
         $allTime = $this->revenueBetween($company, null, null);
+
+        $expensesToday = $this->expenseService->totalBetween($company, $todayStart, $now, $currency);
+        $expensesMonth = $this->expenseService->totalBetween($company, $monthStart, $now, $currency);
 
         $wallet = Wallet::query()->where('company_id', $company->id)->where('currency', $currency)->first();
         $pendingWithdrawals = Withdrawal::query()
@@ -65,6 +71,16 @@ class DashboardController extends Controller
                 'this_month' => $thisMonth,
                 'last_month' => $this->revenueBetween($company, $lastMonthStart, $monthStart),
                 'all_time' => $allTime,
+            ],
+
+            'expenses' => [
+                'today' => $expensesToday,
+                'this_month' => $expensesMonth,
+            ],
+
+            'profit' => [
+                'today' => $this->profitBlock($today['total'], $expensesToday),
+                'this_month' => $this->profitBlock($thisMonth['total'], $expensesMonth),
             ],
 
             'sales_today' => [
@@ -138,6 +154,22 @@ class DashboardController extends Controller
             'total_revenue' => $allTime['total'],
             'active_sessions' => $activeSessions,
         ], 'Dashboard retrieved');
+    }
+
+    /**
+     * @return array{income: float, expenses: float, net: float, margin: float|null}
+     */
+    private function profitBlock(float $income, float $expenses): array
+    {
+        $income = round($income, 2);
+        $net = round($income - $expenses, 2);
+
+        return [
+            'income' => $income,
+            'expenses' => $expenses,
+            'net' => $net,
+            'margin' => $income > 0 ? round(($net / $income) * 100, 2) : null,
+        ];
     }
 
     /**

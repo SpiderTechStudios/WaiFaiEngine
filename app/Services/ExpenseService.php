@@ -9,6 +9,7 @@ use App\Models\NetworkDevice;
 use App\Models\PlatformPayment;
 use App\Models\User;
 use App\Queries\ExpenseQuery;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -282,6 +283,146 @@ class ExpenseService
             'summary' => $this->summary($company, $filters, $router->id),
             'breakdown' => $breakdown,
         ];
+    }
+
+    /**
+     * Cash-cost view of expenses for a date range, used by the income/profit report.
+     * Reuses the same paid_at/currency semantics as the expenses endpoints.
+     *
+     * @param  array{currency?: ?string, router_id?: ?int, branch_id?: ?int}  $filters
+     * @return array<string, mixed>
+     */
+    public function report(Company $company, Carbon $from, Carbon $to, array $filters = []): array
+    {
+        $currency = filled($filters['currency'] ?? null) ? strtoupper((string) $filters['currency']) : null;
+        $routerId = ! empty($filters['router_id']) ? (int) $filters['router_id'] : null;
+        $branchId = ! empty($filters['branch_id']) ? (int) $filters['branch_id'] : null;
+
+        $scope = function () use ($company, $from, $to, $currency, $routerId, $branchId) {
+            return Expense::query()
+                ->where('company_id', $company->id)
+                ->whereDate('paid_at', '>=', $from->toDateString())
+                ->whereDate('paid_at', '<=', $to->toDateString())
+                ->when($currency, fn ($query) => $query->where('currency', $currency))
+                ->when($routerId, fn ($query) => $query->where('router_id', $routerId))
+                ->when($branchId, function ($query) use ($company, $branchId): void {
+                    $query->whereIn(
+                        'router_id',
+                        NetworkDevice::query()
+                            ->where('company_id', $company->id)
+                            ->where('network_station_id', $branchId)
+                            ->pluck('id'),
+                    );
+                });
+        };
+
+        $platformTotal = 0.0;
+        $operationalTotal = 0.0;
+        $count = 0;
+
+        foreach ($scope()
+            ->selectRaw('category, COALESCE(SUM(amount), 0) as total, COUNT(*) as count')
+            ->groupBy('category')
+            ->get() as $row) {
+            $amount = round((float) $row->total, 2);
+            $count += (int) $row->count;
+
+            if ($row->category === ExpenseType::CATEGORY_PLATFORM) {
+                $platformTotal = round($platformTotal + $amount, 2);
+            } else {
+                $operationalTotal = round($operationalTotal + $amount, 2);
+            }
+        }
+
+        $byCurrency = $scope()
+            ->selectRaw('currency, COALESCE(SUM(amount), 0) as total, COUNT(*) as count')
+            ->groupBy('currency')
+            ->get()
+            ->map(fn ($row): array => [
+                'currency' => (string) $row->currency,
+                'total' => round((float) $row->total, 2),
+                'count' => (int) $row->count,
+            ])
+            ->values()
+            ->all();
+
+        $byType = $scope()
+            ->join('expense_types', 'expense_types.id', '=', 'expenses.expense_type_id')
+            ->selectRaw('expense_types.id as expense_type_id, expense_types.name as name, expense_types.category as category, COALESCE(SUM(expenses.amount), 0) as total, COUNT(*) as count')
+            ->groupBy('expense_types.id', 'expense_types.name', 'expense_types.category')
+            ->orderByDesc('total')
+            ->get()
+            ->map(fn ($row): array => [
+                'expense_type_id' => (int) $row->expense_type_id,
+                'name' => (string) $row->name,
+                'category' => (string) $row->category,
+                'total' => round((float) $row->total, 2),
+                'count' => (int) $row->count,
+            ])
+            ->values()
+            ->all();
+
+        $byRouterRows = $scope()
+            ->selectRaw('router_id, COALESCE(SUM(amount), 0) as total, COUNT(*) as count')
+            ->groupBy('router_id')
+            ->orderByDesc('total')
+            ->get();
+
+        $routerIds = $byRouterRows->pluck('router_id')->filter()->unique()->values()->all();
+        $routerNames = $routerIds === []
+            ? collect()
+            : DB::table('network_devices')->whereIn('id', $routerIds)->pluck('name', 'id');
+
+        $byRouter = $byRouterRows->map(function ($row) use ($routerNames): array {
+            $id = $row->router_id === null ? null : (int) $row->router_id;
+
+            return [
+                'router_id' => $id,
+                'name' => $id === null ? 'Business-wide' : (string) ($routerNames[$id] ?? 'Router #'.$id),
+                'total' => round((float) $row->total, 2),
+                'count' => (int) $row->count,
+            ];
+        })->values()->all();
+
+        $daily = $scope()
+            ->selectRaw('DATE(paid_at) as day, COALESCE(SUM(amount), 0) as total, COUNT(*) as count')
+            ->groupBy('day')
+            ->orderBy('day')
+            ->get()
+            ->mapWithKeys(fn ($row): array => [
+                (string) $row->day => [
+                    'total' => round((float) $row->total, 2),
+                    'count' => (int) $row->count,
+                ],
+            ])
+            ->all();
+
+        $mixedCurrencies = $currency === null && count($byCurrency) > 1;
+
+        return [
+            'currency' => $currency,
+            'total' => $mixedCurrencies ? null : round($platformTotal + $operationalTotal, 2),
+            'platform_total' => $mixedCurrencies ? null : $platformTotal,
+            'operational_total' => $mixedCurrencies ? null : $operationalTotal,
+            'count' => $count,
+            'by_currency' => $byCurrency,
+            'by_type' => $byType,
+            'by_router' => $byRouter,
+            'daily' => $daily,
+        ];
+    }
+
+    /**
+     * Total recorded expenses in a local date range (platform currency by default).
+     */
+    public function totalBetween(Company $company, Carbon $from, Carbon $to, ?string $currency = null): float
+    {
+        return round((float) Expense::query()
+            ->where('company_id', $company->id)
+            ->whereDate('paid_at', '>=', $from->toDateString())
+            ->whereDate('paid_at', '<=', $to->toDateString())
+            ->when($currency, fn ($query) => $query->where('currency', strtoupper($currency)))
+            ->sum('amount'), 2);
     }
 
     private function platformExpenseType(): ?ExpenseType

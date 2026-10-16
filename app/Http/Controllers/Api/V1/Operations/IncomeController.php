@@ -52,10 +52,10 @@ class IncomeController extends Controller
 
         return response()->streamDownload(function () use ($report): void {
             $out = fopen('php://output', 'w');
-            fputcsv($out, ['date', 'mobile_money', 'vouchers', 'total', 'transactions']);
+            fputcsv($out, ['date', 'mobile_money', 'vouchers', 'income', 'expenses', 'net', 'transactions']);
 
             foreach ($report['daily'] as $day) {
-                fputcsv($out, [$day['date'], $day['mobile_money'], $day['vouchers'], $day['total'], $day['count']]);
+                fputcsv($out, [$day['date'], $day['mobile_money'], $day['vouchers'], $day['total'], $day['expenses'], $day['net'], $day['count']]);
             }
 
             fputcsv($out, [
@@ -63,6 +63,8 @@ class IncomeController extends Controller
                 $report['totals']['mobile_money'],
                 $report['totals']['vouchers'],
                 $report['totals']['gross'],
+                $report['expenses']['total'],
+                $report['profit']['net'],
                 $report['counts']['paid'],
             ]);
             fclose($out);
@@ -79,6 +81,7 @@ class IncomeController extends Controller
         return $this->incomeReport->build($company, $from, $to, $request->boolean('compare'), [
             'branch_id' => $request->filled('branch_id') ? $request->integer('branch_id') : null,
             'router_id' => $request->filled('router_id') ? $request->integer('router_id') : null,
+            'currency' => $request->filled('currency') ? strtoupper((string) $request->input('currency')) : null,
         ]);
     }
 

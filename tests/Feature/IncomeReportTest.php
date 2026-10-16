@@ -242,9 +242,9 @@ class IncomeReportTest extends TestCase
             ->streamedContent();
 
         $lines = array_values(array_filter(explode("\n", trim($csv))));
-        $this->assertSame('date,mobile_money,vouchers,total,transactions', $lines[0]);
+        $this->assertSame('date,mobile_money,vouchers,income,expenses,net,transactions', $lines[0]);
         $this->assertCount(5, $lines);
-        $this->assertSame('TOTAL,1500,0,1500,1', $lines[4]);
+        $this->assertSame('TOTAL,1500,0,1500,0,1500,1', $lines[4]);
 
         $pdf = $this->withHeaders($this->headers)
             ->get('/api/v1/income/export?from=2026-09-28&to=2026-09-30&format=pdf')

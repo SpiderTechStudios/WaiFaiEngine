@@ -27,6 +27,7 @@ class PlatformPaymentService
         private SubscriptionService $subscriptionService,
         private InstallationRequestService $installationRequestService,
         private PaymentProviderManager $providerManager,
+        private ExpenseService $expenseService,
     ) {}
 
     /**
@@ -682,6 +683,21 @@ class PlatformPaymentService
             $transactionId = (int) data_get($payment->metadata, 'payment_transaction_id');
             if ($transactionId > 0) {
                 app(PaymentService::class)->markPortalPaid($transactionId, $payment);
+            }
+        }
+
+        // What the company pays WaiFai is a real cost: record it as a system expense
+        // (idempotent per payment) so income − expenses = profit includes it.
+        if (
+            in_array($purpose, [
+                PlatformPayment::PURPOSE_PLATFORM_SUBSCRIPTION,
+                PlatformPayment::PURPOSE_SUBSCRIPTION_RENEWAL,
+            ], true)
+            && $payment->company_id
+        ) {
+            $company = Company::query()->find($payment->company_id);
+            if ($company) {
+                $this->expenseService->recordFromPlatformPayment($company, $payment);
             }
         }
 

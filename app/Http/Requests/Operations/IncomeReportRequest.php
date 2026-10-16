@@ -29,6 +29,7 @@ class IncomeReportRequest extends FormRequest
             'from' => ['nullable', 'date_format:Y-m-d'],
             'to' => ['nullable', 'date_format:Y-m-d'],
             'compare' => ['nullable', 'boolean'],
+            'currency' => ['nullable', 'string', 'size:3'],
             'branch_id' => [
                 'nullable',
                 'integer',

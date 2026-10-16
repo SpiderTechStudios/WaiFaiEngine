@@ -44,7 +44,11 @@
             <td class="label">Paid out</td><td class="value">{{ $money($report['totals']['paid_out']) }}</td>
         </tr>
         <tr>
+            <td class="label">Expenses ({{ $currency }})</td><td class="value">{{ $money($report['expenses']['total']) }}</td>
             <td class="label">Transactions</td><td class="value">{{ $report['counts']['paid'] }}</td>
+        </tr>
+        <tr>
+            <td class="label">Profit (income − expenses)</td><td class="value">{{ $money($report['profit']['net']) }}</td>
             <td class="label">Average ticket</td><td class="value">{{ $money($report['counts']['avg_ticket']) }}</td>
         </tr>
     </table>
@@ -55,7 +59,9 @@
                 <th>Date</th>
                 <th>Mobile money</th>
                 <th>Vouchers</th>
-                <th>Total</th>
+                <th>Income</th>
+                <th>Expenses</th>
+                <th>Net</th>
                 <th>Transactions</th>
             </tr>
         </thead>
@@ -66,6 +72,8 @@
                     <td>{{ $money($day['mobile_money']) }}</td>
                     <td>{{ $money($day['vouchers']) }}</td>
                     <td>{{ $money($day['total']) }}</td>
+                    <td>{{ $money($day['expenses']) }}</td>
+                    <td>{{ $money($day['net']) }}</td>
                     <td>{{ $day['count'] }}</td>
                 </tr>
             @endforeach
@@ -74,6 +82,8 @@
                 <td>{{ $money($report['totals']['mobile_money']) }}</td>
                 <td>{{ $money($report['totals']['vouchers']) }}</td>
                 <td>{{ $money($report['totals']['gross']) }}</td>
+                <td>{{ $money($report['expenses']['total']) }}</td>
+                <td>{{ $money($report['profit']['net']) }}</td>
                 <td>{{ $report['counts']['paid'] }}</td>
             </tr>
         </tbody>

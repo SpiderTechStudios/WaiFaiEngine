@@ -4667,6 +4667,16 @@
                         "schema": {
                             "type": "integer"
                         }
+                    },
+                    {
+                        "name": "currency",
+                        "in": "query",
+                        "description": "Report currency, defaults to the platform currency. Other currencies are listed but never added.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "TZS"
+                        }
                     }
                 ],
                 "responses": {
@@ -13441,6 +13451,29 @@
                 },
                 "type": "object"
             },
+            "DashboardProfitPeriod": {
+                "description": "Income − recorded expenses for the period, in the platform currency.",
+                "properties": {
+                    "income": {
+                        "type": "number",
+                        "example": 4000
+                    },
+                    "expenses": {
+                        "type": "number",
+                        "example": 5000
+                    },
+                    "net": {
+                        "type": "number",
+                        "example": -1000
+                    },
+                    "margin": {
+                        "type": "number",
+                        "example": -25,
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
             "DashboardData": {
                 "properties": {
                     "currency": {
@@ -13489,6 +13522,30 @@
                             "offers_claimed": {
                                 "type": "integer",
                                 "example": 0
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "expenses": {
+                        "properties": {
+                            "today": {
+                                "type": "number",
+                                "example": 5000
+                            },
+                            "this_month": {
+                                "type": "number",
+                                "example": 45000
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "profit": {
+                        "properties": {
+                            "today": {
+                                "$ref": "#/components/schemas/DashboardProfitPeriod"
+                            },
+                            "this_month": {
+                                "$ref": "#/components/schemas/DashboardProfitPeriod"
                             }
                         },
                         "type": "object"
@@ -13864,6 +13921,16 @@
                                 "description": "Current pending withdrawals (company-wide)",
                                 "type": "number",
                                 "example": 5000
+                            },
+                            "expenses": {
+                                "description": "Recorded expenses in range (platform currency)",
+                                "type": "number",
+                                "example": 35000
+                            },
+                            "profit": {
+                                "description": "gross − expenses",
+                                "type": "number",
+                                "example": 65000
                             }
                         },
                         "type": "object"
@@ -13897,6 +13964,85 @@
                             "avg_ticket": {
                                 "type": "integer",
                                 "example": 1613
+                            },
+                            "expenses": {
+                                "type": "integer",
+                                "example": 3
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "expenses": {
+                        "description": "Costs in the range, in the report currency",
+                        "properties": {
+                            "currency": {
+                                "type": "string",
+                                "example": "TZS"
+                            },
+                            "total": {
+                                "type": "number",
+                                "example": 35000
+                            },
+                            "platform": {
+                                "type": "number",
+                                "example": 10000
+                            },
+                            "operational": {
+                                "type": "number",
+                                "example": 25000
+                            },
+                            "count": {
+                                "type": "integer",
+                                "example": 3
+                            },
+                            "by_currency": {
+                                "description": "Other currencies are listed here, never added to the total",
+                                "type": "array",
+                                "items": {
+                                    "properties": {
+                                        "currency": {
+                                            "type": "string",
+                                            "example": "TZS"
+                                        },
+                                        "total": {
+                                            "type": "number",
+                                            "example": 35000
+                                        },
+                                        "count": {
+                                            "type": "integer",
+                                            "example": 3
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "profit": {
+                        "properties": {
+                            "income": {
+                                "type": "number",
+                                "example": 100000
+                            },
+                            "expenses": {
+                                "type": "number",
+                                "example": 35000
+                            },
+                            "net": {
+                                "type": "number",
+                                "example": 65000
+                            },
+                            "margin": {
+                                "description": "net ÷ income × 100",
+                                "type": "number",
+                                "example": 65,
+                                "nullable": true
+                            },
+                            "net_excluding_platform": {
+                                "description": "Income minus operational expenses only",
+                                "type": "number",
+                                "example": 75000
                             }
                         },
                         "type": "object"
@@ -13927,6 +14073,14 @@
                             "paid": {
                                 "type": "integer"
                             },
+                            "expenses": {
+                                "type": "number",
+                                "example": 30000
+                            },
+                            "profit": {
+                                "type": "number",
+                                "example": 45000
+                            },
                             "daily": {
                                 "type": "array",
                                 "items": {
@@ -13936,6 +14090,12 @@
                                             "format": "date"
                                         },
                                         "total": {
+                                            "type": "number"
+                                        },
+                                        "expenses": {
+                                            "type": "number"
+                                        },
+                                        "net": {
                                             "type": "number"
                                         }
                                     },
@@ -13971,6 +14131,14 @@
                                 "count": {
                                     "type": "integer",
                                     "example": 5
+                                },
+                                "expenses": {
+                                    "type": "number",
+                                    "example": 1200
+                                },
+                                "net": {
+                                    "type": "number",
+                                    "example": 2800
                                 }
                             },
                             "type": "object"
@@ -14065,6 +14233,46 @@
                                 "count": {
                                     "type": "integer",
                                     "example": 25
+                                },
+                                "expenses": {
+                                    "type": "number",
+                                    "example": 15000
+                                },
+                                "net": {
+                                    "type": "number",
+                                    "example": 25000
+                                }
+                            },
+                            "type": "object"
+                        }
+                    },
+                    "by_expense_type": {
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "expense_type_id": {
+                                    "type": "integer",
+                                    "example": 2
+                                },
+                                "name": {
+                                    "type": "string",
+                                    "example": "Internet"
+                                },
+                                "category": {
+                                    "type": "string",
+                                    "example": "operational",
+                                    "enum": [
+                                        "platform",
+                                        "operational"
+                                    ]
+                                },
+                                "total": {
+                                    "type": "number",
+                                    "example": 15000
+                                },
+                                "count": {
+                                    "type": "integer",
+                                    "example": 2
                                 }
                             },
                             "type": "object"
