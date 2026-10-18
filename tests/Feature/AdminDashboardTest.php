@@ -125,6 +125,10 @@ class AdminDashboardTest extends TestCase
             ->assertJsonPath('data.platform.clients.total', 1)
             ->assertJsonPath('data.platform.clients.active', 1)
             ->assertJsonPath('data.platform.clients.new_this_month', 1)
+            ->assertJsonPath('data.clients_activity.payments_today', 1)
+            ->assertJsonPath('data.clients_activity.payments_total', 1)
+            ->assertJsonPath('data.clients_activity.revenue_today', 1000)
+            ->assertJsonPath('data.clients_activity.revenue_total', 1000)
             ->assertJsonPath('data.revenue_statistics.period_days', 14)
             ->assertJsonCount(14, 'data.revenue_statistics.last_14_days');
 

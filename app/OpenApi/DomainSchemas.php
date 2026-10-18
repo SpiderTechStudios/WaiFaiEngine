@@ -386,6 +386,12 @@ use OpenApi\Attributes as OA;
                 new OA\Property(property: 'count', type: 'integer'),
             ], type: 'object')),
         ]),
+        new OA\Property(property: 'clients_activity', type: 'object', description: 'Aggregate of all clients\' own sales through the platform', properties: [
+            new OA\Property(property: 'revenue_today', type: 'number', example: 15000),
+            new OA\Property(property: 'revenue_total', type: 'number', example: 250000),
+            new OA\Property(property: 'payments_today', type: 'integer', example: 12),
+            new OA\Property(property: 'payments_total', type: 'integer', example: 340),
+        ]),
         new OA\Property(
             property: 'revenue_statistics',
             type: 'object',

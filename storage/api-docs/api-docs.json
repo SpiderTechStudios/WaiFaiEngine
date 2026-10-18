@@ -14643,6 +14643,28 @@
                         },
                         "type": "object"
                     },
+                    "clients_activity": {
+                        "description": "Aggregate of all clients' own sales through the platform",
+                        "properties": {
+                            "revenue_today": {
+                                "type": "number",
+                                "example": 15000
+                            },
+                            "revenue_total": {
+                                "type": "number",
+                                "example": 250000
+                            },
+                            "payments_today": {
+                                "type": "integer",
+                                "example": 12
+                            },
+                            "payments_total": {
+                                "type": "integer",
+                                "example": 340
+                            }
+                        },
+                        "type": "object"
+                    },
                     "revenue_statistics": {
                         "description": "Platform revenue trend for the dashboard chart",
                         "properties": {
