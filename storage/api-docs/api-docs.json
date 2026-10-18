@@ -9220,8 +9220,8 @@
                 "tags": [
                     "Platform Admin"
                 ],
-                "summary": "Platform-wide admin dashboard KPIs",
-                "description": "Aggregates today/total revenue, payments, active sessions, router online/offline counts, recent sessions, top plans by recent usage, and last-14-days revenue for the admin home screen.",
+                "summary": "Platform management dashboard (WaiFai revenue + client subscriptions)",
+                "description": "Platform revenue (MRR, collected today/this month/previous month, uncollected, by purpose), client subscription counts, due-soon and overdue subscriptions, upcoming renewals, and a 14-day platform revenue trend. Client-level data (their plans, sessions, hotspot revenue) is intentionally excluded.",
                 "operationId": "adminDashboard",
                 "responses": {
                     "200": {
@@ -14474,13 +14474,18 @@
                 "type": "object"
             },
             "AdminDashboardData": {
+                "description": "Platform management dashboard: WaiFai revenue and client subscriptions. Client-level data (their plans, sessions, hotspot revenue) is not included.",
                 "properties": {
                     "currency": {
                         "type": "string",
                         "example": "TZS"
                     },
+                    "generated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
                     "platform": {
-                        "description": "Platform revenue: what client companies pay WaiFai",
+                        "description": "Platform revenue and subscription health",
                         "properties": {
                             "currency": {
                                 "type": "string",
@@ -14492,7 +14497,33 @@
                             },
                             "mrr": {
                                 "type": "number",
+                                "example": 40000
+                            },
+                            "collected_today": {
+                                "type": "number",
+                                "example": 20000
+                            },
+                            "collected_this_month": {
+                                "type": "number",
+                                "example": 80000
+                            },
+                            "collected_previous_month": {
+                                "type": "number",
                                 "example": 60000
+                            },
+                            "uncollected_this_month": {
+                                "description": "MRR minus collected this month",
+                                "type": "number",
+                                "example": 20000
+                            },
+                            "by_purpose": {
+                                "type": "object",
+                                "example": {
+                                    "platform_subscription": {
+                                        "count": 2,
+                                        "total": 40000
+                                    }
+                                }
                             },
                             "clients": {
                                 "properties": {
@@ -14519,6 +14550,10 @@
                                     "cancelled": {
                                         "type": "integer",
                                         "example": 0
+                                    },
+                                    "new_this_month": {
+                                        "type": "integer",
+                                        "example": 1
                                     }
                                 },
                                 "type": "object"
@@ -14531,11 +14566,11 @@
                                     },
                                     "count": {
                                         "type": "integer",
-                                        "example": 1
+                                        "example": 2
                                     },
                                     "amount": {
                                         "type": "number",
-                                        "example": 20000
+                                        "example": 40000
                                     }
                                 },
                                 "type": "object"
@@ -14553,123 +14588,63 @@
                                 },
                                 "type": "object"
                             },
-                            "revenue_this_month": {
-                                "type": "number",
-                                "example": 80000
+                            "upcoming_renewals": {
+                                "type": "array",
+                                "items": {
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer",
+                                            "example": 3
+                                        },
+                                        "name": {
+                                            "type": "string",
+                                            "example": "Niawifi"
+                                        },
+                                        "subscription_status": {
+                                            "type": "string",
+                                            "example": "active"
+                                        },
+                                        "subscription_period_ends_at": {
+                                            "type": "string",
+                                            "format": "date-time",
+                                            "nullable": true
+                                        },
+                                        "days_remaining": {
+                                            "type": "integer",
+                                            "example": 5,
+                                            "nullable": true
+                                        },
+                                        "mrr": {
+                                            "type": "number",
+                                            "example": 20000
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            },
+                            "series": {
+                                "type": "array",
+                                "items": {
+                                    "properties": {
+                                        "date": {
+                                            "type": "string",
+                                            "format": "date"
+                                        },
+                                        "total": {
+                                            "type": "number"
+                                        },
+                                        "count": {
+                                            "type": "integer"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
                             }
                         },
                         "type": "object"
                     },
-                    "today_revenue": {
-                        "description": "Client (tenant) hotspot revenue today",
-                        "type": "number",
-                        "example": 15000
-                    },
-                    "today_payments": {
-                        "type": "integer",
-                        "example": 12
-                    },
-                    "total_revenue": {
-                        "type": "number",
-                        "example": 250000
-                    },
-                    "active_sessions": {
-                        "type": "integer",
-                        "example": 8
-                    },
-                    "routers_online": {
-                        "type": "integer",
-                        "example": 3
-                    },
-                    "routers_offline": {
-                        "type": "integer",
-                        "example": 1
-                    },
-                    "routers_total": {
-                        "type": "integer",
-                        "example": 4
-                    },
-                    "recent_sessions": {
-                        "type": "array",
-                        "items": {
-                            "properties": {
-                                "id": {
-                                    "type": "integer",
-                                    "example": 1
-                                },
-                                "mac_address": {
-                                    "type": "string",
-                                    "example": "AA:BB:CC:DD:EE:FF"
-                                },
-                                "status": {
-                                    "type": "string",
-                                    "example": "active"
-                                },
-                                "company_id": {
-                                    "type": "integer",
-                                    "example": 1
-                                },
-                                "company_name": {
-                                    "type": "string",
-                                    "example": "ABC Internet"
-                                },
-                                "plan_name": {
-                                    "type": "string",
-                                    "example": "1 Hour",
-                                    "nullable": true
-                                },
-                                "customer_name": {
-                                    "type": "string",
-                                    "example": "Walk in",
-                                    "nullable": true
-                                },
-                                "description": {
-                                    "type": "string",
-                                    "example": "Walk in · 1 Hour · ABC Internet"
-                                },
-                                "started_at": {
-                                    "type": "string",
-                                    "format": "date-time",
-                                    "nullable": true
-                                }
-                            },
-                            "type": "object"
-                        }
-                    },
-                    "top_plans": {
-                        "type": "array",
-                        "items": {
-                            "properties": {
-                                "id": {
-                                    "type": "integer",
-                                    "example": 3
-                                },
-                                "name": {
-                                    "type": "string",
-                                    "example": "Daily"
-                                },
-                                "company_id": {
-                                    "type": "integer",
-                                    "example": 1
-                                },
-                                "company_name": {
-                                    "type": "string",
-                                    "example": "ABC Internet"
-                                },
-                                "usage_count": {
-                                    "type": "integer",
-                                    "example": 42
-                                },
-                                "price": {
-                                    "type": "number",
-                                    "example": 1000,
-                                    "nullable": true
-                                }
-                            },
-                            "type": "object"
-                        }
-                    },
                     "revenue_statistics": {
+                        "description": "Platform revenue trend for the dashboard chart",
                         "properties": {
                             "period_days": {
                                 "type": "integer",
@@ -14677,7 +14652,7 @@
                             },
                             "total": {
                                 "type": "number",
-                                "example": 85000
+                                "example": 80000
                             },
                             "last_14_days": {
                                 "type": "array",
@@ -14689,7 +14664,7 @@
                                         },
                                         "total": {
                                             "type": "number",
-                                            "example": 5000
+                                            "example": 20000
                                         }
                                     },
                                     "type": "object"

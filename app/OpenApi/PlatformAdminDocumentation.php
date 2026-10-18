@@ -10,8 +10,8 @@ class PlatformAdminDocumentation
         path: '/admin/dashboard',
         operationId: 'adminDashboard',
         tags: ['Platform Admin'],
-        summary: 'Platform-wide admin dashboard KPIs',
-        description: 'Aggregates today/total revenue, payments, active sessions, router online/offline counts, recent sessions, top plans by recent usage, and last-14-days revenue for the admin home screen.',
+        summary: 'Platform management dashboard (WaiFai revenue + client subscriptions)',
+        description: 'Platform revenue (MRR, collected today/this month/previous month, uncollected, by purpose), client subscription counts, due-soon and overdue subscriptions, upcoming renewals, and a 14-day platform revenue trend. Client-level data (their plans, sessions, hotspot revenue) is intentionally excluded.',
         security: [['sanctum' => []]],
         responses: [
             new OA\Response(response: 200, description: 'Admin dashboard', content: new OA\JsonContent(ref: '#/components/schemas/AdminDashboardResponse')),

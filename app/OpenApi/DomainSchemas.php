@@ -337,12 +337,19 @@ use OpenApi\Attributes as OA;
 )]
 #[OA\Schema(
     schema: 'AdminDashboardData',
+    description: 'Platform management dashboard: WaiFai revenue and client subscriptions. Client-level data (their plans, sessions, hotspot revenue) is not included.',
     properties: [
         new OA\Property(property: 'currency', type: 'string', example: 'TZS'),
-        new OA\Property(property: 'platform', type: 'object', description: 'Platform revenue: what client companies pay WaiFai', properties: [
+        new OA\Property(property: 'generated_at', type: 'string', format: 'date-time'),
+        new OA\Property(property: 'platform', type: 'object', description: 'Platform revenue and subscription health', properties: [
             new OA\Property(property: 'currency', type: 'string', example: 'TZS'),
             new OA\Property(property: 'monthly_fee', type: 'number', example: 20000),
-            new OA\Property(property: 'mrr', type: 'number', example: 60000),
+            new OA\Property(property: 'mrr', type: 'number', example: 40000),
+            new OA\Property(property: 'collected_today', type: 'number', example: 20000),
+            new OA\Property(property: 'collected_this_month', type: 'number', example: 80000),
+            new OA\Property(property: 'collected_previous_month', type: 'number', example: 60000),
+            new OA\Property(property: 'uncollected_this_month', type: 'number', example: 20000, description: 'MRR minus collected this month'),
+            new OA\Property(property: 'by_purpose', type: 'object', example: ['platform_subscription' => ['count' => 2, 'total' => 40000]]),
             new OA\Property(property: 'clients', type: 'object', properties: [
                 new OA\Property(property: 'total', type: 'integer', example: 4),
                 new OA\Property(property: 'active', type: 'integer', example: 3),
@@ -350,64 +357,48 @@ use OpenApi\Attributes as OA;
                 new OA\Property(property: 'expired', type: 'integer', example: 1),
                 new OA\Property(property: 'suspended', type: 'integer', example: 0),
                 new OA\Property(property: 'cancelled', type: 'integer', example: 0),
+                new OA\Property(property: 'new_this_month', type: 'integer', example: 1),
             ]),
             new OA\Property(property: 'due_soon', type: 'object', properties: [
                 new OA\Property(property: 'days', type: 'integer', example: 7),
-                new OA\Property(property: 'count', type: 'integer', example: 1),
-                new OA\Property(property: 'amount', type: 'number', example: 20000),
+                new OA\Property(property: 'count', type: 'integer', example: 2),
+                new OA\Property(property: 'amount', type: 'number', example: 40000),
             ]),
             new OA\Property(property: 'overdue', type: 'object', properties: [
                 new OA\Property(property: 'count', type: 'integer', example: 1),
                 new OA\Property(property: 'amount', type: 'number', example: 20000),
             ]),
-            new OA\Property(property: 'revenue_this_month', type: 'number', example: 80000),
+            new OA\Property(
+                property: 'upcoming_renewals',
+                type: 'array',
+                items: new OA\Items(properties: [
+                    new OA\Property(property: 'id', type: 'integer', example: 3),
+                    new OA\Property(property: 'name', type: 'string', example: 'Niawifi'),
+                    new OA\Property(property: 'subscription_status', type: 'string', example: 'active'),
+                    new OA\Property(property: 'subscription_period_ends_at', type: 'string', format: 'date-time', nullable: true),
+                    new OA\Property(property: 'days_remaining', type: 'integer', nullable: true, example: 5),
+                    new OA\Property(property: 'mrr', type: 'number', example: 20000),
+                ], type: 'object')
+            ),
+            new OA\Property(property: 'series', type: 'array', items: new OA\Items(properties: [
+                new OA\Property(property: 'date', type: 'string', format: 'date'),
+                new OA\Property(property: 'total', type: 'number'),
+                new OA\Property(property: 'count', type: 'integer'),
+            ], type: 'object')),
         ]),
-        new OA\Property(property: 'today_revenue', type: 'number', example: 15000, description: 'Client (tenant) hotspot revenue today'),
-        new OA\Property(property: 'today_payments', type: 'integer', example: 12),
-        new OA\Property(property: 'total_revenue', type: 'number', example: 250000),
-        new OA\Property(property: 'active_sessions', type: 'integer', example: 8),
-        new OA\Property(property: 'routers_online', type: 'integer', example: 3),
-        new OA\Property(property: 'routers_offline', type: 'integer', example: 1),
-        new OA\Property(property: 'routers_total', type: 'integer', example: 4),
-        new OA\Property(
-            property: 'recent_sessions',
-            type: 'array',
-            items: new OA\Items(properties: [
-                new OA\Property(property: 'id', type: 'integer', example: 1),
-                new OA\Property(property: 'mac_address', type: 'string', example: 'AA:BB:CC:DD:EE:FF'),
-                new OA\Property(property: 'status', type: 'string', example: 'active'),
-                new OA\Property(property: 'company_id', type: 'integer', example: 1),
-                new OA\Property(property: 'company_name', type: 'string', example: 'ABC Internet'),
-                new OA\Property(property: 'plan_name', type: 'string', nullable: true, example: '1 Hour'),
-                new OA\Property(property: 'customer_name', type: 'string', nullable: true, example: 'Walk in'),
-                new OA\Property(property: 'description', type: 'string', example: 'Walk in · 1 Hour · ABC Internet'),
-                new OA\Property(property: 'started_at', type: 'string', format: 'date-time', nullable: true),
-            ], type: 'object')
-        ),
-        new OA\Property(
-            property: 'top_plans',
-            type: 'array',
-            items: new OA\Items(properties: [
-                new OA\Property(property: 'id', type: 'integer', example: 3),
-                new OA\Property(property: 'name', type: 'string', example: 'Daily'),
-                new OA\Property(property: 'company_id', type: 'integer', example: 1),
-                new OA\Property(property: 'company_name', type: 'string', example: 'ABC Internet'),
-                new OA\Property(property: 'usage_count', type: 'integer', example: 42),
-                new OA\Property(property: 'price', type: 'number', nullable: true, example: 1000),
-            ], type: 'object')
-        ),
         new OA\Property(
             property: 'revenue_statistics',
             type: 'object',
+            description: 'Platform revenue trend for the dashboard chart',
             properties: [
                 new OA\Property(property: 'period_days', type: 'integer', example: 14),
-                new OA\Property(property: 'total', type: 'number', example: 85000),
+                new OA\Property(property: 'total', type: 'number', example: 80000),
                 new OA\Property(
                     property: 'last_14_days',
                     type: 'array',
                     items: new OA\Items(properties: [
                         new OA\Property(property: 'date', type: 'string', example: '2026-09-01'),
-                        new OA\Property(property: 'total', type: 'number', example: 5000),
+                        new OA\Property(property: 'total', type: 'number', example: 20000),
                     ], type: 'object')
                 ),
             ]

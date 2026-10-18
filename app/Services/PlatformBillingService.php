@@ -118,6 +118,61 @@ class PlatformBillingService
     }
 
     /**
+     * Management-focused dashboard payload: platform revenue and subscription
+     * health only (no client-level top plans / sessions).
+     *
+     * @return array<string, mixed>
+     */
+    public function dashboard(): array
+    {
+        $timezone = (string) config('platform.reporting_timezone', 'Africa/Dar_es_Salaam');
+        $now = Carbon::now($timezone);
+        $monthStart = $now->copy()->startOfMonth();
+
+        $month = $this->summary($monthStart, $now);
+        $today = $this->revenueBetween($now->copy()->startOfDay(), $now);
+        $previousMonth = $this->revenueBetween(
+            $monthStart->copy()->subMonth(),
+            $monthStart->copy()->subSecond(),
+        );
+        $series = $this->dailySeries($now->copy()->subDays(13)->startOfDay(), $now);
+
+        $newClients = Company::query()
+            ->where('created_at', '>=', $monthStart->copy()->utc())
+            ->where('created_at', '<=', $now->copy()->utc())
+            ->count();
+
+        $upcoming = Company::query()
+            ->get()
+            ->map(fn (Company $company) => $this->clientRow($company))
+            ->filter(fn (array $row) => in_array($row['subscription_status'], ['active', 'past_due', 'expired'], true)
+                && $row['days_remaining'] !== null
+                && $row['days_remaining'] <= self::DUE_SOON_DAYS * 2)
+            ->sortBy('days_remaining')
+            ->take(5)
+            ->values()
+            ->all();
+
+        $collected = (float) $month['revenue']['total'];
+
+        return [
+            'currency' => $month['currency'],
+            'monthly_fee' => $month['monthly_fee'],
+            'mrr' => $month['mrr'],
+            'collected_today' => $today['total'],
+            'collected_this_month' => $collected,
+            'collected_previous_month' => $previousMonth['total'],
+            'uncollected_this_month' => max(0, round((float) $month['mrr'] - $collected, 2)),
+            'by_purpose' => $month['revenue']['by_purpose'],
+            'clients' => [...$month['clients'], 'new_this_month' => $newClients],
+            'due_soon' => $month['due_soon'],
+            'overdue' => $month['overdue'],
+            'upcoming_renewals' => $upcoming,
+            'series' => $series,
+        ];
+    }
+
+    /**
      * Client companies enriched with subscription lifecycle + billing.
      *
      * @param  array{search?: string, subscription_status?: string, expiring_within?: int, sort?: string}  $filters

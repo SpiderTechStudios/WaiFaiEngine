@@ -196,7 +196,7 @@ class AdminBillingTest extends TestCase
             ->json('data');
 
         $this->assertSame(20000.0, (float) $data['platform']['mrr']);
-        $this->assertSame(20000.0, (float) $data['platform']['revenue_this_month']);
+        $this->assertSame(20000.0, (float) $data['platform']['collected_this_month']);
         $this->assertSame(1, $data['platform']['clients']['active']);
     }
 

@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\InternetPlan;
 use App\Models\NetworkSession;
 use App\Models\PaymentTransaction;
+use App\Models\PlatformPayment;
 use App\Models\RevenueRecord;
 use App\Services\RouterService;
 use Illuminate\Support\Str;
@@ -14,12 +15,33 @@ use Tests\TestCase;
 
 class AdminDashboardTest extends TestCase
 {
-    public function test_platform_admin_can_view_dashboard_kpis(): void
+    public function test_admin_dashboard_reports_platform_management_stats_only(): void
     {
+        config(['platform.subscription_monthly' => 20000]);
+
         $admin = $this->createUser(['is_admin' => true, 'status' => 'active']);
         $owner = $this->createUser();
-        $company = $this->createCompanyFor($owner, 'owner', ['name' => 'Cafe Net']);
+        $company = $this->createCompanyFor($owner, 'owner', [
+            'name' => 'Cafe Net',
+            'subscription_status' => 'active',
+            'subscription_period_ends_at' => now()->addDays(15),
+        ]);
 
+        // A paid platform subscription (what the client pays WaiFai).
+        PlatformPayment::query()->create([
+            'company_id' => $company->id,
+            'type' => PlatformPayment::PURPOSE_PLATFORM_SUBSCRIPTION,
+            'purpose' => PlatformPayment::PURPOSE_PLATFORM_SUBSCRIPTION,
+            'direction' => PlatformPayment::DIRECTION_COLLECTION,
+            'reference' => 'PAY-'.strtoupper(Str::random(8)),
+            'amount' => 20000,
+            'currency' => 'TZS',
+            'status' => 'paid',
+            'initiated_at' => now(),
+            'paid_at' => now(),
+        ]);
+
+        // Client-side hotspot revenue / sessions must NOT drive the admin figures.
         $onlineRouter = app(RouterService::class)->create($company, [
             'gateway_type' => 'mikrotik',
             'name' => 'Online AP',
@@ -28,15 +50,6 @@ class AdminDashboardTest extends TestCase
             'api_password' => 'secret',
         ], $owner);
         $onlineRouter->forceFill(['last_seen_at' => now()->subMinutes(2)])->save();
-
-        $offlineRouter = app(RouterService::class)->create($company, [
-            'gateway_type' => 'mikrotik',
-            'name' => 'Offline AP',
-            'lan_ip' => '192.168.88.2',
-            'api_username' => 'admin',
-            'api_password' => 'secret',
-        ], $owner);
-        $offlineRouter->forceFill(['last_seen_at' => now()->subHours(2)])->save();
 
         $plan = InternetPlan::query()->create([
             'company_id' => $company->id,
@@ -76,7 +89,6 @@ class AdminDashboardTest extends TestCase
             'currency' => 'TZS',
             'status' => 'recognized',
             'recognized_at' => now(),
-            'description' => 'Payment '.$payment->reference,
         ]);
 
         $grant = AccessGrant::query()->create([
@@ -103,23 +115,23 @@ class AdminDashboardTest extends TestCase
             'started_at' => now(),
         ]);
 
-        $this->withHeaders($this->authHeaders($admin))
+        $response = $this->withHeaders($this->authHeaders($admin))
             ->getJson('/api/v1/admin/dashboard')
             ->assertOk()
             ->assertJsonPath('data.currency', 'TZS')
-            ->assertJsonPath('data.today_revenue', 1000)
-            ->assertJsonPath('data.today_payments', 1)
-            ->assertJsonPath('data.total_revenue', 1000)
-            ->assertJsonPath('data.active_sessions', 1)
-            ->assertJsonPath('data.routers_online', 1)
-            ->assertJsonPath('data.routers_offline', 1)
-            ->assertJsonPath('data.routers_total', 2)
-            ->assertJsonPath('data.recent_sessions.0.company_name', 'Cafe Net')
-            ->assertJsonPath('data.top_plans.0.name', '1 Hour')
-            ->assertJsonPath('data.top_plans.0.usage_count', 1)
+            ->assertJsonPath('data.platform.monthly_fee', 20000)
+            ->assertJsonPath('data.platform.mrr', 20000)
+            ->assertJsonPath('data.platform.collected_this_month', 20000)
+            ->assertJsonPath('data.platform.clients.total', 1)
+            ->assertJsonPath('data.platform.clients.active', 1)
+            ->assertJsonPath('data.platform.clients.new_this_month', 1)
             ->assertJsonPath('data.revenue_statistics.period_days', 14)
-            ->assertJsonPath('data.revenue_statistics.total', 1000)
             ->assertJsonCount(14, 'data.revenue_statistics.last_14_days');
+
+        // Client-level noise is gone.
+        $response->assertJsonMissingPath('data.today_revenue');
+        $response->assertJsonMissingPath('data.top_plans');
+        $response->assertJsonMissingPath('data.recent_sessions');
     }
 
     public function test_regular_client_cannot_view_admin_dashboard(): void
