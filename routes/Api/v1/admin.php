@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\AdminBillingController;
 use App\Http\Controllers\Api\V1\Admin\AdminDashboardController;
 use App\Http\Controllers\Api\V1\Admin\AdminExpenseTypeController;
 use App\Http\Controllers\Api\V1\Admin\AdminInstallationRequestController;
@@ -14,6 +15,13 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('admin')->middleware(['auth:sanctum', 'active.user', 'platform.admin'])->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'show']);
+
+    // Platform billing: what clients pay WaiFai + subscription lifecycle.
+    Route::get('/billing/summary', [AdminBillingController::class, 'summary']);
+    Route::get('/billing/clients', [AdminBillingController::class, 'clients']);
+    Route::get('/billing/clients/{company}', [AdminBillingController::class, 'client']);
+    Route::get('/billing/renewals', [AdminBillingController::class, 'renewals']);
+    Route::get('/billing/payments', [AdminBillingController::class, 'payments']);
 
     Route::get('/routers', [AdminRouterController::class, 'index']);
     Route::post('/routers', [AdminRouterController::class, 'store']);

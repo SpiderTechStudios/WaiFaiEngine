@@ -9850,6 +9850,779 @@
                 ]
             }
         },
+        "/admin/billing/summary": {
+            "get": {
+                "tags": [
+                    "Platform Admin"
+                ],
+                "summary": "Platform revenue and subscription-health overview",
+                "description": "What client companies pay WaiFai (subscriptions, renewals, installation, hardware) plus MRR, client status counts, due-soon and overdue subscriptions.",
+                "operationId": "adminBillingSummary",
+                "parameters": [
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "description": "Y-m-d, default start of current month",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "description": "Y-m-d, default today",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Summary",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "code": {
+                                            "type": "integer",
+                                            "example": 200
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Platform billing summary retrieved"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "currency": {
+                                                    "type": "string",
+                                                    "example": "TZS"
+                                                },
+                                                "monthly_fee": {
+                                                    "type": "number",
+                                                    "example": 20000
+                                                },
+                                                "mrr": {
+                                                    "description": "monthly fee × active clients",
+                                                    "type": "number",
+                                                    "example": 60000
+                                                },
+                                                "clients": {
+                                                    "properties": {
+                                                        "total": {
+                                                            "type": "integer",
+                                                            "example": 4
+                                                        },
+                                                        "active": {
+                                                            "type": "integer",
+                                                            "example": 3
+                                                        },
+                                                        "past_due": {
+                                                            "type": "integer",
+                                                            "example": 0
+                                                        },
+                                                        "expired": {
+                                                            "type": "integer",
+                                                            "example": 1
+                                                        },
+                                                        "suspended": {
+                                                            "type": "integer",
+                                                            "example": 0
+                                                        },
+                                                        "cancelled": {
+                                                            "type": "integer",
+                                                            "example": 0
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "due_soon": {
+                                                    "properties": {
+                                                        "days": {
+                                                            "type": "integer",
+                                                            "example": 7
+                                                        },
+                                                        "count": {
+                                                            "type": "integer",
+                                                            "example": 1
+                                                        },
+                                                        "amount": {
+                                                            "type": "number",
+                                                            "example": 20000
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "overdue": {
+                                                    "properties": {
+                                                        "count": {
+                                                            "type": "integer",
+                                                            "example": 1
+                                                        },
+                                                        "amount": {
+                                                            "type": "number",
+                                                            "example": 20000
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "revenue": {
+                                                    "properties": {
+                                                        "total": {
+                                                            "type": "number",
+                                                            "example": 90000
+                                                        },
+                                                        "count": {
+                                                            "type": "integer",
+                                                            "example": 3
+                                                        },
+                                                        "by_purpose": {
+                                                            "type": "object",
+                                                            "example": {
+                                                                "platform_subscription": {
+                                                                    "count": 1,
+                                                                    "total": 20000
+                                                                }
+                                                            }
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "previous_revenue": {
+                                                    "properties": {
+                                                        "total": {
+                                                            "type": "number",
+                                                            "example": 40000
+                                                        },
+                                                        "count": {
+                                                            "type": "integer",
+                                                            "example": 2
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "series": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "date": {
+                                                                "type": "string",
+                                                                "format": "date"
+                                                            },
+                                                            "total": {
+                                                                "type": "number"
+                                                            },
+                                                            "count": {
+                                                                "type": "integer"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "range": {
+                                                    "type": "object"
+                                                },
+                                                "generated_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/billing/clients": {
+            "get": {
+                "tags": [
+                    "Platform Admin"
+                ],
+                "summary": "Client companies with subscription lifecycle and billing",
+                "operationId": "adminBillingClients",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "subscription_status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "all",
+                                "active",
+                                "past_due",
+                                "expired",
+                                "suspended",
+                                "cancelled"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "expiring_within",
+                        "in": "query",
+                        "description": "Only clients whose period ends within N days",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "sort",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "period_ends",
+                                "name",
+                                "created"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Clients",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "code": {
+                                            "type": "integer",
+                                            "example": 200
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Clients retrieved"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "items": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "integer"
+                                                            },
+                                                            "name": {
+                                                                "type": "string"
+                                                            },
+                                                            "subdomain": {
+                                                                "type": "string",
+                                                                "nullable": true
+                                                            },
+                                                            "subscription_status": {
+                                                                "type": "string",
+                                                                "example": "active"
+                                                            },
+                                                            "subscription_period_ends_at": {
+                                                                "type": "string",
+                                                                "format": "date-time",
+                                                                "nullable": true
+                                                            },
+                                                            "days_remaining": {
+                                                                "type": "integer",
+                                                                "nullable": true
+                                                            },
+                                                            "is_active": {
+                                                                "type": "boolean"
+                                                            },
+                                                            "expiring_soon": {
+                                                                "type": "boolean"
+                                                            },
+                                                            "mrr": {
+                                                                "type": "number",
+                                                                "example": 20000
+                                                            },
+                                                            "currency": {
+                                                                "type": "string",
+                                                                "example": "TZS"
+                                                            },
+                                                            "payments_count": {
+                                                                "type": "integer",
+                                                                "example": 3
+                                                            },
+                                                            "total_paid": {
+                                                                "type": "number",
+                                                                "example": 60000
+                                                            },
+                                                            "last_payment_at": {
+                                                                "type": "string",
+                                                                "format": "date-time",
+                                                                "nullable": true
+                                                            },
+                                                            "last_payment_amount": {
+                                                                "type": "number",
+                                                                "nullable": true
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "meta": {
+                                                    "$ref": "#/components/schemas/PaginationMeta"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/billing/clients/{company}": {
+            "get": {
+                "tags": [
+                    "Platform Admin"
+                ],
+                "summary": "One client with subscription, usage and billing history",
+                "operationId": "adminBillingClient",
+                "parameters": [
+                    {
+                        "name": "company",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Client",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "code": {
+                                            "type": "integer",
+                                            "example": 200
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Client retrieved"
+                                        },
+                                        "data": {
+                                            "description": "Client row + subscription, usage and payments",
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/billing/renewals": {
+            "get": {
+                "tags": [
+                    "Platform Admin"
+                ],
+                "summary": "Clients whose subscription is due within N days (and overdue)",
+                "operationId": "adminBillingRenewals",
+                "parameters": [
+                    {
+                        "name": "days",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 7
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Renewals",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "code": {
+                                            "type": "integer",
+                                            "example": 200
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Renewals retrieved"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "days": {
+                                                    "type": "integer",
+                                                    "example": 7
+                                                },
+                                                "count": {
+                                                    "type": "integer",
+                                                    "example": 2
+                                                },
+                                                "items": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/billing/payments": {
+            "get": {
+                "tags": [
+                    "Platform Admin"
+                ],
+                "summary": "Platform revenue payments (subscriptions, renewals, installation, hardware)",
+                "operationId": "adminBillingPayments",
+                "parameters": [
+                    {
+                        "name": "company_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "purpose",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "platform_subscription",
+                                "subscription_renewal",
+                                "installation_request",
+                                "device_purchase",
+                                "marketplace_order"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "pending",
+                                "paid",
+                                "failed",
+                                "cancelled",
+                                "expired"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Platform payments",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "code": {
+                                            "type": "integer",
+                                            "example": 200
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Platform payments retrieved"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "items": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "integer"
+                                                            },
+                                                            "reference": {
+                                                                "type": "string"
+                                                            },
+                                                            "purpose": {
+                                                                "type": "string"
+                                                            },
+                                                            "company_id": {
+                                                                "type": "integer",
+                                                                "nullable": true
+                                                            },
+                                                            "company_name": {
+                                                                "type": "string",
+                                                                "nullable": true
+                                                            },
+                                                            "amount": {
+                                                                "type": "number"
+                                                            },
+                                                            "currency": {
+                                                                "type": "string"
+                                                            },
+                                                            "status": {
+                                                                "type": "string"
+                                                            },
+                                                            "paid_at": {
+                                                                "type": "string",
+                                                                "format": "date-time",
+                                                                "nullable": true
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "meta": {
+                                                    "$ref": "#/components/schemas/PaginationMeta"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/portal/{subdomain}": {
             "get": {
                 "tags": [
@@ -13706,7 +14479,89 @@
                         "type": "string",
                         "example": "TZS"
                     },
+                    "platform": {
+                        "description": "Platform revenue: what client companies pay WaiFai",
+                        "properties": {
+                            "currency": {
+                                "type": "string",
+                                "example": "TZS"
+                            },
+                            "monthly_fee": {
+                                "type": "number",
+                                "example": 20000
+                            },
+                            "mrr": {
+                                "type": "number",
+                                "example": 60000
+                            },
+                            "clients": {
+                                "properties": {
+                                    "total": {
+                                        "type": "integer",
+                                        "example": 4
+                                    },
+                                    "active": {
+                                        "type": "integer",
+                                        "example": 3
+                                    },
+                                    "past_due": {
+                                        "type": "integer",
+                                        "example": 0
+                                    },
+                                    "expired": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "suspended": {
+                                        "type": "integer",
+                                        "example": 0
+                                    },
+                                    "cancelled": {
+                                        "type": "integer",
+                                        "example": 0
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "due_soon": {
+                                "properties": {
+                                    "days": {
+                                        "type": "integer",
+                                        "example": 7
+                                    },
+                                    "count": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "amount": {
+                                        "type": "number",
+                                        "example": 20000
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "overdue": {
+                                "properties": {
+                                    "count": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "amount": {
+                                        "type": "number",
+                                        "example": 20000
+                                    }
+                                },
+                                "type": "object"
+                            },
+                            "revenue_this_month": {
+                                "type": "number",
+                                "example": 80000
+                            }
+                        },
+                        "type": "object"
+                    },
                     "today_revenue": {
+                        "description": "Client (tenant) hotspot revenue today",
                         "type": "number",
                         "example": 15000
                     },

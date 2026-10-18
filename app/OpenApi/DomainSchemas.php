@@ -339,7 +339,30 @@ use OpenApi\Attributes as OA;
     schema: 'AdminDashboardData',
     properties: [
         new OA\Property(property: 'currency', type: 'string', example: 'TZS'),
-        new OA\Property(property: 'today_revenue', type: 'number', example: 15000),
+        new OA\Property(property: 'platform', type: 'object', description: 'Platform revenue: what client companies pay WaiFai', properties: [
+            new OA\Property(property: 'currency', type: 'string', example: 'TZS'),
+            new OA\Property(property: 'monthly_fee', type: 'number', example: 20000),
+            new OA\Property(property: 'mrr', type: 'number', example: 60000),
+            new OA\Property(property: 'clients', type: 'object', properties: [
+                new OA\Property(property: 'total', type: 'integer', example: 4),
+                new OA\Property(property: 'active', type: 'integer', example: 3),
+                new OA\Property(property: 'past_due', type: 'integer', example: 0),
+                new OA\Property(property: 'expired', type: 'integer', example: 1),
+                new OA\Property(property: 'suspended', type: 'integer', example: 0),
+                new OA\Property(property: 'cancelled', type: 'integer', example: 0),
+            ]),
+            new OA\Property(property: 'due_soon', type: 'object', properties: [
+                new OA\Property(property: 'days', type: 'integer', example: 7),
+                new OA\Property(property: 'count', type: 'integer', example: 1),
+                new OA\Property(property: 'amount', type: 'number', example: 20000),
+            ]),
+            new OA\Property(property: 'overdue', type: 'object', properties: [
+                new OA\Property(property: 'count', type: 'integer', example: 1),
+                new OA\Property(property: 'amount', type: 'number', example: 20000),
+            ]),
+            new OA\Property(property: 'revenue_this_month', type: 'number', example: 80000),
+        ]),
+        new OA\Property(property: 'today_revenue', type: 'number', example: 15000, description: 'Client (tenant) hotspot revenue today'),
         new OA\Property(property: 'today_payments', type: 'integer', example: 12),
         new OA\Property(property: 'total_revenue', type: 'number', example: 250000),
         new OA\Property(property: 'active_sessions', type: 'integer', example: 8),

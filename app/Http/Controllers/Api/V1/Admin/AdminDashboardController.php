@@ -8,6 +8,7 @@ use App\Models\NetworkDevice;
 use App\Models\NetworkSession;
 use App\Models\PaymentTransaction;
 use App\Models\RevenueRecord;
+use App\Services\PlatformBillingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -15,6 +16,8 @@ use Illuminate\Support\Facades\DB;
 
 class AdminDashboardController extends Controller
 {
+    public function __construct(private PlatformBillingService $billing) {}
+
     public function show(Request $request): JsonResponse
     {
         $today = Carbon::today();
@@ -111,8 +114,24 @@ class AdminDashboardController extends Controller
 
         $periodTotal = (float) $last14Days->sum('total');
 
+        $monthStart = Carbon::now()->startOfMonth();
+        $platform = $this->billing->summary($monthStart, Carbon::now());
+
         return $this->success([
             'currency' => $currency,
+
+            // Platform revenue: what client companies pay WaiFai.
+            'platform' => [
+                'currency' => $platform['currency'],
+                'monthly_fee' => $platform['monthly_fee'],
+                'mrr' => $platform['mrr'],
+                'clients' => $platform['clients'],
+                'due_soon' => $platform['due_soon'],
+                'overdue' => $platform['overdue'],
+                'revenue_this_month' => $platform['revenue']['total'],
+            ],
+
+            // Client (tenant) activity across every company.
             'today_revenue' => $todayRevenue,
             'today_payments' => $todayPayments,
             'total_revenue' => $totalRevenue,

@@ -48,6 +48,15 @@ class PlatformPayment extends Model
 
     public const STATUS_EXPIRED = 'expired';
 
+    /** Purposes that represent money WaiFai collects from the client (platform revenue). */
+    public const REVENUE_PURPOSES = [
+        self::PURPOSE_PLATFORM_SUBSCRIPTION,
+        self::PURPOSE_SUBSCRIPTION_RENEWAL,
+        self::PURPOSE_INSTALLATION_REQUEST,
+        self::PURPOSE_DEVICE_PURCHASE,
+        self::PURPOSE_MARKETPLACE_ORDER,
+    ];
+
     protected $fillable = [
         'payment_provider_id',
         'provider_slug',

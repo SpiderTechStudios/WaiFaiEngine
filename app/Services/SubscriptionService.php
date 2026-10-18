@@ -73,6 +73,47 @@ class SubscriptionService
     }
 
     /**
+     * The status a company should currently show, computed from its period end and
+     * grace window without writing to the row (safe for reporting/summaries).
+     */
+    public function effectiveStatus(Company $company): string
+    {
+        $status = (string) $company->subscription_status;
+
+        if (in_array($status, ['cancelled', 'suspended'], true)) {
+            return $status;
+        }
+
+        $ends = $company->subscription_period_ends_at;
+
+        if (! $ends) {
+            return $status !== '' ? $status : 'active';
+        }
+
+        if ($ends->isFuture()) {
+            return 'active';
+        }
+
+        return $ends->copy()->addDays(PlatformPricing::subscriptionGraceDays())->isFuture()
+            ? 'past_due'
+            : 'expired';
+    }
+
+    /**
+     * Whole days until the subscription period ends (negative when overdue).
+     */
+    public function daysRemaining(Company $company): ?int
+    {
+        $ends = $company->subscription_period_ends_at;
+
+        if (! $ends) {
+            return null;
+        }
+
+        return (int) floor(($ends->getTimestamp() - now()->getTimestamp()) / 86400);
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function summary(Company $company): array
