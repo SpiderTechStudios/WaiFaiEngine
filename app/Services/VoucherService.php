@@ -321,6 +321,12 @@ class VoucherService
             ->first();
 
         if ($plan) {
+            if ($plan->status !== InternetPlan::STATUS_ACTIVE) {
+                throw ValidationException::withMessages([
+                    'package_id' => ['This package is inactive. Activate it or choose another package.'],
+                ]);
+            }
+
             return $plan;
         }
 
