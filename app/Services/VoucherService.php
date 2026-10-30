@@ -7,6 +7,8 @@ use App\Models\Company;
 use App\Models\Customer;
 use App\Models\InternetPlan;
 use App\Models\NetworkDevice;
+use App\Models\PaymentTransaction;
+use App\Models\PlatformPayment;
 use App\Models\RevenueRecord;
 use App\Models\User;
 use App\Models\Voucher;
@@ -137,7 +139,13 @@ class VoucherService
                 ]);
             }
 
-            return $this->performConsume($voucher, $data, null);
+            $result = $this->performConsume($voucher, $data, null);
+
+            // The customer paid with a voucher, so any unpaid mobile-money attempt
+            // for them is abandoned — expire it instead of leaving it "pending".
+            $this->expirePendingPaymentsFor($result['customer']);
+
+            return $result;
         });
     }
 
@@ -231,10 +239,44 @@ class VoucherService
     }
 
     /**
+     * Expire this customer's unpaid mobile-money attempts (and their linked
+     * portal collections) after they redeem a voucher.
+     */
+    private function expirePendingPaymentsFor(Customer $customer): void
+    {
+        $transactions = PaymentTransaction::query()
+            ->where('company_id', $customer->company_id)
+            ->where('customer_id', $customer->id)
+            ->whereIn('status', ['pending', 'processing'])
+            ->get();
+
+        foreach ($transactions as $transaction) {
+            $metadata = is_array($transaction->metadata) ? $transaction->metadata : [];
+            $metadata['expired_at'] = now()->toIso8601String();
+            $metadata['expiry_reason'] = 'voucher_redeemed';
+
+            $transaction->forceFill([
+                'status' => 'expired',
+                'metadata' => $metadata,
+            ])->save();
+
+            $platformId = (int) ($metadata['platform_payment_id'] ?? 0);
+            if ($platformId > 0) {
+                PlatformPayment::query()
+                    ->whereKey($platformId)
+                    ->where('status', PlatformPayment::STATUS_PENDING)
+                    ->update([
+                        'status' => PlatformPayment::STATUS_EXPIRED,
+                        'cancelled_at' => now(),
+                    ]);
+            }
+        }
+    }
+
+    /**
      * @param  array<string, mixed>  $data
      */
-    private function resolveCustomer(int $companyId, array $data): Customer
-    {
+    private function resolveCustomer(int $companyId, array $data): Customer    {
         if (! empty($data['customer_id'])) {
             return Customer::query()
                 ->where('company_id', $companyId)

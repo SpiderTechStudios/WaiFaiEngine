@@ -3,8 +3,11 @@
 namespace Tests\Feature;
 
 use App\Models\Company;
+use App\Models\Customer;
 use App\Models\InternetPlan;
 use App\Models\NetworkDevice;
+use App\Models\PaymentTransaction;
+use App\Models\PlatformPayment;
 use App\Models\User;
 use App\Services\RouterService;
 use Illuminate\Support\Carbon;
@@ -97,6 +100,118 @@ class VoucherApiTest extends TestCase
 
         $this->assertTrue($expiresAt->equalTo(now()->addHours(6)));
         $this->assertNotSame($other->id, $redemption->json('data.package.id'));
+    }
+
+    public function test_voucher_redemption_expires_the_customers_pending_payment(): void
+    {
+        $plan = $this->plan('masaa 6', 500, 6, 'HOURS');
+
+        $customer = Customer::query()->create([
+            'company_id' => $this->company->id,
+            'name' => 'Pending Customer',
+            'phone' => '0712345678',
+            'status' => 'active',
+        ]);
+
+        $platform = PlatformPayment::query()->create([
+            'company_id' => $this->company->id,
+            'type' => PlatformPayment::TYPE_HOTSPOT_PORTAL,
+            'purpose' => PlatformPayment::PURPOSE_HOTSPOT_PORTAL,
+            'direction' => PlatformPayment::DIRECTION_COLLECTION,
+            'reference' => 'HOT-'.Str::upper(Str::random(10)),
+            'amount' => 500,
+            'currency' => 'TZS',
+            'status' => PlatformPayment::STATUS_PENDING,
+            'initiated_at' => now(),
+        ]);
+
+        $pending = PaymentTransaction::query()->create([
+            'company_id' => $this->company->id,
+            'customer_id' => $customer->id,
+            'internet_plan_id' => $plan->id,
+            'reference' => 'PAY-'.Str::upper(Str::random(10)),
+            'amount' => 500,
+            'currency' => 'TZS',
+            'payment_method' => 'Mpesa',
+            'status' => 'pending',
+            'initiated_at' => now(),
+            'metadata' => ['platform_payment_id' => $platform->id],
+        ]);
+
+        $paid = PaymentTransaction::query()->create([
+            'company_id' => $this->company->id,
+            'customer_id' => $customer->id,
+            'internet_plan_id' => $plan->id,
+            'reference' => 'PAY-'.Str::upper(Str::random(10)),
+            'amount' => 500,
+            'currency' => 'TZS',
+            'payment_method' => 'Mpesa',
+            'status' => 'paid',
+            'initiated_at' => now(),
+            'paid_at' => now(),
+        ]);
+
+        $code = $this->withHeaders($this->headers)
+            ->postJson('/api/v1/vouchers', [
+                'router_id' => $this->router->id,
+                'package_id' => $plan->id,
+                'quantity' => 1,
+            ])
+            ->assertCreated()
+            ->json('data.items.0.code');
+
+        $this->postJson('/api/v1/portal/voucher-cafe/vouchers/redeem', [
+            'code' => $code,
+            'customer_name' => 'Pending Customer',
+            'customer_phone' => '0712345678',
+        ])->assertCreated();
+
+        $this->assertSame('expired', $pending->fresh()->status);
+        $this->assertSame(PlatformPayment::STATUS_EXPIRED, $platform->fresh()->status);
+        $this->assertSame('paid', $paid->fresh()->status);
+    }
+
+    public function test_expire_pending_payments_command_expires_stale_attempts_only(): void
+    {
+        $stale = PaymentTransaction::query()->create([
+            'company_id' => $this->company->id,
+            'reference' => 'PAY-'.Str::upper(Str::random(10)),
+            'amount' => 500,
+            'currency' => 'TZS',
+            'payment_method' => 'Mpesa',
+            'status' => 'pending',
+            'initiated_at' => now()->subHours(2),
+        ]);
+        $stale->forceFill(['created_at' => now()->subHours(2)])->save();
+
+        $recent = PaymentTransaction::query()->create([
+            'company_id' => $this->company->id,
+            'reference' => 'PAY-'.Str::upper(Str::random(10)),
+            'amount' => 500,
+            'currency' => 'TZS',
+            'payment_method' => 'Mpesa',
+            'status' => 'pending',
+            'initiated_at' => now(),
+        ]);
+
+        $oldPortal = PlatformPayment::query()->create([
+            'company_id' => $this->company->id,
+            'type' => PlatformPayment::TYPE_HOTSPOT_PORTAL,
+            'purpose' => PlatformPayment::PURPOSE_HOTSPOT_PORTAL,
+            'direction' => PlatformPayment::DIRECTION_COLLECTION,
+            'reference' => 'HOT-'.Str::upper(Str::random(10)),
+            'amount' => 500,
+            'currency' => 'TZS',
+            'status' => PlatformPayment::STATUS_PENDING,
+            'initiated_at' => now()->subHours(2),
+        ]);
+        $oldPortal->forceFill(['created_at' => now()->subHours(2)])->save();
+
+        $this->artisan('payments:expire-pending')->assertSuccessful();
+
+        $this->assertSame('expired', $stale->fresh()->status);
+        $this->assertSame('pending', $recent->fresh()->status);
+        $this->assertSame(PlatformPayment::STATUS_EXPIRED, $oldPortal->fresh()->status);
     }
 
     private function plan(

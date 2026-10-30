@@ -47,4 +47,11 @@ return [
     | Paid enrollment payments also auto-complete account creation.
     */
     'payment_auto_paid' => (bool) env('PLATFORM_PAYMENT_AUTO_PAID', false),
+
+    /*
+    | How long an unpaid customer/portal payment may stay "pending" before it is
+    | expired automatically. Abandoned mobile-money attempts otherwise pile up
+    | forever and inflate the pending counts on the dashboard/payments screens.
+    */
+    'pending_payment_ttl_minutes' => (int) env('PLATFORM_PENDING_PAYMENT_TTL_MINUTES', 30),
 ];
