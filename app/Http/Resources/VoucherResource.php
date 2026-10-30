@@ -30,6 +30,8 @@ class VoucherResource extends JsonResource
                 'id' => $this->internetPlan?->id,
                 'name' => $this->internetPlan?->name,
                 'price' => $this->internetPlan?->price,
+                'duration' => $this->internetPlan?->duration,
+                'duration_unit' => $this->internetPlan?->duration_unit,
             ]),
             'created_at' => $this->created_at,
         ];
