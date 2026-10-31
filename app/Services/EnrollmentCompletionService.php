@@ -105,7 +105,9 @@ class EnrollmentCompletionService
                 'subdomain' => $enrollment->portal_subdomain,
                 'subscription_status' => 'active',
                 'activated_at' => now(),
-                'subscription_period_ends_at' => now()->addMonth(),
+                // The first month is free; the payment made at registration
+                // therefore covers the second month.
+                'subscription_period_ends_at' => now()->addMonths(2),
             ]);
 
             $payment->forceFill(['company_id' => $company->id])->save();
