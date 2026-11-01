@@ -26,10 +26,10 @@ Route::post('/webhooks/payouts/{provider}', [PaymentProviderWebhookController::c
 Route::post('/webhooks/platform-payments', PlatformPaymentWebhookController::class)
     ->middleware('throttle:120,1');
 
-Route::post('/auth/login', [SessionController::class, 'login'])->middleware('throttle:5,1');
+Route::post('/auth/login', [SessionController::class, 'login'])->middleware('throttle:login');
 
-Route::post('/auth/forgot-password', [PasswordController::class, 'forgot'])->middleware('throttle:5,1');
-Route::post('/auth/reset-password', [PasswordController::class, 'reset'])->middleware('throttle:5,1');
+Route::post('/auth/forgot-password', [PasswordController::class, 'forgot'])->middleware('throttle:forgot-password');
+Route::post('/auth/reset-password', [PasswordController::class, 'reset'])->middleware('throttle:reset-password');
 
 Route::get('/auth/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
     ->middleware(['signed'])

@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -83,6 +84,19 @@ return Application::configure(basePath: dirname(__DIR__))
                     'code' => 404,
                     'message' => ApiErrorMessage::from($e, 'Resource not found.'),
                 ], 404);
+            }
+        });
+
+        $exceptions->render(function (ThrottleRequestsException $e, Request $request) {
+            if ($request->is('api/*')) {
+                $headers = $e->getHeaders();
+
+                return response()->json([
+                    'status' => false,
+                    'code' => 429,
+                    'message' => 'Too many attempts. Please wait a moment and try again.',
+                    'retry_after' => (int) ($headers['Retry-After'] ?? 60),
+                ], 429, $headers);
             }
         });
 

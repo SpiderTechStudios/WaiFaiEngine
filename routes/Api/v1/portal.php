@@ -7,7 +7,7 @@ Route::prefix('portal/{subdomain}')
     ->middleware(['portal.company'])
     ->group(function () {
         Route::get('/', [PortalController::class, 'bootstrap'])
-            ->middleware('throttle:60,1');
+            ->middleware('throttle:120,1');
 
         Route::post('/payments', [PortalController::class, 'createPayment'])
             ->middleware('throttle:portal-payment-create');
@@ -16,14 +16,14 @@ Route::prefix('portal/{subdomain}')
             ->middleware('throttle:portal-payment-status');
 
         Route::post('/vouchers/redeem', [PortalController::class, 'redeemVoucher'])
-            ->middleware('throttle:10,1');
+            ->middleware('throttle:portal-voucher');
 
         Route::post('/offers/claim', [PortalController::class, 'claimOffer'])
-            ->middleware('throttle:10,1');
+            ->middleware('throttle:portal-offer');
 
         Route::post('/sessions', [PortalController::class, 'createSession'])
-            ->middleware('throttle:20,1');
+            ->middleware('throttle:portal-session');
 
         Route::post('/restore', [PortalController::class, 'restore'])
-            ->middleware('throttle:10,1');
+            ->middleware('throttle:portal-restore');
     });

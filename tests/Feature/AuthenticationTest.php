@@ -231,6 +231,35 @@ class AuthenticationTest extends TestCase
         ])->assertStatus(422);
     }
 
+    public function test_login_attempts_are_limited_per_account_not_per_ip(): void
+    {
+        for ($i = 1; $i <= 6; $i++) {
+            $this->postJson('/api/v1/auth/login', [
+                'email' => "staff{$i}@example.com",
+                'password' => 'wrong-password',
+            ])->assertStatus(422);
+        }
+    }
+
+    public function test_login_is_rate_limited_per_account_with_friendly_429(): void
+    {
+        for ($i = 0; $i < 10; $i++) {
+            $this->postJson('/api/v1/auth/login', [
+                'email' => 'jane@example.com',
+                'password' => 'wrong-password',
+            ])->assertStatus(422);
+        }
+
+        $this->postJson('/api/v1/auth/login', [
+            'email' => 'jane@example.com',
+            'password' => 'wrong-password',
+        ])->assertStatus(429)
+            ->assertHeader('Retry-After')
+            ->assertJsonPath('code', 429)
+            ->assertJsonPath('message', 'Too many attempts. Please wait a moment and try again.')
+            ->assertJsonPath('retry_after', fn ($value) => is_int($value) && $value > 0);
+    }
+
     public function test_email_can_be_verified(): void
     {
         $user = $this->createUser([
