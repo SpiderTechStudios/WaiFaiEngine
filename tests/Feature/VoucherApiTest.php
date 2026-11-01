@@ -214,6 +214,57 @@ class VoucherApiTest extends TestCase
         $this->assertSame(PlatformPayment::STATUS_EXPIRED, $oldPortal->fresh()->status);
     }
 
+    public function test_selected_vouchers_can_be_downloaded_as_a_word_document(): void
+    {
+        $plan = $this->plan('masaa 6', 500, 6, 'HOURS');
+
+        $items = $this->withHeaders($this->headers)
+            ->postJson('/api/v1/vouchers', [
+                'router_id' => $this->router->id,
+                'package_id' => $plan->id,
+                'quantity' => 2,
+                'note' => 'Cash sale',
+            ])
+            ->assertCreated()
+            ->json('data.items');
+
+        $response = $this->withHeaders($this->headers)
+            ->postJson('/api/v1/vouchers/export/word', [
+                'ids' => array_column($items, 'id'),
+            ])
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+
+        $binary = (string) $response->getContent();
+        $this->assertSame('PK', substr($binary, 0, 2));
+
+        $path = (string) tempnam(sys_get_temp_dir(), 'voucher-docx-');
+        file_put_contents($path, $binary);
+
+        $zip = new \ZipArchive;
+        $this->assertTrue($zip->open($path) === true);
+
+        $document = (string) $zip->getFromName('word/document.xml');
+        $zip->close();
+        @unlink($path);
+
+        $this->assertNotFalse(simplexml_load_string($document));
+
+        foreach ($items as $item) {
+            $this->assertStringContainsString((string) $item['code'], $document);
+        }
+
+        $this->assertStringContainsString('masaa 6', $document);
+        $this->assertStringContainsString('Cash sale', $document);
+    }
+
+    public function test_word_export_returns_not_found_for_unknown_vouchers(): void
+    {
+        $this->withHeaders($this->headers)
+            ->postJson('/api/v1/vouchers/export/word', ['ids' => [999999]])
+            ->assertStatus(404);
+    }
+
     private function plan(
         string $name,
         float $price,

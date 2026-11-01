@@ -4,13 +4,16 @@ namespace App\Http\Controllers\Api\V1\Operations;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Operations\ConsumeVoucherRequest;
+use App\Http\Requests\Operations\ExportVouchersWordRequest;
 use App\Http\Requests\Operations\StoreVoucherRequest;
 use App\Http\Resources\CustomerResource;
 use App\Http\Resources\VoucherResource;
 use App\Models\Voucher;
 use App\Services\VoucherService;
+use App\Services\VoucherWordExporter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class VoucherController extends Controller
 {
@@ -47,6 +50,27 @@ class VoucherController extends Controller
             'quantity' => $vouchers->count(),
             'items' => VoucherResource::collection($vouchers)->resolve(),
         ], 'Vouchers created', 201);
+    }
+
+    public function exportWord(ExportVouchersWordRequest $request, VoucherWordExporter $exporter): Response
+    {
+        $vouchers = Voucher::query()
+            ->with(['router', 'internetPlan'])
+            ->where('company_id', $this->currentCompany()->id)
+            ->whereIn('id', $request->validated()['ids'])
+            ->orderBy('id')
+            ->get();
+
+        if ($vouchers->isEmpty()) {
+            abort(404, 'No vouchers to export.');
+        }
+
+        $binary = $exporter->export($this->currentCompany(), $vouchers);
+
+        return response($binary, 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'Content-Disposition' => 'attachment; filename="'.$exporter->filename().'"',
+        ]);
     }
 
     public function revoke(Request $request, Voucher $voucher): JsonResponse

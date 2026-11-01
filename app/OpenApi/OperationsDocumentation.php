@@ -573,6 +573,32 @@ class OperationsDocumentation
     public function createVouchers(): void {}
 
     #[OA\Post(
+        path: '/vouchers/export/word',
+        operationId: 'exportVouchersWord',
+        tags: ['Vouchers'],
+        summary: 'Download selected vouchers as a Word (.docx) document',
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(required: ['ids'], properties: [
+            new OA\Property(property: 'ids', type: 'array', items: new OA\Items(type: 'integer'), example: [1, 2, 3]),
+        ])),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Word document',
+                content: new OA\MediaType(
+                    mediaType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    schema: new OA\Schema(type: 'string', format: 'binary'),
+                ),
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 404, description: 'No matching vouchers', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
+            new OA\Response(response: 422, description: 'Validation error', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
+        ]
+    )]
+    public function exportVouchersWord(): void {}
+
+    #[OA\Post(
         path: '/vouchers/{voucher}/revoke',
         operationId: 'revokeVoucher',
         tags: ['Vouchers'],
