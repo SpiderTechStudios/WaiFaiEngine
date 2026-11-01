@@ -54,12 +54,39 @@ class VoucherController extends Controller
 
     public function exportWord(ExportVouchersWordRequest $request, VoucherWordExporter $exporter): Response
     {
-        $vouchers = Voucher::query()
+        $data = $request->validated();
+
+        $query = Voucher::query()
             ->with(['router', 'internetPlan'])
-            ->where('company_id', $this->currentCompany()->id)
-            ->whereIn('id', $request->validated()['ids'])
-            ->orderBy('id')
-            ->get();
+            ->where('company_id', $this->currentCompany()->id);
+
+        if (! empty($data['ids'])) {
+            $query->whereIn('id', $data['ids']);
+        }
+
+        if (! empty($data['status'])) {
+            $query->where('status', $data['status']);
+        }
+
+        if (! empty($data['router_id'])) {
+            $query->where('network_device_id', $data['router_id']);
+        }
+
+        if (! empty($data['package_id'])) {
+            $query->where('internet_plan_id', $data['package_id']);
+        }
+
+        if (! empty($data['search'])) {
+            $term = '%'.$data['search'].'%';
+
+            $query->where(function ($builder) use ($term) {
+                $builder->where('code', 'like', $term)
+                    ->orWhere('note', 'like', $term)
+                    ->orWhereHas('internetPlan', fn ($plan) => $plan->where('name', 'like', $term));
+            });
+        }
+
+        $vouchers = $query->orderBy('id')->limit(5000)->get();
 
         if ($vouchers->isEmpty()) {
             abort(404, 'No vouchers to export.');

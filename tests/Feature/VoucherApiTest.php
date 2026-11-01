@@ -235,11 +235,62 @@ class VoucherApiTest extends TestCase
             ->assertOk()
             ->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
 
-        $binary = (string) $response->getContent();
-        $this->assertSame('PK', substr($binary, 0, 2));
+        $this->assertSame('PK', substr((string) $response->getContent(), 0, 2));
 
+        $document = $this->documentXml($response);
+
+        foreach ($items as $item) {
+            $this->assertStringContainsString((string) $item['code'], $document);
+        }
+
+        $this->assertStringContainsString('masaa 6', $document);
+        $this->assertStringContainsString('Cash sale', $document);
+    }
+
+    public function test_word_export_can_filter_by_package(): void
+    {
+        $sixHours = $this->plan('masaa 6', 500, 6, 'HOURS');
+        $oneDay = $this->plan('masaa 24', 1000, 24, 'HOURS');
+
+        $sixHourCode = $this->withHeaders($this->headers)
+            ->postJson('/api/v1/vouchers', [
+                'router_id' => $this->router->id,
+                'package_id' => $sixHours->id,
+                'quantity' => 1,
+            ])
+            ->assertCreated()
+            ->json('data.items.0.code');
+
+        $oneDayCode = $this->withHeaders($this->headers)
+            ->postJson('/api/v1/vouchers', [
+                'router_id' => $this->router->id,
+                'package_id' => $oneDay->id,
+                'quantity' => 1,
+            ])
+            ->assertCreated()
+            ->json('data.items.0.code');
+
+        $document = $this->documentXml(
+            $this->withHeaders($this->headers)
+                ->postJson('/api/v1/vouchers/export/word', ['package_id' => $sixHours->id])
+                ->assertOk(),
+        );
+
+        $this->assertStringContainsString((string) $sixHourCode, $document);
+        $this->assertStringNotContainsString((string) $oneDayCode, $document);
+    }
+
+    public function test_word_export_returns_not_found_for_unknown_vouchers(): void
+    {
+        $this->withHeaders($this->headers)
+            ->postJson('/api/v1/vouchers/export/word', ['ids' => [999999]])
+            ->assertStatus(404);
+    }
+
+    private function documentXml(\Illuminate\Testing\TestResponse $response): string
+    {
         $path = (string) tempnam(sys_get_temp_dir(), 'voucher-docx-');
-        file_put_contents($path, $binary);
+        file_put_contents($path, (string) $response->getContent());
 
         $zip = new \ZipArchive;
         $this->assertTrue($zip->open($path) === true);
@@ -250,19 +301,7 @@ class VoucherApiTest extends TestCase
 
         $this->assertNotFalse(simplexml_load_string($document));
 
-        foreach ($items as $item) {
-            $this->assertStringContainsString((string) $item['code'], $document);
-        }
-
-        $this->assertStringContainsString('masaa 6', $document);
-        $this->assertStringContainsString('Cash sale', $document);
-    }
-
-    public function test_word_export_returns_not_found_for_unknown_vouchers(): void
-    {
-        $this->withHeaders($this->headers)
-            ->postJson('/api/v1/vouchers/export/word', ['ids' => [999999]])
-            ->assertStatus(404);
+        return $document;
     }
 
     private function plan(

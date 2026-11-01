@@ -578,8 +578,12 @@ class OperationsDocumentation
         tags: ['Vouchers'],
         summary: 'Download selected vouchers as a Word (.docx) document',
         security: [['sanctum' => []]],
-        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(required: ['ids'], properties: [
-            new OA\Property(property: 'ids', type: 'array', items: new OA\Items(type: 'integer'), example: [1, 2, 3]),
+        requestBody: new OA\RequestBody(content: new OA\JsonContent(properties: [
+            new OA\Property(property: 'ids', type: 'array', items: new OA\Items(type: 'integer'), example: [1, 2, 3], description: 'Export exactly these voucher ids. Omit to export by filters (or all).'),
+            new OA\Property(property: 'status', type: 'string', enum: ['active', 'expired', 'revoked'], nullable: true),
+            new OA\Property(property: 'router_id', type: 'integer', nullable: true),
+            new OA\Property(property: 'package_id', type: 'integer', nullable: true),
+            new OA\Property(property: 'search', type: 'string', nullable: true, description: 'Matches code, note, or package name.'),
         ])),
         responses: [
             new OA\Response(

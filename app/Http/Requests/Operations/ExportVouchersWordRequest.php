@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Operations;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class ExportVouchersWordRequest extends FormRequest
 {
@@ -17,8 +18,12 @@ class ExportVouchersWordRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'ids' => ['required', 'array', 'min:1', 'max:1000'],
+            'ids' => ['nullable', 'array', 'max:1000'],
             'ids.*' => ['integer'],
+            'status' => ['nullable', Rule::in(['active', 'expired', 'revoked'])],
+            'router_id' => ['nullable', 'integer'],
+            'package_id' => ['nullable', 'integer'],
+            'search' => ['nullable', 'string', 'max:100'],
         ];
     }
 }
