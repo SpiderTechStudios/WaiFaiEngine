@@ -9,6 +9,7 @@ use App\Models\NetworkDevice;
 use App\Models\PaymentTransaction;
 use App\Models\PlatformPayment;
 use App\Models\User;
+use App\Models\Voucher;
 use App\Services\RouterService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -285,6 +286,169 @@ class VoucherApiTest extends TestCase
         $this->withHeaders($this->headers)
             ->postJson('/api/v1/vouchers/export/word', ['ids' => [999999]])
             ->assertStatus(404);
+    }
+
+    public function test_new_vouchers_are_single_use(): void
+    {
+        $plan = $this->plan('masaa 6', 500, 6, 'HOURS');
+
+        $item = $this->withHeaders($this->headers)
+            ->postJson('/api/v1/vouchers', [
+                'router_id' => $this->router->id,
+                'package_id' => $plan->id,
+                'quantity' => 1,
+                'max_uses' => 5,
+            ])
+            ->assertCreated()
+            ->json('data.items.0');
+
+        $this->assertSame(1, $item['max_uses']);
+        $this->assertFalse($item['is_used']);
+        $this->assertSame(1, $item['remaining_uses']);
+    }
+
+    public function test_a_voucher_cannot_be_redeemed_twice(): void
+    {
+        $plan = $this->plan('masaa 6', 500, 6, 'HOURS');
+
+        $code = $this->withHeaders($this->headers)
+            ->postJson('/api/v1/vouchers', [
+                'router_id' => $this->router->id,
+                'package_id' => $plan->id,
+                'quantity' => 1,
+            ])
+            ->assertCreated()
+            ->json('data.items.0.code');
+
+        $this->postJson('/api/v1/portal/voucher-cafe/vouchers/redeem', [
+            'code' => $code,
+            'customer_name' => 'First Customer',
+            'customer_phone' => '0712345678',
+        ])->assertCreated();
+
+        $this->postJson('/api/v1/portal/voucher-cafe/vouchers/redeem', [
+            'code' => $code,
+            'customer_name' => 'First Customer',
+            'customer_phone' => '0712345678',
+        ])->assertStatus(422)
+            ->assertJsonPath('data.voucher.0', 'This voucher has no remaining uses.');
+
+        $this->postJson('/api/v1/portal/voucher-cafe/vouchers/redeem', [
+            'code' => $code,
+            'customer_name' => 'Someone Else',
+            'customer_phone' => '0755555555',
+        ])->assertStatus(422);
+    }
+
+    public function test_legacy_multi_use_voucher_cannot_be_reused_by_the_same_customer(): void
+    {
+        $plan = $this->plan('masaa 6', 500, 6, 'HOURS');
+        $code = '555111';
+
+        Voucher::query()->create([
+            'company_id' => $this->company->id,
+            'network_device_id' => $this->router->id,
+            'internet_plan_id' => $plan->id,
+            'code' => $code,
+            'max_uses' => 3,
+            'uses_count' => 0,
+            'status' => Voucher::STATUS_ACTIVE,
+            'created_by' => $this->owner->id,
+        ]);
+
+        $this->postJson('/api/v1/portal/voucher-cafe/vouchers/redeem', [
+            'code' => $code,
+            'customer_name' => 'Same Customer',
+            'customer_phone' => '0712345678',
+        ])->assertCreated();
+
+        $this->postJson('/api/v1/portal/voucher-cafe/vouchers/redeem', [
+            'code' => $code,
+            'customer_name' => 'Same Customer',
+            'customer_phone' => '0712345678',
+        ])->assertStatus(422)
+            ->assertJsonPath('data.code.0', 'This voucher was already used by this customer.');
+
+        $this->postJson('/api/v1/portal/voucher-cafe/vouchers/redeem', [
+            'code' => $code,
+            'customer_name' => 'Different Customer',
+            'customer_phone' => '0755555555',
+        ])->assertCreated();
+    }
+
+    public function test_voucher_list_can_filter_used_and_unused(): void
+    {
+        $plan = $this->plan('masaa 6', 500, 6, 'HOURS');
+
+        $items = $this->withHeaders($this->headers)
+            ->postJson('/api/v1/vouchers', [
+                'router_id' => $this->router->id,
+                'package_id' => $plan->id,
+                'quantity' => 2,
+            ])
+            ->assertCreated()
+            ->json('data.items');
+
+        $usedCode = $items[0]['code'];
+        $unusedCode = $items[1]['code'];
+
+        $this->postJson('/api/v1/portal/voucher-cafe/vouchers/redeem', [
+            'code' => $usedCode,
+            'customer_name' => 'List Customer',
+            'customer_phone' => '0712345678',
+        ])->assertCreated();
+
+        $used = $this->withHeaders($this->headers)
+            ->getJson('/api/v1/vouchers?usage=used')
+            ->assertOk()
+            ->assertJsonPath('data.meta.total', 1)
+            ->assertJsonPath('data.items.0.code', $usedCode)
+            ->assertJsonPath('data.items.0.is_used', true);
+
+        $this->assertSame(1, $used->json('data.items.0.uses_count'));
+
+        $this->withHeaders($this->headers)
+            ->getJson('/api/v1/vouchers?usage=unused')
+            ->assertOk()
+            ->assertJsonPath('data.meta.total', 1)
+            ->assertJsonPath('data.items.0.code', $unusedCode)
+            ->assertJsonPath('data.items.0.is_used', false);
+    }
+
+    public function test_voucher_summary_counts_used_unused_and_available(): void
+    {
+        $plan = $this->plan('masaa 6', 500, 6, 'HOURS');
+
+        $items = $this->withHeaders($this->headers)
+            ->postJson('/api/v1/vouchers', [
+                'router_id' => $this->router->id,
+                'package_id' => $plan->id,
+                'quantity' => 3,
+            ])
+            ->assertCreated()
+            ->json('data.items');
+
+        $this->postJson('/api/v1/portal/voucher-cafe/vouchers/redeem', [
+            'code' => $items[0]['code'],
+            'customer_name' => 'Summary Customer',
+            'customer_phone' => '0712345678',
+        ])->assertCreated();
+
+        $this->withHeaders($this->headers)
+            ->postJson("/api/v1/vouchers/{$items[1]['id']}/revoke")
+            ->assertOk();
+
+        $response = $this->withHeaders($this->headers)
+            ->getJson('/api/v1/vouchers/summary')
+            ->assertOk()
+            ->assertJsonPath('data.total', 3)
+            ->assertJsonPath('data.used', 1)
+            ->assertJsonPath('data.unused', 2)
+            ->assertJsonPath('data.available', 1)
+            ->assertJsonPath('data.expired', 0)
+            ->assertJsonPath('data.revoked', 1);
+
+        $this->assertEqualsWithDelta(500, $response->json('data.sold_value'), 0.01);
     }
 
     private function documentXml(\Illuminate\Testing\TestResponse $response): string

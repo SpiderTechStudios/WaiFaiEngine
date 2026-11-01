@@ -265,7 +265,7 @@ class OperationsTest extends TestCase
             'max_uses' => 3,
         ])->assertCreated()
             ->assertJsonPath('data.items.0.code', '998877')
-            ->assertJsonPath('data.items.0.max_uses', 3);
+            ->assertJsonPath('data.items.0.max_uses', 1);
     }
 
     public function test_voucher_create_rejects_missing_or_deleted_router(): void

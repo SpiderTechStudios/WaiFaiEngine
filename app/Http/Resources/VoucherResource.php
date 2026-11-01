@@ -18,6 +18,19 @@ class VoucherResource extends JsonResource
             'status' => $this->status,
             'max_uses' => $this->max_uses,
             'uses_count' => $this->uses_count,
+            'is_used' => (int) $this->uses_count > 0,
+            'remaining_uses' => max(0, (int) $this->max_uses - (int) $this->uses_count),
+            'fully_used' => (int) $this->uses_count >= (int) $this->max_uses,
+            'last_used_at' => $this->whenLoaded('latestGrant', fn () => $this->latestGrant?->created_at),
+            'used_by' => $this->whenLoaded('latestGrant', function () {
+                $customer = $this->latestGrant?->customer;
+
+                return $customer ? [
+                    'id' => $customer->id,
+                    'name' => $customer->name,
+                    'phone' => $customer->phone,
+                ] : null;
+            }),
             'expires_at' => $this->expires_at,
             'note' => $this->note,
             'revoked_at' => $this->revoked_at,

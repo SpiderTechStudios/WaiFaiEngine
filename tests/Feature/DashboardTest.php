@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\RevenueRecord;
+use App\Models\Voucher;
 use App\Models\Wallet;
 use Tests\TestCase;
 
@@ -101,7 +102,7 @@ class DashboardTest extends TestCase
     public function test_multi_use_voucher_counts_as_one_sale(): void
     {
         $owner = $this->createUser();
-        $this->createCompanyFor($owner, 'owner', ['subdomain' => 'multi-cafe', 'payment_method' => 'both']);
+        $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'multi-cafe', 'payment_method' => 'both']);
         $headers = $this->authHeaders($owner);
 
         $routerId = $this->withHeaders($headers)->postJson('/api/v1/routers', [
@@ -121,12 +122,20 @@ class DashboardTest extends TestCase
             'price' => 2000,
         ])->assertCreated()->json('data.id');
 
-        $code = $this->withHeaders($headers)->postJson('/api/v1/vouchers', [
-            'router_id' => $routerId,
-            'package_id' => $packageId,
-            'quantity' => 1,
+        // Legacy multi-use voucher (created before vouchers became single-use):
+        // sharing it across two different customers must still count one sale.
+        $code = '112233';
+
+        Voucher::query()->create([
+            'company_id' => $company->id,
+            'network_device_id' => $routerId,
+            'internet_plan_id' => $packageId,
+            'code' => $code,
             'max_uses' => 3,
-        ])->assertCreated()->json('data.items.0.code');
+            'uses_count' => 0,
+            'status' => Voucher::STATUS_ACTIVE,
+            'created_by' => $owner->id,
+        ]);
 
         foreach (['0711000001', '0711000002'] as $phone) {
             $this->postJson('/api/v1/portal/multi-cafe/vouchers/redeem', [

@@ -534,6 +534,8 @@ class OperationsDocumentation
             new OA\Parameter(name: 'status', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['active', 'expired', 'revoked'])),
             new OA\Parameter(name: 'router_id', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
             new OA\Parameter(name: 'package_id', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'usage', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['used', 'unused'])),
+            new OA\Parameter(name: 'search', in: 'query', required: false, schema: new OA\Schema(type: 'string'), description: 'Matches code, note, or package name.'),
         ],
         responses: [
             new OA\Response(response: 200, description: 'Vouchers', content: new OA\JsonContent(ref: '#/components/schemas/VoucherListResponse')),
@@ -542,6 +544,33 @@ class OperationsDocumentation
         ]
     )]
     public function listVouchers(): void {}
+
+    #[OA\Get(
+        path: '/vouchers/summary',
+        operationId: 'voucherSummary',
+        tags: ['Vouchers'],
+        summary: 'Used / unused voucher report',
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'Voucher counts', content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'status', type: 'boolean', example: true),
+                new OA\Property(property: 'message', type: 'string'),
+                new OA\Property(property: 'data', type: 'object', properties: [
+                    new OA\Property(property: 'total', type: 'integer', example: 381),
+                    new OA\Property(property: 'used', type: 'integer', example: 53),
+                    new OA\Property(property: 'unused', type: 'integer', example: 328),
+                    new OA\Property(property: 'available', type: 'integer', example: 320),
+                    new OA\Property(property: 'expired', type: 'integer', example: 4),
+                    new OA\Property(property: 'revoked', type: 'integer', example: 4),
+                    new OA\Property(property: 'sold_value', type: 'number', example: 26500),
+                    new OA\Property(property: 'currency', type: 'string', example: 'TZS'),
+                ]),
+            ])),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+        ]
+    )]
+    public function voucherSummary(): void {}
 
     #[OA\Post(
         path: '/vouchers',
@@ -581,6 +610,7 @@ class OperationsDocumentation
         requestBody: new OA\RequestBody(content: new OA\JsonContent(properties: [
             new OA\Property(property: 'ids', type: 'array', items: new OA\Items(type: 'integer'), example: [1, 2, 3], description: 'Export exactly these voucher ids. Omit to export by filters (or all).'),
             new OA\Property(property: 'status', type: 'string', enum: ['active', 'expired', 'revoked'], nullable: true),
+            new OA\Property(property: 'usage', type: 'string', enum: ['used', 'unused'], nullable: true),
             new OA\Property(property: 'router_id', type: 'integer', nullable: true),
             new OA\Property(property: 'package_id', type: 'integer', nullable: true),
             new OA\Property(property: 'search', type: 'string', nullable: true, description: 'Matches code, note, or package name.'),

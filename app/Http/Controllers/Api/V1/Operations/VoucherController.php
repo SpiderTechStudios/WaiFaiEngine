@@ -8,6 +8,7 @@ use App\Http\Requests\Operations\ExportVouchersWordRequest;
 use App\Http\Requests\Operations\StoreVoucherRequest;
 use App\Http\Resources\CustomerResource;
 use App\Http\Resources\VoucherResource;
+use App\Models\RevenueRecord;
 use App\Models\Voucher;
 use App\Services\VoucherService;
 use App\Services\VoucherWordExporter;
@@ -21,21 +22,72 @@ class VoucherController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        $companyId = $this->currentCompany()->id;
+
+        $this->expireOverdue($companyId);
+
         $paginated = Voucher::query()
-            ->with(['router', 'internetPlan'])
-            ->where('company_id', $this->currentCompany()->id)
+            ->with(['router', 'internetPlan', 'latestGrant.customer'])
+            ->where('company_id', $companyId)
             ->when($request->filled('status'), fn ($query) => $query->where('status', $request->string('status')))
+            ->when(
+                in_array($request->input('usage'), ['used', 'unused'], true),
+                fn ($query) => $request->input('usage') === 'used'
+                    ? $query->where('uses_count', '>', 0)
+                    : $query->where('uses_count', 0),
+            )
             ->when($request->filled('router_id'), fn ($query) => $query->where('network_device_id', $request->integer('router_id')))
             ->when($request->filled('package_id'), fn ($query) => $query->where('internet_plan_id', $request->integer('package_id')))
+            ->when($request->filled('search'), function ($query) use ($request) {
+                $term = '%'.$request->string('search').'%';
+
+                $query->where(function ($builder) use ($term) {
+                    $builder->where('code', 'like', $term)
+                        ->orWhere('note', 'like', $term)
+                        ->orWhereHas('internetPlan', fn ($plan) => $plan->where('name', 'like', $term));
+                });
+            })
             ->latest('id')
             ->paginate($request->integer('per_page', 15));
-
-        $paginated->getCollection()->each->syncExpiryStatus();
 
         return $this->success(
             $this->paginated($paginated, VoucherResource::collection($paginated->items())->resolve()),
             'Vouchers retrieved',
         );
+    }
+
+    public function summary(): JsonResponse
+    {
+        $companyId = $this->currentCompany()->id;
+
+        $this->expireOverdue($companyId);
+
+        $query = Voucher::query()->where('company_id', $companyId);
+
+        $total = (clone $query)->count();
+        $used = (clone $query)->where('uses_count', '>', 0)->count();
+        $unused = (clone $query)->where('uses_count', 0)->count();
+        $available = (clone $query)
+            ->where('status', Voucher::STATUS_ACTIVE)
+            ->where('uses_count', 0)
+            ->count();
+        $expired = (clone $query)->where('status', Voucher::STATUS_EXPIRED)->count();
+        $revoked = (clone $query)->where('status', Voucher::STATUS_REVOKED)->count();
+        $soldValue = (float) RevenueRecord::query()
+            ->where('company_id', $companyId)
+            ->where('source', 'voucher')
+            ->sum('amount');
+
+        return $this->success([
+            'total' => $total,
+            'used' => $used,
+            'unused' => $unused,
+            'available' => $available,
+            'expired' => $expired,
+            'revoked' => $revoked,
+            'sold_value' => $soldValue,
+            'currency' => (string) config('platform.currency', 'TZS'),
+        ], 'Voucher summary');
     }
 
     public function store(StoreVoucherRequest $request): JsonResponse
@@ -66,6 +118,12 @@ class VoucherController extends Controller
 
         if (! empty($data['status'])) {
             $query->where('status', $data['status']);
+        }
+
+        if (! empty($data['usage'])) {
+            $data['usage'] === 'used'
+                ? $query->where('uses_count', '>', 0)
+                : $query->where('uses_count', 0);
         }
 
         if (! empty($data['router_id'])) {
@@ -126,6 +184,16 @@ class VoucherController extends Controller
                 'source' => $result['access_grant']->source,
             ],
         ], 'Voucher consumed');
+    }
+
+    private function expireOverdue(int $companyId): void
+    {
+        Voucher::query()
+            ->where('company_id', $companyId)
+            ->where('status', Voucher::STATUS_ACTIVE)
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '<', now())
+            ->update(['status' => Voucher::STATUS_EXPIRED]);
     }
 
     private function assertCompany(int $companyId): void

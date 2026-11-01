@@ -30,7 +30,9 @@ class VoucherService
         $plan = $this->resolvePackage($company, (int) $data['package_id']);
 
         $quantity = (int) $data['quantity'];
-        $maxUses = (int) ($data['max_uses'] ?? 1);
+        // One code = one customer. Legacy requests may still send max_uses,
+        // but every new voucher is single-use so it cannot be resold/reused.
+        $maxUses = 1;
         $digits = max(4, min(12, (int) $company->voucher_code_digits));
         $customCode = $data['custom_code'] ?? null;
 
@@ -178,6 +180,17 @@ class VoucherService
         }
 
         $customer = $this->resolveCustomer($voucher->company_id, $data);
+
+        $alreadyUsed = AccessGrant::query()
+            ->where('voucher_id', $voucher->id)
+            ->where('customer_id', $customer->id)
+            ->exists();
+
+        if ($alreadyUsed) {
+            throw ValidationException::withMessages([
+                $actor ? 'voucher' : 'code' => ['This voucher was already used by this customer.'],
+            ]);
+        }
 
         $startsAt = now();
         $expiresAt = $this->expiresAtForPlan($plan, $startsAt);

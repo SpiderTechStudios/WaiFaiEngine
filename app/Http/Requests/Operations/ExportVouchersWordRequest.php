@@ -21,6 +21,7 @@ class ExportVouchersWordRequest extends FormRequest
             'ids' => ['nullable', 'array', 'max:1000'],
             'ids.*' => ['integer'],
             'status' => ['nullable', Rule::in(['active', 'expired', 'revoked'])],
+            'usage' => ['nullable', Rule::in(['used', 'unused'])],
             'router_id' => ['nullable', 'integer'],
             'package_id' => ['nullable', 'integer'],
             'search' => ['nullable', 'string', 'max:100'],
