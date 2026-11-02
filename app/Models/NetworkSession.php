@@ -19,6 +19,8 @@ class NetworkSession extends Model
         'network_device_id',
         'network_ssid_id',
         'session_id',
+        'router_username',
+        'router_active_id',
         'mac_address',
         'ip_address',
         'started_at',

@@ -1,0 +1,838 @@
+==============================================================================
+WaiFaiEngine - MikroTik Integration Assessment
+==============================================================================
+Assessment date : 2026-11-02
+Codebase        : Laravel app in C:\Users\JUKU\Documents\dev\laravel\WaiFaiEngine
+Scope           : Router management, captive portal, payments, callbacks
+Prepared from   : source code only (no live MikroTik/router was contacted)
+
+UPDATE (2026-11-02): The gaps described in this assessment have since been
+implemented. See mikrotik_new.txt section 19 for the implemented endpoints,
+services, migrations, and the new MikroTik connect -> pay -> internet flow.
+
+------------------------------------------------------------------------------
+0. SHORT ANSWER (read this first)
+------------------------------------------------------------------------------
+The current build does NOT integrate MikroTik as a captive-portal data plane.
+It supports MikroTik only as a managed device:
+
+  * store its public API host / port / username / password
+  * TCP connection test
+  * send a reboot command through the RouterOS REST API
+  * generate a "setup" guide with walled-garden commands
+
+There is NO MikroTik API call that authorizes a client after payment, and NO
+API (local or remote) that removes/disconnects a user from a MikroTik hotspot.
+The captive-portal authorization engine that exists is WiFiDog, and it only
+accepts Ruijie / Wavlink gateways (plus a MikroTik only if someone manually
+sets a WiFiDog port and gateway identifier - which the MikroTik create flow
+never does).
+
+In practice, today:
+  - MikroTik sees the payment portal only as an ordinary web page that the
+    hotspot must be told to redirect to (walled garden + custom login page).
+  - Payment success is recorded in the database, but the MikroTik router is
+    never told to open Internet access for that MAC/IP.
+  - "Remove user" exists in WiFiDog logic only as a database status change
+    (triggered by the gateway's logout callback), not as a router command.
+
+------------------------------------------------------------------------------
+1. BUILD STOCKTAKE (what is actually implemented)
+------------------------------------------------------------------------------
+1.1 Router model
+    app/Models/NetworkDevice.php
+      GATEWAY_MIKROTIK = 'mikrotik'         (line 17)
+      GATEWAY_RUIJIE   = 'ruijie'           (line 19)
+      GATEWAY_WAVLINK  = 'wavlink'          (line 21)
+      ONLINE_WINDOW_MINUTES = 10            (line 15)
+      api_password is hidden from serialization (line 52)
+
+    MikroTik-specific columns (database/migrations/2026_08_15_120005...):
+      lan_ip, api_host, api_port, api_username, api_password (text),
+      gateway_id, serial_number, wifidog_port, last_seen_at, status
+
+1.2 Router create/update
+    app/Services/RouterService.php:20-81
+      - For gateway_type = mikrotik:
+          api_host      stored as given
+          api_port      default 443
+          api_username  stored as given
+          api_password  encrypted with Crypt::encryptString()
+      - Ruijie-only fields (gateway_id, serial_number, wifidog_port) are forced
+        to null for MikroTik.
+      - On update, api_port defaults back to 443 when blank.
+      - Router deletion is a soft delete on the local record; nothing is sent
+        to the router.
+
+    Validation: app/Http/Requests/Operations/StoreRouterRequest.php:20-97
+      - lan_ip required on create for mikrotik and ruijie
+      - api_username/api_password required on create for mikrotik
+      - api_host must NOT be a private IP / private range (line 64-97)
+      - api_port 1..65535
+
+1.3 MikroTik features that exist
+    a) Connection test     RouterService.php:155-195
+    b) Reboot              RouterService.php:202-242
+    c) Setup guide         RouterService.php:250-325
+    d) Router CRUD/events  RouterController + RouterService
+
+1.4 MikroTik features that DO NOT exist
+    - No RouterOS API (port 8728/8729) client.
+    - No SSH client.
+    - No SNMP polling.
+    - No RADIUS integration.
+    - No hotspot user creation/deletion on the router.
+    - No active-client listing on the router.
+    - No hotspot active-session removal / kick.
+    - No inbound heartbeat/callback endpoint for MikroTik.
+    - No automatic provisioning of login.html on the router.
+    - No way for MikroTik to obtain or validate a WaiFai payment session.
+
+------------------------------------------------------------------------------
+2. HOW THE SYSTEM IS CONFIGURED FOR MIKROTIK
+------------------------------------------------------------------------------
+2.1 What the operator enters in the admin/API
+    POST /api/v1/routers (auth required; permission routers.create)
+    {
+      "gateway_type": "mikrotik",
+      "name": "MikroTik-Hotspot",
+      "branch_id": 1,
+      "lan_ip": "192.168.88.1",
+      "api_host": "41.59.12.34",          // public IP or DDNS only
+      "api_port": 443,                     // default 443
+      "api_username": "waifai-api",
+      "api_password": "********",
+      "status": "active"
+    }
+
+    Stored in network_devices:
+      company_id, network_station_id, type='router', gateway_type='mikrotik',
+      name, lan_ip, api_host, api_port, api_username,
+      api_password (encrypted), status, last_seen_at (NULL initially)
+
+    Response never returns the password. It returns
+      "api_password_set": true|false      (RouterResource.php:24)
+
+2.2 How the credentials are protected
+    - At rest: Laravel Crypt (AES-256-CBC with APP_KEY) via
+      Crypt::encryptString() in RouterService.php:37-39.
+    - In transit: HTTP Basic Auth. The password is decrypted in memory only
+      when a reboot is sent (RouterService.php:215).
+    - API responses: hidden field + boolean flag.
+    - Important consequence: if APP_KEY changes, stored passwords can no
+      longer be decrypted; reboot then returns HTTP 422
+      "The stored MikroTik API password cannot be read."
+
+2.3 Address semantics (important)
+    api_host : public IP / DDNS; enforced non-private at create/update.
+    lan_ip   : private management address, kept for display and used as a
+               last-resort fallback by test/reboot.
+    Runtime fallback:
+      test   -> api_host ?: lan_ip  (RouterService.php:162)
+      reboot -> api_host ?: lan_ip  (RouterService.php:208)
+
+    This is a contradiction worth knowing: private addresses are rejected for
+    api_host, but if api_host is blank the code will still try lan_ip. From a
+    cloud-hosted backend a private lan_ip is normally unreachable, so the
+    call fails at the network layer.
+
+2.4 Router status / heartbeat
+    network_devices.last_seen_at is updated ONLY by the WiFiDog endpoints
+    (WiFiDogService::touchGateway, lines 736-739, called from login/auth/portal/
+    ping). There is no MikroTik heartbeat.
+    Therefore a MikroTik router will normally show online=false forever after
+    creation unless its last_seen_at is written by some other process.
+    The "online" flag (NetworkDevice::isOnline, line 73) is purely
+    last_seen_at > now - 10 minutes.
+
+------------------------------------------------------------------------------
+3. APIS THAT COMMUNICATE WITH MIKROTIK
+------------------------------------------------------------------------------
+There are exactly TWO outbound network calls to a MikroTik device, plus one
+informational endpoint that makes no call at all.
+
++----------------------+--------+--------------------------------------------+
+| System API           | Router | What it does to the MikroTik               |
++----------------------+--------+--------------------------------------------+
+| POST /api/v1/routers | none   | DB insert only                             |
+| GET  /api/v1/routers | none   | DB read only                               |
+| POST /routers/{id}/test   | TCP  | TCP connect to api_host:api_port (3s)  |
+| POST /routers/{id}/reboot | REST | POST /rest/system/reboot               |
+| GET  /routers/{id}/setup  | none | returns operator instructions          |
+| POST /routers/{id}/sync   | none | Ruijie Cloud only; 422 for MikroTik?   |
++----------------------+--------+--------------------------------------------+
+
+Note: /sync calls RouterService::syncFromRuijie unconditionally. There is no
+gateway_type guard in that method. A MikroTik router sent to /sync would be
+passed to RuijieCloudService and fail there (or misbehave). Treat /sync as
+Ruijie-only.
+
+3.1 Connection test
+    File: app/Services/RouterService.php:155-195
+    Route: POST /api/v1/routers/{router}/test
+    Permission: routers.view
+
+    Logic:
+      host = api_host ?: lan_ip
+      port = api_port ?: 443
+      fsockopen(host, port, timeout=3)
+      measure latency
+      return reachable true/false + host/port/message
+
+    This is ONLY a TCP reachability check. It does NOT:
+      - authenticate
+      - call /rest/
+      - verify RouterOS REST is enabled
+      - verify the user has the "api"/"rest" policy
+      - verify the certificate
+      - update last_seen_at
+
+    Success response shape:
+      {
+        "gateway_type": "mikrotik",
+        "reachable": true,
+        "latency_ms": 42,
+        "host": "41.59.12.34",
+        "port": 443,
+        "message": "Router address is reachable."
+      }
+
+    Failure response still returns HTTP 200 with reachable=false.
+
+3.2 Reboot (the only real RouterOS API call)
+    File: app/Services/RouterService.php:202-242
+    Route: POST /api/v1/routers/{router}/reboot
+    Permission: routers.update
+
+    Preconditions:
+      - gateway_type must be mikrotik, else HTTP 422:
+        "Reboot is currently supported for MikroTik routers only."
+      - host + api_username + api_password must be present, else HTTP 422:
+        "MikroTik API host, username and password are required to reboot."
+      - password must decrypt, else HTTP 422.
+
+    Request:
+      POST {scheme}://{host}:{port}/rest/system/reboot
+      Authorization: Basic base64(api_username:api_password)
+      scheme = "http"  when port == 80
+               "https" for every other port (443 by default)
+      timeout = 10 seconds
+      TLS verification = DISABLED (Http::withoutVerifying())
+
+    There is no JSON body and no Content-Type header. RouterOS accepts that
+    for a command endpoint.
+
+    Result handling:
+      - transport exception -> HTTP 502
+        "Could not reach the router API: <message>"
+      - HTTP 4xx/5xx -> HTTP 502
+        "The router API rejected the reboot (HTTP <status>)."
+      - success -> audit log "router_rebooted" and:
+        { "requested": true,
+          "message": "Reboot command accepted by the router." }
+
+    No retry, no queue, no offline deferral.
+
+3.3 What RouterOS needs for the reboot to work
+    - /ip service www-ssl enabled (or www for port 80), reachable from the
+      public Internet (firewall/NAT).
+    - A user with sufficient policy (write/rest-api or full) - not a
+      hotspot-only user.
+    - If https: a certificate the backend can accept. The PHP client turns
+      verification OFF, so any cert works, but RouterOS still needs a cert
+      configured for www-ssl.
+    - The same public host/port saved in api_host/api_port.
+
+3.4 Setup guide (no router call)
+    File: app/Services/RouterService.php:250-325
+    Route: GET /api/v1/routers/{router}/setup
+    Permission: routers.view
+
+    serverHost = host part of config('app.url'), fallback api.waifai.co.tz
+    portalUrl  = url('/connect?subdomain=<company subdomain>')
+
+    For gateway_type=mikrotik, the returned steps/commands are:
+
+      Step 1 - Run the hotspot wizard
+        /ip hotspot setup
+
+      Step 2 - Allow the WaiFai API through the walled garden
+        /ip hotspot walled-garden add dst-host=<serverHost> action=allow \
+            comment="WaiFai API"
+        /ip hotspot walled-garden ip add action=accept \
+            dst-address=<serverHost> comment="WaiFai API"
+
+      Step 3 - Set the portal URL
+        Portal URL: <portalUrl>
+
+    Problems with these instructions as written:
+      a) The second command uses dst-address=<serverHost>. On RouterOS,
+         dst-address expects an IP address or address range, not a DNS name.
+         If serverHost is a domain (the normal case), this line is rejected.
+         Use dst-host for hostnames, or resolve the IP and use dst-address.
+      b) "In IP > Hotspot > Server Profiles set the login/redirect to the
+         portal URL" is not a real RouterOS field. RouterOS hotspot has no
+         "redirect URL" setting in the server profile. An external portal is
+         normally wired by editing the hotspot login.html (meta refresh /
+         form action) and walled-gardening the portal, or by RADIUS.
+      c) The guide does not configure any way for the router to tell WaiFai
+         that a client paid, nor for WaiFai to tell the router to authorize.
+      d) portalUrl uses APP_URL. In this local .env APP_URL=http://localhost,
+         so the generated guide would point clients at localhost. Production
+         must have a public APP_URL (or CAPTIVE_FORCE_BACKEND_PORTAL=false with
+         a correct CAPTIVE_PORTAL_URL).
+
+------------------------------------------------------------------------------
+4. HOW THE MIKROTIK SEES THE PAYMENT CAPTIVE PORTAL
+------------------------------------------------------------------------------
+4.1 The intended/actual chain (what the code implements)
+
+    Browser (unauthenticated)
+        |
+        | 1. hotspot redirect (configured on the router by the operator)
+        v
+    GET {APP_URL}/connect?subdomain=<company>&session=<token>&router=<id>
+        |
+        | 2. user picks a package, pays, or redeems a voucher
+        v
+    POST /api/v1/portal/{subdomain}/payments
+    POST /api/v1/portal/{subdomain}/vouchers/redeem
+    POST /api/v1/portal/{subdomain}/offers/claim
+        |
+        | 3. PaymentTransaction + PlatformPayment are created; provider is
+        |    asked to collect (USSD / checkout)
+        v
+    Provider callback -> POST /api/v1/webhooks/payments/{provider}
+        |
+        | 4. markPaid -> dispatchPurposeHandler(HOTSPOT_PORTAL)
+        |    -> PaymentService::markPortalPaid
+        |    -> CaptiveSessionService::authenticate
+        |    -> CaptiveSession.status = authenticated
+        v
+    Portal poll GET /api/v1/portal/{subdomain}/payments/{id}
+        |
+        | 5. response includes captive.gateway_auth_url
+        v
+    Browser is sent to
+    http://{gw_address}:{gw_port}/wifidog/auth?token=<captive token>
+        |
+        | 6. WiFiDog gateway calls back:
+        v
+    GET /api/wifidog/auth?token=...&stage=login  ->  "Auth:1"
+        |
+        v
+    Gateway opens the Internet for that client.
+
+    Steps 1-4 run for any gateway type that can create a captive session.
+    Steps 5-6 are WiFiDog-specific and are where MikroTik falls out.
+
+4.2 Why MikroTik cannot enter this chain
+    Captive sessions are only created by the WiFiDog entry point:
+
+      GET /api/wifidog/login
+        -> WiFiDogService::login            (WiFiDogService.php:50)
+        -> resolveGatewayFromRequest        (line 747)
+        -> GatewayResolver::resolveActive   (GatewayResolver.php:17)
+
+    GatewayResolver::resolveActive requires:
+      - a matching gateway_id or serial_number
+      - status = active
+      - company active + subdomain present
+      - supportsWiFiDog(gateway) == true
+
+    supportsWiFiDog (GatewayResolver.php:113-123):
+      if gateway_id and serial_number are both blank -> false
+      return true only when gateway_type is ruijie/wavlink,
+             OR wifidog_port is filled.
+
+    RouterService::create for MikroTik leaves gateway_id, serial_number and
+    wifidog_port all NULL. So a normally-created MikroTik router is rejected
+    by the WiFiDog resolver with:
+      "Router "<id>" is not configured for WiFiDog (expected Ruijie/Wavlink
+       with gateway_id)."
+
+    Consequently:
+      - no CaptiveSession can be created for a MikroTik through the supported
+        flow;
+      - no captive token is attached to the portal session;
+      - payment still records revenue, but there is no gateway authorization;
+      - gateway_auth_url is never meaningful for MikroTik.
+
+    Even if someone manually filled wifidog_port, the URL produced is
+      http://{gw_address}:{gw_port}/wifidog/auth?token=...
+    MikroTik's hotspot does not implement a WiFiDog auth server listener on
+    that port by default. It expects its own login mechanism (local users,
+    RADIUS, or the hotspot login form).
+
+4.3 What MikroTik actually sees today
+    - An HTTP redirect from its hotspot login page to /connect (if the
+      operator edits login.html / uses a walled-garden redirect).
+    - A payment web page served by WaiFai.
+    - After payment: nothing it can act on. It will keep the client in the
+      "not logged in" state unless the client separately authenticates with
+      MikroTik (local hotspot user or RADIUS).
+
+    In other words: MikroTik sees a payment portal, not a payment callback.
+    The payment success is invisible to RouterOS.
+
+4.4 Payment authorization internals (for completeness)
+    PlatformPaymentService::startHotspotPortalPayment (line 747)
+      type      = hotspot_portal
+      purpose   = hotspot_portal
+      metadata  = payment_transaction_id, captive_session, customer, network
+
+    On paid:
+      PlatformPaymentService::dispatchPurposeHandler (line 682)
+        -> PaymentService::markPortalPaid (PaymentService.php:137)
+           -> recognizePayment (wallet + revenue record)
+           -> authorizeCaptiveIfPresent (PaymentService.php:261)
+              -> CaptiveSessionService::authenticate
+                 -> NetworkSessionService::create
+                 -> captive session authenticated + access_grant_id
+
+    Polling path:
+      GET /api/v1/portal/{subdomain}/payments/{id}
+        -> PaymentService::refreshPortalPaymentStatus (line 187)
+        -> optionally reconcileProviderPayment if still pending
+        -> markPortalPaid when provider says paid
+
+    Manual authorize paths (still captive-token based):
+      POST /api/v1/portal/{subdomain}/sessions   (createSession)
+      POST /api/v1/captive/sessions/{token}/authorize
+      POST /api/v1/portal/{subdomain}/vouchers/redeem
+      POST /api/v1/portal/{subdomain}/offers/claim
+
+    All of these return or build gateway_auth_url through
+      CaptiveSessionService::gatewayAuthRedirectUrl (line 610)
+    which is a WiFiDog URL, not a MikroTik command.
+
+4.5 The security model of the portal (current)
+    - Captive token: 32 hex chars, unique, generated with random_bytes(16).
+    - Pending TTL: config('captive.session_ttl_minutes'), default 30,
+      .env currently CAPTIVE_SESSION_TTL=10.
+    - A pending session carries no authority. Only the portal (after payment/
+      voucher/offer) or an explicit authorize call marks it authenticated.
+    - WiFiDog /auth only returns Auth:1 when the stored session is
+      authenticated and its AccessGrant is usable.
+    - This design is sound for WiFiDog, but it is not wired to MikroTik.
+
+------------------------------------------------------------------------------
+5. API FOR REMOVING A USER FROM MIKROTIK
+------------------------------------------------------------------------------
+5.1 Current state: there is no such API.
+
+    Nothing in the codebase calls any of:
+      /rest/ip/hotspot/active/remove
+      /rest/ip/hotspot/active/{id}
+      /rest/ip/hotspot/user/remove
+      /rest/ip/hotspot/cookie/remove
+    A global search for "rest/" finds exactly one URL: /rest/system/reboot
+    (RouterService.php:227).
+
+    There is also no endpoint in routes/api that exposes "kick/disconnect
+    router client". The only "disconnect" in the domain is:
+      CaptiveSessionService::disconnect (line 485)
+    called only from WiFiDogService::auth when stage=logout (line 185-199).
+    That is an INBOUND callback from a WiFiDog gateway. It changes the local
+    CaptiveSession row to status=disconnected. It sends nothing to any router.
+
+    Access expiry is also database-only:
+      AccessExpiryService::expireDue (line 19)
+      -> marks AccessGrant expired, NetworkSession ended, CaptiveSession expired
+      No router call.
+
+    Therefore:
+      - "remove user" from MikroTik = not implemented.
+      - "kick active user" from MikroTik = not implemented.
+      - Even if a session is ended in WaiFai, the MikroTik keeps passing
+        traffic until its own session/session-timeout ends.
+
+5.2 What would need to be built (recommended design)
+
+    A) Router-side removal service
+       Add MikroTik hot-spot client operations to a service (recommended name:
+       MikroTikService, used by RouterService or alongside it), using the same
+       encrypted credentials and timeout conventions as reboot.
+
+       Required RouterOS REST calls (RouterOS v7):
+
+         List active hotspot clients:
+           GET /rest/ip/hotspot/active
+           Response items have ".id" (e.g. "*1A"), "user", "address",
+           "mac-address", "uptime", "bytes-in", "bytes-out".
+
+         Find by MAC:
+           GET /rest/ip/hotspot/active?mac-address=AA:BB:CC:DD:EE:FF
+           (or fetch all and filter server-side)
+
+         Remove an active client by its .id:
+           DELETE /rest/ip/hotspot/active/{id}
+           or POST /rest/ip/hotspot/active/remove with {".id":"*1A"}
+
+         Remove a hotspot user (provisioned account) by .id:
+           DELETE /rest/ip/hotspot/user/{id}
+           or POST /rest/ip/hotspot/user/remove with {".id":"*2B"}
+
+         Optional: remove cookie (browser auto-login):
+           POST /rest/ip/hotspot/cookie/remove with {".id":"*3C"}
+
+       RouterOS REST returns 204 on successful DELETE. Command endpoints
+       (…/remove) usually return 200 with an empty body.
+
+    B) Exposed app API (suggested)
+       DELETE /api/v1/routers/{router}/clients/{mac}
+         permission: routers.update (or a new routers.clients.manage)
+         behaviour:
+           1. assert router belongs to current company
+           2. assert gateway_type = mikrotik
+           3. resolve active .id by MAC on the router
+           4. DELETE /rest/ip/hotspot/active/{id}
+           5. mark local CaptiveSession/NetworkSession disconnected/ended
+           6. audit log "router_client_removed" with actor, MAC, router
+         idempotent: if no active entry, return success with removed=false
+         or 404 with a clear message (pick one and document it).
+
+       Also useful read-only:
+         GET /api/v1/routers/{router}/clients
+         -> maps /rest/ip/hotspot/active into a stable response schema.
+
+    C) Automatic revocation on expiry (optional but needed for correctness)
+       When AccessExpiryService expires a grant, also enqueue a job that calls
+       the MikroTik removal for each affected active session/MAC. Without this,
+       a "1 hour" package will keep working on the router after expiry.
+
+    D) Safety rules to keep
+       - Never trust a MAC coming from the client for router removal; require
+         staff authentication + company scoping.
+       - Keep the 10s timeout and 502 mapping used by reboot.
+       - Do not log api_password or the Basic header.
+       - Make removal idempotent; RouterOS returns an error if the .id is gone
+         (race with the client disconnecting).
+       - Consider a per-router lock to avoid concurrent remove/reboot storms.
+
+5.3 Removing a user: current vs target
+    Current:
+      WiFiDog logout callback  -> DB status only (no router call)
+      Access expiry           -> DB status only (no router call)
+      Admin UI/API            -> nothing
+    Target:
+      Admin/API or expiry job -> REST DELETE /rest/ip/hotspot/active/{id}
+                              -> DB status update + audit log
+
+------------------------------------------------------------------------------
+6. CALLBACKS
+------------------------------------------------------------------------------
+6.1 Inbound payment-provider callbacks (the main callbacks in the build)
+
+    Routes: routes/Api/v1/auth.php:20-27 (inside the /api/v1 prefix)
+
+      POST /api/v1/webhooks/payments/{provider}
+      POST /api/v1/webhooks/payouts/{provider}
+      POST /api/v1/webhooks/platform-payments      (legacy bridge)
+
+    Throttle: 120 requests/minute each. No auth:sanctum - authenticity is the
+    provider's signature/shared secret.
+
+    Handler:
+      PaymentProviderWebhookController::payments
+        -> PlatformPaymentService::handleProviderWebhook
+           -> driver->validateWebhook(headers, payload, rawBody)
+           -> driver->parseWebhook(payload)
+           -> resolveWebhookPayment (reference, external_reference,
+              provider_event_id, nested data.*)
+           -> optional driver->verifyTransaction (authoritative)
+           -> amount/currency reconciliation
+           -> markPaid or markFailed
+
+    Provider specifics:
+      PalmPay:
+        validateWebhook verifies an MD5 + RSA/SHA1 signature with the
+        configured public key (PalmPayPaymentProvider.php:102-126).
+        Missing public key falls back to simulate/auto-paid config.
+        Requires a plain-text "success" response or it retries
+        (PaymentProviderWebhookController.php:26-34).
+
+      PalmPesa:
+        No signature defined by the provider. If a webhook_secret is
+        configured (provider credential or platform.payment_webhook_secret),
+        it compares X-Platform-Payment-Secret / Authorization
+        (PalmPesaPaymentProvider.php:125-146). If not configured, it accepts
+        the callback. Production should configure the secret.
+        The outbound initiate body carries callback_url:
+          provider setting callback_url
+          ?: services.palmpesa.callback_url
+          ?: {APP_URL}/api/v1/webhooks/payments/{slug}
+        (PalmPesaPaymentProvider.php:68-70)
+
+      Flutterwave:
+        verif-hash / shared secret validation (FlutterwavePaymentProvider).
+
+      Stub:
+        X-Platform-Payment-Secret based; for tests/dev.
+
+    PlatformPayment rules:
+      - already paid -> idempotent, re-runs enrollment completion, returns.
+      - provider mismatch -> validation error.
+      - amount mismatch -> audit + validation error.
+      - currency mismatch -> validation error.
+      - provider success -> markPaid -> dispatchPurposeHandler.
+      - provider failure -> markFailed.
+
+6.2 What the payment callback ultimately does for a hotspot purchase
+
+    PlatformPayment.purpose = hotspot_portal
+      -> PaymentService::markPortalPaid(payment_transaction_id)
+         -> PaymentTransaction.status = paid, paid_at = now
+         -> recognizePayment: wallet credit + RevenueRecord
+         -> authorizeCaptiveIfPresent:
+              token = PlatformPayment.metadata.captive_session
+              if token exists and session belongs to the company:
+                CaptiveSessionService::authenticate
+                  -> NetworkSessionService::create
+                  -> CaptiveSession.status = authenticated
+                     authenticated_at, access_grant_id, network_session_id
+         -> audit log portal_payment_paid
+
+    This is the complete "payment success" chain. It is gateway-agnostic up
+    to the captive-token step, but there is no router-side authorization for
+    MikroTik.
+
+6.3 Polling (callbacks are not the only path)
+    If a provider callback is late or lost:
+      GET /api/v1/portal/{subdomain}/payments/{id}
+        -> refreshPortalPaymentStatus
+        -> reconcileProviderPayment (PalmPesa order-status / PalmPay query)
+        -> markPortalPaid if paid
+    Scheduler:
+      payments:reconcile-palmpesa   every minute
+      payments:expire-pending       every 5 minutes
+      access:expire                 every minute
+
+6.4 WiFiDog / gateway callbacks (Ruijie/Wavlink only)
+
+    Routes: routes/Api/wifidog.php (no /v1, no auth, throttle 120/min)
+
+      GET|POST /api/wifidog/login
+        browser entry. Creates/reuses a pending captive session, redirects to
+        {APP_URL}/connect. Never authorizes.
+
+      GET|POST /api/wifidog/auth
+        server-to-server from the gateway. stage=login|logout|counter|query.
+        Returns exactly "Auth:1" or "Auth:0" as text/plain, HTTP 200.
+
+      GET|POST /api/wifidog/portal
+        user-facing result page. Redirects to the original URL when the
+        session is authenticated; otherwise back to /connect or an error page.
+
+      GET|POST /api/wifidog/ping
+        heartbeat. Returns exactly "Pong" and touches last_seen_at.
+
+    There is NO MikroTik equivalent of these endpoints. MikroTik has no
+    callback into WaiFai in this build.
+
+6.5 Callback summary table
+
+    +------------------------------------------+----------+-----------------+
+    | Endpoint                                 | Caller   | Effect          |
+    +------------------------------------------+----------+-----------------+
+    | POST /api/v1/webhooks/payments/{provider}| Provider | Mark paid       |
+    | POST /api/v1/webhooks/payouts/{provider} | Provider | Acknowledge     |
+    | POST /api/v1/webhooks/platform-payments  | Legacy   | Mark paid       |
+    | /api/wifidog/login|auth|portal|ping      | Ruijie/  | Captive auth    |
+    |                                          | Wavlink  |                 |
+    +------------------------------------------+----------+-----------------+
+    | (none)                                   | MikroTik | -               |
+    +------------------------------------------+----------+-----------------+
+
+------------------------------------------------------------------------------
+7. RECOMMENDED MIKROTIK CONFIGURATION (for operators)
+------------------------------------------------------------------------------
+7.1 RouterOS side, assuming the current build's management features
+
+    # 1. Enable a REST/API service reachable by the backend
+    /ip service
+    set www-ssl disabled=no port=443 certificate=<cert>
+    # or, for port 80 only (insecure, discouraged):
+    # set www disabled=no port=80
+
+    # 2. Create a dedicated API user (do not reuse the hotspot admin)
+    /user group add name=waifai-api policy=read,write,rest-api,api
+    /user add name=waifai-api group=waifai-api password=<strong-password>
+    # restrict source address to the backend egress IP
+    /user set [find name=waifai-api] address=<backend-public-ip>/32
+
+    # 3. Hotspot
+    /ip hotspot setup
+    # choose the LAN bridge that serves clients
+
+    # 4. Walled garden: the portal and the API must be reachable BEFORE login
+    /ip hotspot walled-garden
+    add dst-host=<backend-host> action=allow comment="WaiFai portal/API"
+    # If you must use an IP form, use dst-address with a real IP:
+    # add dst-address=<backend-ip> action=allow comment="WaiFai portal/API"
+
+    # 5. Point the hotspot login page at the portal
+    #    RouterOS has no "redirect URL" field in the server profile.
+    #    Edit the hotspot login.html (Files > hotspot > login.html) to
+    #    redirect to:
+    #      https://<backend-host>/connect?subdomain=<company-subdomain>
+
+    # 6. (Required for real authorization - not in the current build)
+    #    Add a mechanism that tells the router to let the client through:
+    #    - RADIUS: /radius add service=hotspot address=<radius> secret=...
+    #      and have WaiFai provision the account, OR
+    #    - a custom login form that posts to $(link-login-only), OR
+    #    - the missing WaiFai -> RouterOS REST call after payment.
+
+7.2 Backend side checklist
+    - APP_URL must be a public https URL in production (currently
+      APP_URL=http://localhost in .env).
+    - CAPTIVE_FORCE_BACKEND_PORTAL=true uses APP_URL/connect and ignores
+      CAPTIVE_PORTAL_URL. Set false only if you intentionally use the
+      configured external portal URL.
+    - Save api_host (public/DDNS) and api_port (443).
+    - Confirm GET /api/v1/routers/{id}/test returns reachable=true.
+    - Confirm POST /api/v1/routers/{id}/reboot works (this is the only proof
+      that credentials + REST + firewall are correct).
+    - Configure a payment webhook secret for PalmPesa (otherwise callbacks are
+      accepted unsigned).
+    - Alert on router online=false, remembering that MikroTik never updates
+      last_seen_at in this build.
+
+------------------------------------------------------------------------------
+8. SECURITY AND OPERATIONAL NOTES (current build)
+------------------------------------------------------------------------------
+1. TLS verification is disabled for RouterOS REST (Http::withoutVerifying,
+   RouterService.php:225). This protects against self-signed certs but not
+   against MITM. Consider pinning the router certificate or a known CA.
+2. The API password is encrypted at rest, but the Basic header contains it in
+   clear over the wire. Require https (port 443) and restrict the API user's
+   source address.
+3. api_host validation uses a private-range check. It does not block
+   loopback, link-local, or DNS names that resolve to private IPs. Consider
+   resolving and checking the resolved address.
+4. Reboot is unauthenticated at the router level beyond Basic auth; there is
+   no confirmation token, no 2FA, no rate limit specific to reboot. It is
+   permission-gated in WaiFai (routers.update) and audited.
+5. The setup guide can leak internal/incorrect values if APP_URL is local.
+6. PalmPesa webhook validation is optional; if no secret is configured the
+   endpoint trusts any caller that can reach it. Configure a secret.
+7. Payment webhooks are idempotent on the PlatformPayment status, but the
+   purpose handler can be re-run for enrollment completion; hotspot portal
+   handling is guarded by PaymentTransaction.status = paid.
+8. MikroTik never updates last_seen_at, so dashboards and "online" counts are
+   misleading for MikroTik. Do not use them as an uptime monitor yet.
+9. Router delete is local only; the router keeps its config, and WaiFai loses
+   the credentials.
+10. /routers/{id}/sync has no gateway_type guard; restrict it to Ruijie.
+
+------------------------------------------------------------------------------
+9. GAP REGISTER / BUILD ASSESSMENT
+------------------------------------------------------------------------------
++-----+------------------------------------------------------+----------+-----+
+| #   | Gap                                                  | Severity | In  |
+|     |                                                      |          | code|
++-----+------------------------------------------------------+----------+-----+
+| 1   | No MikroTik payment authorization (portal pays, the  | Critical | No  |
+|     | router is never told to open access)                 |          |     |
+| 2   | No MikroTik client removal / kick / user delete API  | Critical | No  |
+| 3   | No MikroTik inbound heartbeat or callback; last_seen  | High     | No  |
+|     | _at never updates, so online status is wrong         |          |     |
+| 4   | WiFiDog setup guide is the only "portal" guidance;   | High     | Yes |
+|     | two of its commands/fields are not valid RouterOS    |          |     |
+| 5   | No RADIUS or hotspot-user provisioning               | High     | No  |
+| 6   | Access expiry does not revoke router access          | High     | No  |
+| 7   | Reboot/removal calls are synchronous, no queue/retry | Medium   | No  |
+| 8   | RouterOS TLS verification disabled                    | Medium   | Yes |
+| 9   | PalmPesa webhook authentication optional              | Medium   | Yes |
+| 10  | /sync is not guarded by gateway_type                  | Low      | Yes |
+| 11  | Private-IP validation does not cover DNS resolution   | Low      | Yes |
++-----+------------------------------------------------------+----------+-----+
+
+Bottom line:
+  - As a router inventory + remote reboot tool, MikroTik support is real and
+    working (assuming public api_host + RouterOS REST enabled).
+  - As a paid captive-portal system, MikroTik support is not complete. The
+    payment and session engine is there, but the final "open the network for
+    this device" and "remove this device" legs are missing for MikroTik.
+  - The WiFiDog implementation (Ruijie/Wavlink) is the only end-to-end
+    captive-portal path in the current build.
+
+------------------------------------------------------------------------------
+10. SOURCE MAP
+------------------------------------------------------------------------------
+app/Models/NetworkDevice.php
+    Gateway constants, online window, hidden api_password, isOnline()
+
+app/Services/RouterService.php
+    create()     20   MikroTik field storage + password encryption
+    update()     53   password re-encryption, port default
+    test()       155  TCP reachability check
+    reboot()     202  the only RouterOS REST call
+    setup()      250  operator guide (MikroTik/Ruijie/Wavlink)
+    events()     104  offline + audit-derived event list
+
+app/Http/Requests/Operations/StoreRouterRequest.php
+    rules()      20   conditional MikroTik requirements
+    withValidator 64  public-host validation
+
+app/Http/Resources/RouterResource.php
+    toArray()    15   api_password_set, metrics, branch
+
+app/Services/GatewayResolver.php
+    resolveActive()      17  WiFiDog gateway gate
+    supportsWiFiDog()   113  why MikroTik is rejected
+
+app/Services/WiFiDogService.php
+    login()      50   creates/reuses pending captive session
+    auth()      104   Auth:1 / Auth:0 callback
+    portal()    253   post-auth result page
+    ping()      459   Pong heartbeat + last_seen_at
+    disconnect  via captive service on stage=logout (line 185)
+
+app/Services/CaptiveSessionService.php
+    resolveOrCreate()          26  pending sessions
+    authenticate()            197  payment/voucher -> authenticated
+    authorizeToken()          354  grant + status decision
+    disconnect()              485  status only, no router call
+    portalRedirectUrl()       509  /connect URL
+    gatewayAuthRedirectUrl()  610  WiFiDog auth URL (no MikroTik)
+
+app/Services/PaymentService.php
+    createForPortal()          70  portal checkout
+    markPortalPaid()          137  paid -> revenue -> captive auth
+    refreshPortalPaymentStatus 187 polling/reconcile
+    authorizeCaptiveIfPresent 261  links payment to captive session
+
+app/Services/PlatformPaymentService.php
+    markPaid()                 362
+    handleProviderWebhook()    468
+    dispatchPurposeHandler()   647
+    startHotspotPortalPayment 747
+
+app/Services/AccessExpiryService.php
+    expireDue()                 19  DB-only expiry (no router call)
+
+app/Http/Controllers/Api/V1/Portal/PortalController.php
+    createPayment 46, redeemVoucher 77, claimOffer 124,
+    createSession 195, restore 264
+
+app/Http/Controllers/Api/V1/Captive/CaptiveSessionController.php
+    show 14, authorize 32
+
+app/Http/Controllers/Api/V1/Webhooks/PaymentProviderWebhookController.php
+    payments 17, payouts 37
+
+routes/Api/wifidog.php          /api/wifidog/{login,auth,portal,ping}
+routes/Api/v1/auth.php:20-27    /api/v1/webhooks/{payments,payouts,platform-payments}
+routes/Api/v1/routers.php       router CRUD + test/reboot/setup/events/sync
+routes/Api/v1/portal.php        captive portal API
+routes/Api/v1/captive.php       captive session show/authorize
+
+config/captive.php              portal URL / TTL / success URL
+config/services.php             palmpesa/palmpay credentials + callback
+routes/console.php              access:expire, payments:reconcile-palmpesa, ...
+
+==============================================================================
+END OF DOCUMENT
+==============================================================================

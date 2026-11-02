@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
+use App\Jobs\ProvisionMikroTikSession;
 use App\Models\Company;
 use App\Models\Customer;
 use App\Models\InternetPlan;
+use App\Models\NetworkDevice;
 use App\Models\PaymentTransaction;
 use App\Models\PlatformPayment;
 use App\Models\RevenueRecord;
@@ -12,9 +14,9 @@ use App\Models\User;
 use App\Models\Wallet;
 use App\Models\WalletTransaction;
 use App\Support\NetworkDetector;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -280,6 +282,12 @@ class PaymentService
             $captiveService->authenticate($captive, [
                 'payment_transaction_id' => $payment->id,
             ]);
+
+            $captive = $captiveService->findByToken($token);
+
+            if ($captive?->networkDevice?->gateway_type === NetworkDevice::GATEWAY_MIKROTIK) {
+                DB::afterCommit(fn () => ProvisionMikroTikSession::dispatch($captive->id));
+            }
         } catch (\Throwable $e) {
             Log::warning('Portal captive auto-authorize failed', [
                 'payment_transaction_id' => $payment->id,

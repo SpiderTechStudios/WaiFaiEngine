@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Jobs\RevokeMikroTikSession;
 use App\Models\AccessGrant;
 use App\Models\CaptiveSession;
 use App\Models\NetworkSession;
@@ -60,7 +61,13 @@ class AccessExpiryService
      */
     public function expireGrant(AccessGrant $grant): array
     {
-        return DB::transaction(function () use ($grant) {
+        $captiveSessionIds = CaptiveSession::query()
+            ->where('access_grant_id', $grant->id)
+            ->where('status', CaptiveSession::STATUS_AUTHENTICATED)
+            ->pluck('id')
+            ->all();
+
+        $result = DB::transaction(function () use ($grant) {
             $grant = AccessGrant::query()->whereKey($grant->id)->lockForUpdate()->first();
 
             if (! $grant) {
@@ -95,6 +102,12 @@ class AccessExpiryService
                 'captive_sessions' => $captiveSessions,
             ];
         });
+
+        foreach ($captiveSessionIds as $captiveSessionId) {
+            DB::afterCommit(fn () => RevokeMikroTikSession::dispatch((int) $captiveSessionId));
+        }
+
+        return $result;
     }
 
     private function endSessionsForExpiredGrants(): int

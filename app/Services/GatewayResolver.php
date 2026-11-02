@@ -35,7 +35,6 @@ class GatewayResolver
                 'Unknown WiFiDog gateway. No router is registered with gateway_id "'.$gwId.'".'
             );
         }
-
         if ($gateway->status !== 'active') {
             Log::info('wifidog.gateway_inactive', [
                 'received_gw_id' => $gwId,
@@ -88,6 +87,45 @@ class GatewayResolver
         }
 
         return $gateway;
+    }
+
+    /**
+     * Resolve a MikroTik router from the browser login redirect. The portal
+     * key scopes the router; payment/session authorization is still required.
+     *
+     * @throws HttpException
+     */
+    public function resolveMikroTik(int $routerId, string $portalKey): NetworkDevice
+    {
+        $router = NetworkDevice::query()
+            ->with(['company', 'networkStation'])
+            ->where('type', 'router')
+            ->whereKey($routerId)
+            ->first();
+
+        if (! $router || $router->gateway_type !== NetworkDevice::GATEWAY_MIKROTIK) {
+            throw new HttpException(404, 'Unknown MikroTik router.');
+        }
+
+        if ($router->status !== 'active') {
+            throw new HttpException(404, 'MikroTik router is not active.');
+        }
+
+        if (blank($router->portal_key) || ! hash_equals((string) $router->portal_key, $portalKey)) {
+            throw new HttpException(403, 'Invalid MikroTik portal key.');
+        }
+
+        $company = $router->company;
+
+        if (! $company || $company->status !== 'active') {
+            throw new HttpException(404, 'This router belongs to an inactive company.');
+        }
+
+        if (blank($company->subdomain)) {
+            throw new HttpException(422, 'Captive portal subdomain is not configured for this network.');
+        }
+
+        return $router;
     }
 
     /**

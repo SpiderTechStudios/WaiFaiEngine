@@ -49,6 +49,10 @@ class StoreRouterRequest extends FormRequest
                 'string',
                 'max:255',
             ],
+            'api_verify_tls' => ['nullable', 'boolean'],
+            'connection_mode' => ['nullable', 'string', Rule::in(['public', 'vpn'])],
+            'hotspot_port' => ['nullable', 'integer', 'min:1', 'max:65535'],
+            'router_identity' => ['nullable', 'string', 'max:100'],
 
             'gateway_id' => [
                 Rule::requiredIf(fn () => $this->isMethod('post') && $isRuijie),
@@ -65,6 +69,10 @@ class StoreRouterRequest extends FormRequest
     {
         $validator->after(function (Validator $validator) {
             if ($this->input('gateway_type') !== NetworkDevice::GATEWAY_MIKROTIK) {
+                return;
+            }
+
+            if ($this->input('connection_mode') === 'vpn') {
                 return;
             }
 

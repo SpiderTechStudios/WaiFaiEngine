@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Route;
 | /api/wifidog/* without API versioning (matches SensibleHotspot convention).
 */
 require __DIR__.'/Api/wifidog.php';
+require __DIR__.'/Api/mikrotik.php';
 
 Route::prefix('v1')->group(function () {
     require __DIR__.'/Api/v1/portal.php';

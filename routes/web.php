@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Web\CaptivePortalController;
+use App\Http\Controllers\Web\MikroTikGatewayController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -20,3 +21,11 @@ Route::get('/', function () {
 | (/api/wifidog/login, /auth, /portal, /ping).
 */
 Route::get('/connect', [CaptivePortalController::class, 'show'])->name('captive.connect');
+
+/*
+| MikroTik auto-login page. The captive portal sends the browser here after
+| payment; it posts the one-time hotspot credentials to the router's /login.
+*/
+Route::get('/gateway/mikrotik/{token}', [MikroTikGatewayController::class, 'show'])
+    ->middleware('throttle:60,1')
+    ->name('mikrotik.gateway');

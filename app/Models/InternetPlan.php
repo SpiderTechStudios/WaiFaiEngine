@@ -45,6 +45,7 @@ class InternetPlan extends Model
         'speed_download_mbps',
         'speed_upload_mbps',
         'data_cap_mb',
+        'mikrotik_profile',
         'devices_allowed',
         'status',
         'sort_order',

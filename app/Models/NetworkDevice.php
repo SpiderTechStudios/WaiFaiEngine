@@ -43,14 +43,23 @@ class NetworkDevice extends Model
         'firmware',
         'mac_address',
         'wifidog_port',
+        'portal_key',
+        'hotspot_port',
+        'callback_secret',
+        'api_verify_tls',
+        'connection_mode',
+        'router_identity',
         'source',
         'installation_request_id',
         'status',
         'last_seen_at',
+        'last_synced_at',
     ];
 
     protected $hidden = [
         'api_password',
+        'callback_secret',
+        'portal_key',
     ];
 
     /**
@@ -61,7 +70,10 @@ class NetworkDevice extends Model
         return [
             'api_port' => 'integer',
             'wifidog_port' => 'integer',
+            'hotspot_port' => 'integer',
+            'api_verify_tls' => 'boolean',
             'last_seen_at' => 'datetime',
+            'last_synced_at' => 'datetime',
         ];
     }
 

@@ -35,6 +35,18 @@ class CaptiveSession extends Model
         'authenticated_at',
         'expires_at',
         'last_seen_at',
+        'mikrotik_username',
+        'mikrotik_password',
+        'mikrotik_user_id',
+        'mikrotik_grant_id',
+        'mikrotik_provisioned_at',
+        'router_active_id',
+        'router_authorized_at',
+        'router_last_seen_at',
+    ];
+
+    protected $hidden = [
+        'mikrotik_password',
     ];
 
     /**
@@ -47,6 +59,10 @@ class CaptiveSession extends Model
             'authenticated_at' => 'datetime',
             'expires_at' => 'datetime',
             'last_seen_at' => 'datetime',
+            'mikrotik_grant_id' => 'integer',
+            'mikrotik_provisioned_at' => 'datetime',
+            'router_authorized_at' => 'datetime',
+            'router_last_seen_at' => 'datetime',
         ];
     }
 

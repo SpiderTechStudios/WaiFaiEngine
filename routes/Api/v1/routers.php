@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Operations\RouterClientController;
 use App\Http\Controllers\Api\V1\Operations\RouterController;
 use App\Http\Controllers\Api\V1\Operations\RouterExpenseController;
 use App\Support\Permissions;
@@ -12,6 +13,8 @@ Route::middleware(['auth:sanctum', 'active.user', 'company.context', 'company.re
     Route::get('/routers', [RouterController::class, 'index'])->middleware('permission:'.Permissions::ROUTERS_VIEW);
     Route::post('/routers', [RouterController::class, 'store'])->middleware('permission:'.Permissions::ROUTERS_CREATE);
     Route::get('/routers/{router}/expenses', [RouterExpenseController::class, 'index'])->middleware('permission:'.Permissions::EXPENSES_VIEW);
+    Route::get('/routers/{router}/clients', [RouterClientController::class, 'index'])->middleware('permission:'.Permissions::ROUTERS_VIEW);
+    Route::delete('/routers/{router}/clients/{mac}', [RouterClientController::class, 'destroy'])->middleware('permission:'.Permissions::ROUTERS_UPDATE);
     Route::get('/routers/{router}/events', [RouterController::class, 'events'])->middleware('permission:'.Permissions::ROUTERS_VIEW);
     Route::get('/routers/{router}/setup', [RouterController::class, 'setup'])->middleware('permission:'.Permissions::ROUTERS_VIEW);
     Route::post('/routers/{router}/test', [RouterController::class, 'test'])->middleware('permission:'.Permissions::ROUTERS_VIEW);

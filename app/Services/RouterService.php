@@ -6,8 +6,10 @@ use App\Models\AuditLog;
 use App\Models\Company;
 use App\Models\NetworkDevice;
 use App\Models\User;
+use App\Services\MikroTik\MikroTikService;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 
 class RouterService
 {
@@ -15,12 +17,14 @@ class RouterService
         private AuditLogger $auditLogger,
         private BranchService $branchService,
         private RuijieCloudService $ruijieCloudService,
+        private MikroTikService $mikroTikService,
     ) {}
 
     public function create(Company $company, array $data, User $actor): NetworkDevice
     {
         $station = $this->branchService->defaultStation($company, $data['branch_id'] ?? null);
         $gatewayType = $data['gateway_type'];
+        $isMikroTik = $gatewayType === NetworkDevice::GATEWAY_MIKROTIK;
 
         $router = NetworkDevice::query()->create([
             'company_id' => $company->id,
@@ -29,19 +33,35 @@ class RouterService
             'gateway_type' => $gatewayType,
             'name' => $data['name'],
             'lan_ip' => $data['lan_ip'] ?? null,
-            'api_host' => $gatewayType === NetworkDevice::GATEWAY_MIKROTIK ? ($data['api_host'] ?? null) : null,
-            'api_port' => $gatewayType === NetworkDevice::GATEWAY_MIKROTIK
+            'api_host' => $isMikroTik ? ($data['api_host'] ?? null) : null,
+            'api_port' => $isMikroTik
                 ? (int) ($data['api_port'] ?? 443)
                 : null,
-            'api_username' => $gatewayType === NetworkDevice::GATEWAY_MIKROTIK ? ($data['api_username'] ?? null) : null,
-            'api_password' => $gatewayType === NetworkDevice::GATEWAY_MIKROTIK && filled($data['api_password'] ?? null)
+            'api_username' => $isMikroTik ? ($data['api_username'] ?? null) : null,
+            'api_password' => $isMikroTik && filled($data['api_password'] ?? null)
                 ? Crypt::encryptString($data['api_password'])
                 : null,
-            'gateway_id' => $gatewayType === NetworkDevice::GATEWAY_RUIJIE ? ($data['gateway_id'] ?? null) : null,
-            'serial_number' => $gatewayType === NetworkDevice::GATEWAY_RUIJIE ? ($data['serial_number'] ?? null) : null,
+            'gateway_id' => match (true) {
+                $isMikroTik => (string) ($data['gateway_id'] ?? $data['serial_number'] ?? 'mt-'.Str::lower(Str::random(10))),
+                $gatewayType === NetworkDevice::GATEWAY_RUIJIE => $data['gateway_id'] ?? null,
+                default => $data['gateway_id'] ?? null,
+            },
+            'serial_number' => in_array($gatewayType, [NetworkDevice::GATEWAY_RUIJIE, NetworkDevice::GATEWAY_MIKROTIK], true)
+                ? ($data['serial_number'] ?? null)
+                : null,
+            'router_identity' => $isMikroTik ? ($data['router_identity'] ?? $data['serial_number'] ?? null) : null,
             'wifidog_port' => $gatewayType === NetworkDevice::GATEWAY_RUIJIE
                 ? (int) ($data['wifidog_port'] ?? 2060)
                 : null,
+            'hotspot_port' => $isMikroTik
+                ? (int) ($data['hotspot_port'] ?? config('mikrotik.hotspot_port', 80))
+                : null,
+            'portal_key' => $isMikroTik ? Str::random((int) config('mikrotik.portal_key_length', 48)) : null,
+            'callback_secret' => $isMikroTik
+                ? Crypt::encryptString(Str::random((int) config('mikrotik.callback_secret_length', 48)))
+                : null,
+            'api_verify_tls' => $isMikroTik ? (bool) ($data['api_verify_tls'] ?? true) : true,
+            'connection_mode' => $isMikroTik ? ($data['connection_mode'] ?? 'public') : 'public',
             'status' => $data['status'] ?? 'active',
         ]);
 
@@ -59,6 +79,7 @@ class RouterService
         }
 
         $gatewayType = $data['gateway_type'] ?? $router->gateway_type;
+        $isMikroTik = $gatewayType === NetworkDevice::GATEWAY_MIKROTIK;
 
         if (array_key_exists('api_password', $data)) {
             $data['api_password'] = filled($data['api_password'])
@@ -66,8 +87,26 @@ class RouterService
                 : $router->api_password;
         }
 
-        if ($gatewayType === NetworkDevice::GATEWAY_MIKROTIK && array_key_exists('api_port', $data) && blank($data['api_port'])) {
+        if ($isMikroTik && array_key_exists('api_port', $data) && blank($data['api_port'])) {
             $data['api_port'] = 443;
+        }
+
+        if ($isMikroTik && array_key_exists('hotspot_port', $data) && blank($data['hotspot_port'])) {
+            $data['hotspot_port'] = config('mikrotik.hotspot_port', 80);
+        } elseif ($isMikroTik && blank($router->hotspot_port)) {
+            $data['hotspot_port'] = config('mikrotik.hotspot_port', 80);
+        }
+
+        if ($isMikroTik && blank($router->portal_key)) {
+            $data['portal_key'] = Str::random((int) config('mikrotik.portal_key_length', 48));
+        }
+
+        if ($isMikroTik && blank($router->callback_secret)) {
+            $data['callback_secret'] = Crypt::encryptString(Str::random((int) config('mikrotik.callback_secret_length', 48)));
+        }
+
+        if ($isMikroTik && blank($router->gateway_id)) {
+            $data['gateway_id'] = 'mt-'.Str::lower(Str::random(10));
         }
 
         if ($gatewayType === NetworkDevice::GATEWAY_RUIJIE && array_key_exists('wifidog_port', $data) && blank($data['wifidog_port'])) {
@@ -158,10 +197,12 @@ class RouterService
             return ['gateway_type' => $router->gateway_type] + $this->ruijieCloudService->testConnection($router);
         }
 
-        [$host, $port] = match ($router->gateway_type) {
-            NetworkDevice::GATEWAY_MIKROTIK => [$router->api_host ?: $router->lan_ip, (int) ($router->api_port ?: 443)],
-            default => [$router->lan_ip, 80],
-        };
+        if ($router->gateway_type === NetworkDevice::GATEWAY_MIKROTIK) {
+            return $this->mikroTikService->test($router);
+        }
+
+        $host = $router->lan_ip;
+        $port = 80;
 
         if (blank($host)) {
             abort(422, 'This router has no address to test.');
@@ -219,12 +260,17 @@ class RouterService
 
         $port = (int) ($router->api_port ?: 443);
         $scheme = $port === 80 ? 'http' : 'https';
+        $host = (string) preg_replace('#^https?://#i', '', (string) $host);
 
         try {
-            $response = Http::withBasicAuth((string) $router->api_username, $password)
-                ->withoutVerifying()
-                ->timeout(10)
-                ->post("{$scheme}://{$host}:{$port}/rest/system/reboot");
+            $request = Http::withBasicAuth((string) $router->api_username, $password)
+                ->timeout(10);
+
+            if (! ($router->api_verify_tls ?? (bool) config('mikrotik.verify_tls', true))) {
+                $request = $request->withoutVerifying();
+            }
+
+            $response = $request->post("{$scheme}://{$host}:{$port}/rest/system/reboot");
         } catch (\Throwable $exception) {
             abort(502, 'Could not reach the router API: '.$exception->getMessage());
         }
@@ -256,6 +302,32 @@ class RouterService
             ? url('/connect?subdomain='.$company->subdomain)
             : url('/connect');
 
+        $baseUrl = rtrim((string) config('app.url'), '/');
+        $isMikroTik = $router->gateway_type === NetworkDevice::GATEWAY_MIKROTIK;
+        $loginUrl = $isMikroTik
+            ? $baseUrl.'/api/mikrotik/login?router='.$router->id
+                .'&key='.($router->portal_key ?: '<portal-key>')
+                .'&mac=$(mac)&ip=$(ip)&url=$(link-orig-esc)'
+            : null;
+        $loginTemplateUrl = $isMikroTik
+            ? $baseUrl.'/api/mikrotik/login.html?router='.$router->id.'&key='.($router->portal_key ?: '')
+            : null;
+        $callbackSecret = null;
+
+        if ($isMikroTik && filled($router->callback_secret)) {
+            try {
+                $callbackSecret = Crypt::decryptString((string) $router->callback_secret);
+            } catch (\Throwable) {
+                $callbackSecret = null;
+            }
+        }
+
+        $walledGardenCommands = ['/ip hotspot walled-garden add dst-host='.$serverHost.' action=allow comment="WaiFai API"'];
+
+        if (filter_var($serverHost, FILTER_VALIDATE_IP)) {
+            $walledGardenCommands[] = '/ip hotspot walled-garden ip add action=accept dst-address='.$serverHost.' comment="WaiFai API"';
+        }
+
         $steps = match ($router->gateway_type) {
             NetworkDevice::GATEWAY_RUIJIE => [
                 [
@@ -283,22 +355,47 @@ class RouterService
             ],
             NetworkDevice::GATEWAY_MIKROTIK => [
                 [
+                    'title' => 'Enable RouterOS REST',
+                    'description' => 'Enable the REST service and create a dedicated API user restricted to the WaiFai egress IP.',
+                    'commands' => [
+                        '/ip service set www-ssl disabled=no port=443',
+                        '/user group add name=waifai-rest policy=read,write,api,rest-api,test',
+                        '/user add name=waifai-rest group=waifai-rest password=<strong-password> address=<backend-egress-ip>/32',
+                    ],
+                ],
+                [
                     'title' => 'Run the hotspot wizard',
                     'description' => 'On the router open IP > Hotspot > Hotspot Setup and pick the LAN bridge that serves clients.',
                     'commands' => ['/ip hotspot setup'],
                 ],
                 [
-                    'title' => 'Allow the WaiFai API through the walled garden',
+                    'title' => 'Allow WaiFai through the walled garden',
                     'description' => 'The captive portal and payments must reach the backend before the client is authenticated.',
+                    'commands' => $walledGardenCommands,
+                ],
+                [
+                    'title' => 'Install the login page',
+                    'description' => 'Replace the hotspot login page with the WaiFai redirect. Keep a backup first.',
                     'commands' => [
-                        '/ip hotspot walled-garden add dst-host='.$serverHost.' action=allow comment="WaiFai API"',
-                        '/ip hotspot walled-garden ip add action=accept dst-address='.$serverHost.' comment="WaiFai API"',
+                        '/file copy hotspot/login.html hotspot/login.html.bak',
+                        'Login URL: '.$loginUrl,
+                        '/tool fetch url="'.($loginTemplateUrl ?: '').'" dst-path=hotspot/login.html mode=https check-certificate=yes',
                     ],
                 ],
                 [
-                    'title' => 'Set the portal URL',
-                    'description' => 'In IP > Hotspot > Server Profiles set the login/redirect to the portal URL below.',
-                    'commands' => ['Portal URL: '.$portalUrl],
+                    'title' => 'Use HTTP PAP for the auto-login form',
+                    'description' => 'The gateway page posts the one-time hotspot username/password to the router. Enable HTTP PAP on the hotspot profile.',
+                    'commands' => [
+                        '/ip hotspot profile set [find] login-by=http-pap',
+                    ],
+                ],
+                [
+                    'title' => 'Test the connection',
+                    'description' => 'Run the connection test. It calls /rest/system/resource and /rest/ip/hotspot/active.',
+                    'commands' => [
+                        'POST /api/v1/routers/'.$router->id.'/test',
+                        'Portal URL: '.$portalUrl,
+                    ],
                 ],
             ],
             default => [
@@ -319,6 +416,15 @@ class RouterService
             'type' => $router->gateway_type,
             'portal_url' => $portalUrl,
             'server_host' => $serverHost,
+            'hotspot_port' => $router->hotspot_port,
+            'portal_key' => $router->portal_key,
+            'login_url' => $loginUrl,
+            'login_template_url' => $loginTemplateUrl,
+            'login_html' => $isMikroTik && $loginUrl
+                ? view('captive.mikrotik-login', ['loginUrl' => $loginUrl])->render()
+                : null,
+            'callback_url' => $isMikroTik ? $baseUrl.'/api/mikrotik/callback' : null,
+            'callback_secret' => $callbackSecret,
             'steps' => $steps,
             'commands' => array_merge(...array_map(fn (array $step) => $step['commands'], $steps)),
         ];

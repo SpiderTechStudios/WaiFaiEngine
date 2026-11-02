@@ -44,7 +44,10 @@ class CaptiveSessionService
                 ? (int) $client['gw_port']
                 : null;
             $fallbackGwAddress = $gateway->lan_ip ?: null;
-            $fallbackGwPort = $gateway->wifidog_port ?: 2060;
+            $fallbackGwPort = $gateway->gateway_type === NetworkDevice::GATEWAY_MIKROTIK
+                ? (int) ($gateway->hotspot_port ?: config('mikrotik.hotspot_port', 80))
+                : (int) ($gateway->wifidog_port ?: 2060);
+            $gatewayIdentifier = (string) ($gateway->gateway_id ?: $gateway->serial_number ?: $gateway->id);
 
             if ($existing) {
                 $previousGwAddress = $existing->gw_address;
@@ -86,7 +89,7 @@ class CaptiveSessionService
                 'company_id' => $gateway->company_id,
                 'network_device_id' => $gateway->id,
                 'network_station_id' => $gateway->network_station_id,
-                'gateway_id' => (string) $gateway->gateway_id,
+                'gateway_id' => $gatewayIdentifier,
                 'client_mac' => $mac,
                 'client_ip' => $ip,
                 'ssid' => $client['ssid'] ?? null,
@@ -610,6 +613,10 @@ class CaptiveSessionService
     public function gatewayAuthRedirectUrl(CaptiveSession $session): ?string
     {
         $session->loadMissing('networkDevice');
+
+        if ($session->networkDevice?->gateway_type === NetworkDevice::GATEWAY_MIKROTIK) {
+            return url('/gateway/mikrotik/'.$session->token);
+        }
 
         $address = $session->gw_address ?: $session->networkDevice?->lan_ip;
         $port = $session->gw_port
