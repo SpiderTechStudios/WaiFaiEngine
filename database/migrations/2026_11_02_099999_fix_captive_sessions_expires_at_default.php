@@ -22,8 +22,11 @@ return new class extends Migration
             return;
         }
 
-        $hasInvalidDefault = $column->is_nullable === 'NO'
-            || str_starts_with((string) $column->column_default, '0000-00-00');
+        // MySQL/MariaDB may return information_schema columns in upper case.
+        $data = array_change_key_case((array) $column, CASE_LOWER);
+
+        $hasInvalidDefault = ($data['is_nullable'] ?? '') === 'NO'
+            || str_starts_with((string) ($data['column_default'] ?? ''), '0000-00-00');
 
         if ($hasInvalidDefault) {
             DB::statement('ALTER TABLE `captive_sessions` MODIFY `expires_at` TIMESTAMP NULL DEFAULT NULL');
