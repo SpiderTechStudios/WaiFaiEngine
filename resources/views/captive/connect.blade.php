@@ -8,94 +8,360 @@
     <style>
         :root {
             --brand: {{ $portal['brand_color'] }};
-            --brand-ink: #ffffff;
-            --accent: #f97316;
+            --brand-dark: color-mix(in srgb, var(--brand) 78%, #000);
+            --brand-soft: color-mix(in srgb, var(--brand) 9%, #ffffff);
+            --brand-line: color-mix(in srgb, var(--brand) 26%, #ffffff);
             --ink: #0f172a;
             --muted: #64748b;
             --line: #e2e8f0;
-            --bg: #f1f5f9;
+            --bg: #eef2f7;
+            --card: #ffffff;
             --danger: #b91c1c;
+            --success: #047857;
+            --radius: 18px;
         }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         html, body { margin: 0; padding: 0; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background:
-                linear-gradient(
-                    180deg,
-                    color-mix(in srgb, var(--brand) 45%, #ffffff) 0%,
-                    color-mix(in srgb, var(--brand) 10%, #ffffff) 38%,
-                    var(--bg) 100%
-                );
+                radial-gradient(120% 60% at 50% 0%, color-mix(in srgb, var(--brand) 22%, #ffffff) 0%, transparent 60%),
+                var(--bg);
             color: var(--ink);
             line-height: 1.5;
             min-height: 100vh;
             display: flex;
             justify-content: center;
-            padding: 20px 16px 40px;
+            padding: 18px 14px 40px;
         }
-        .portal { width: 100%; max-width: 480px; }
-        .brand-head {
-            text-align: center;
-            margin-bottom: 16px;
-            background: var(--brand);
-            color: var(--brand-ink);
-            border-radius: 20px;
-            padding: 22px 18px 20px;
-            box-shadow: 0 10px 24px color-mix(in srgb, var(--brand) 28%, transparent);
+        .portal { width: 100%; max-width: 520px; }
+
+        /* ---------- Hero ---------- */
+        .hero {
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
+            color: #fff;
+            border-radius: 26px;
+            padding: 22px 20px 20px;
+            box-shadow: 0 24px 45px -24px color-mix(in srgb, var(--brand) 85%, transparent);
         }
+        .hero::after {
+            content: "";
+            position: absolute;
+            width: 220px;
+            height: 220px;
+            right: -90px;
+            top: -110px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, .12);
+        }
+        .hero-top { display: flex; align-items: center; gap: 14px; position: relative; z-index: 1; }
         .brand-mark {
-            width: 52px;
-            height: 52px;
-            margin: 0 auto 12px;
-            border-radius: 14px;
-            background: var(--accent);
+            flex: none;
+            width: 60px;
+            height: 60px;
+            padding: 6px;
+            border-radius: 18px;
+            background: #ffffff;
             display: grid;
             place-items: center;
             overflow: hidden;
-            box-shadow: 0 6px 14px rgba(0,0,0,.12);
+            box-shadow: 0 8px 18px rgba(0, 0, 0, .16);
         }
-        .brand-mark img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        .brand-mark svg {
-            width: 26px;
-            height: 26px;
-            color: #111;
-            display: block;
-        }
-        .brand-head h1 {
-            font-size: 24px;
-            margin: 0 0 6px;
-            letter-spacing: -0.01em;
-            color: var(--brand-ink);
-        }
-        .brand-head p {
-            margin: 0 auto;
-            max-width: 32ch;
-            color: rgba(255,255,255,.95);
-            font-size: 13px;
-            line-height: 1.4;
-        }
-        .router-note {
-            text-align: center;
-            color: rgba(255,255,255,.8);
-            font-size: 12px;
-            margin-top: 8px;
-        }
-        .header-support {
-            margin-top: 12px;
-            font-size: 13px;
-            color: rgba(255,255,255,.95);
-        }
-        .header-support a {
+        .brand-mark img { width: 100%; height: 100%; object-fit: contain; }
+        .hero-brand { min-width: 0; }
+        .hero-brand h1 {
+            font-size: 21px;
+            line-height: 1.15;
+            margin: 0;
+            letter-spacing: -0.02em;
             color: #fff;
-            font-weight: 700;
-            text-decoration: none;
-            border-bottom: 1px solid rgba(255,255,255,.55);
+            word-break: break-word;
         }
+        .router-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 6px;
+            max-width: 100%;
+            font-size: 11.5px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, .92);
+            background: rgba(255, 255, 255, .16);
+            border-radius: 999px;
+            padding: 3px 10px;
+        }
+        .router-chip svg { width: 12px; height: 12px; flex: none; }
+        .welcome {
+            position: relative;
+            z-index: 1;
+            margin: 16px 0 0;
+            font-size: 15.5px;
+            font-weight: 500;
+            line-height: 1.55;
+            color: rgba(255, 255, 255, .98);
+        }
+        .support {
+            position: relative;
+            z-index: 1;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 14px;
+            padding: 9px 14px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, .16);
+            color: #fff;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .support svg { width: 15px; height: 15px; flex: none; margin-top: 2px; }
+        .support-text { display: flex; flex-direction: column; gap: 1px; }
+        .support-title { font-size: 13px; font-weight: 700; }
+        .support-desc { font-size: 11px; font-weight: 500; opacity: .82; }
+
+        /* ---------- Panels ---------- */
+        .panel {
+            background: var(--card);
+            border: 1px solid rgba(226, 232, 240, .9);
+            border-radius: 22px;
+            padding: 20px;
+            margin-top: 14px;
+            box-shadow: 0 18px 40px -30px rgba(15, 23, 42, .55);
+        }
+        .panel-kicker {
+            display: block;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: var(--brand);
+            margin-bottom: 4px;
+        }
+        .panel-title { font-size: 19px; margin: 0; letter-spacing: -0.01em; }
+        .panel-sub { margin: 6px 0 0; font-size: 13px; color: var(--muted); }
+
+        /* ---------- Action cards ---------- */
+        .actions { display: grid; gap: 10px; margin-top: 16px; }
+        .action-card {
+            display: flex;
+            align-items: center;
+            gap: 13px;
+            width: 100%;
+            text-align: left;
+            background: #fff;
+            border: 1.5px solid var(--line);
+            border-radius: 16px;
+            padding: 13px 14px;
+            font: inherit;
+            color: inherit;
+            cursor: pointer;
+            transition: border-color .15s ease, box-shadow .15s ease, transform .05s ease;
+        }
+        .action-card:active { transform: scale(.995); }
+        .action-card:hover { border-color: var(--brand-line); box-shadow: 0 10px 22px -18px rgba(15, 23, 42, .5); }
+        .action-card.primary {
+            border-color: var(--brand);
+            background: var(--brand-soft);
+        }
+        .action-icon {
+            flex: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 13px;
+            display: grid;
+            place-items: center;
+            background: var(--brand-soft);
+            color: var(--brand);
+        }
+        .action-card.primary .action-icon { background: var(--brand); color: #fff; }
+        .action-icon svg { width: 22px; height: 22px; }
+        .action-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+        .action-title { font-weight: 700; font-size: 15px; }
+        .action-desc { color: var(--muted); font-size: 12.5px; line-height: 1.35; }
+        .action-arrow { flex: none; color: var(--muted); display: grid; place-items: center; }
+        .action-arrow svg { width: 18px; height: 18px; }
+
+        .help-note {
+            margin-top: 16px;
+            padding: 12px 14px;
+            border-radius: 14px;
+            background: #f8fafc;
+            border: 1px dashed var(--line);
+            font-size: 12.5px;
+            color: var(--muted);
+            text-align: center;
+        }
+        .help-note a { color: var(--brand); font-weight: 700; text-decoration: none; }
+
+        /* ---------- Offer ---------- */
+        .offer-banner {
+            position: relative;
+            margin-bottom: 16px;
+            padding: 16px;
+            border-radius: 16px;
+            border: 1.5px dashed #fb923c;
+            background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+        }
+        .offer-tag {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: #fff;
+            background: #ea580c;
+            border-radius: 999px;
+            padding: 2px 9px;
+            margin-bottom: 8px;
+        }
+        .offer-title { margin: 0; font-size: 16px; font-weight: 800; color: #9a3412; }
+        .offer-desc { margin: 4px 0 0; font-size: 13px; color: #7c2d12; }
+        .offer-meta { margin: 6px 0 0; font-size: 12px; font-weight: 700; color: #c2410c; }
+
+        /* ---------- Buttons ---------- */
+        .btn {
+            display: block;
+            width: 100%;
+            text-align: center;
+            border: 0;
+            border-radius: 14px;
+            padding: 15px 16px;
+            font: inherit;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform .05s ease, opacity .15s ease;
+        }
+        .btn:active { transform: scale(.995); }
+        .btn:disabled { opacity: .65; cursor: default; }
+        .btn-primary { background: var(--brand); color: #fff; box-shadow: 0 12px 22px -14px color-mix(in srgb, var(--brand) 90%, transparent); }
+        .btn-outline { background: #fff; color: var(--brand); border: 2px solid var(--brand); }
+        .btn-offer { background: #ea580c; color: #fff; margin-top: 12px; }
+
+        /* ---------- Packages ---------- */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+            gap: 10px;
+            margin-top: 14px;
+        }
+        .package {
+            position: relative;
+            text-align: left;
+            background: #fff;
+            border: 1.5px solid var(--line);
+            border-radius: 16px;
+            padding: 14px;
+            cursor: pointer;
+            font: inherit;
+            color: inherit;
+            transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+        }
+        .package:active { transform: scale(.995); }
+        .package.selected {
+            border-color: var(--brand);
+            background: var(--brand-soft);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 16%, transparent);
+        }
+        .package.selected::after {
+            content: "✓";
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--brand);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            display: grid;
+            place-items: center;
+        }
+        .package .p-name { font-weight: 700; font-size: 15px; padding-right: 24px; }
+        .package .p-desc { color: var(--muted); font-size: 12px; margin-top: 4px; }
+        .package .p-meta { color: var(--muted); font-size: 12px; margin-top: 6px; }
+        .package .p-price { margin-top: 8px; font-weight: 800; color: var(--brand); font-size: 17px; }
+        .package .p-badge {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .03em;
+            background: color-mix(in srgb, var(--brand) 14%, #fff);
+            color: var(--brand);
+            border-radius: 999px;
+            padding: 2px 8px;
+            margin-top: 4px;
+        }
+
+        /* ---------- Forms ---------- */
+        .field { margin-top: 16px; }
+        .field-label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+        .field-hint { font-size: 12px; color: var(--muted); margin: 6px 0 0; }
+        input[type=tel], input[type=text] {
+            width: 100%;
+            padding: 14px 12px;
+            font-size: 16px;
+            border: 1.5px solid var(--line);
+            border-radius: 13px;
+            background: #fff;
+            color: var(--ink);
+        }
+        input:focus {
+            outline: none;
+            border-color: var(--brand);
+            box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand) 15%, transparent);
+        }
+        .error { color: var(--danger); font-size: 13px; margin: 10px 0 0; min-height: 0; }
+        .empty {
+            margin: 14px 0 0;
+            padding: 14px;
+            border-radius: 14px;
+            background: #f8fafc;
+            border: 1px dashed var(--line);
+            color: var(--muted);
+            font-size: 13px;
+            text-align: center;
+        }
+        .back {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(229, 57, 53, .12);
+            border: 1px solid rgba(229, 57, 53, .25);
+            border-radius: 10px;
+            color: #c62828;
+            font: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 8px 14px;
+            margin: 0 0 14px;
+            cursor: pointer;
+        }
+        .back:active { transform: scale(.98); }
+        .back svg { width: 16px; height: 16px; }
+        .submit { margin-top: 16px; }
+
+        .status-box {
+            margin-top: 14px;
+            padding: 13px 14px;
+            border-radius: 13px;
+            background: #f8fafc;
+            border: 1px solid var(--line);
+            font-size: 14px;
+            color: var(--ink);
+            line-height: 1.45;
+        }
+        .status-box strong { display: block; margin-bottom: 2px; }
+        .status-box.ok { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
+        .status-box.wait { background: #fff7ed; border-color: #fed7aa; color: #9a3412; }
+        .status-box .meta { margin-top: 6px; color: var(--muted); font-size: 12px; word-break: break-all; }
+
+        /* ---------- Footer ---------- */
         .footer {
             text-align: center;
             font-size: 12px;
@@ -103,133 +369,14 @@
             margin-top: 18px;
             line-height: 1.4;
         }
-        .footer a {
-            color: var(--brand);
-            font-weight: 600;
-            text-decoration: none;
-        }
-        .card {
-            background: #fff;
-            border-radius: 16px;
-            padding: 18px;
-            box-shadow: 0 1px 3px rgba(15, 23, 42, .08);
-        }
-        .stack > * { margin: 0; }
-        .stack > * + * { margin-top: 12px; }
-        .btn {
-            display: block;
-            width: 100%;
-            text-align: center;
-            border: 0;
-            border-radius: 12px;
-            padding: 14px 16px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform .05s ease, opacity .15s ease;
-        }
-        .btn:active { transform: scale(.99); }
-        .btn-primary {
-            background: var(--brand);
-            color: var(--brand-ink);
-        }
-        .btn-outline {
-            background: #fff;
-            color: var(--brand);
-            border: 2px solid var(--brand);
-        }
-        .btn-offer {
-            background: #0f9d58;
-            color: #fff;
-        }
-        .offer-banner {
-            border: 2px dashed color-mix(in srgb, var(--brand) 45%, #fff);
-            border-radius: 14px;
-            padding: 14px;
-            background: color-mix(in srgb, var(--brand) 7%, #fff);
-        }
-        .offer-banner .offer-title { margin: 0; font-size: 16px; font-weight: 700; }
-        .offer-banner .offer-desc { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
-        .offer-banner .offer-meta { margin: 6px 0 0; color: var(--brand); font-size: 12px; font-weight: 700; }
-        .offer-banner .btn { margin-top: 12px; }
-        .offer-state-desc { margin: 0 0 4px; color: var(--muted); font-size: 13px; }
-        .status-box {
-            margin-top: 14px;
-            padding: 12px 14px;
-            border-radius: 12px;
-            background: #f8fafc;
-            border: 1px solid var(--line);
-            font-size: 14px;
-            color: var(--ink);
-        }
-        .status-box.ok { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
-        .status-box.wait { background: #fff7ed; border-color: #fed7aa; color: #9a3412; }
-        .status-box .meta { margin-top: 6px; color: var(--muted); font-size: 12px; word-break: break-all; }
+        .footer a { color: var(--brand); font-weight: 700; text-decoration: none; }
 
-        h2.section-title { font-size: 18px; margin: 0 0 14px; }
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 10px;
-        }
-        .package {
-            text-align: left;
-            background: #fff;
-            border: 2px solid var(--line);
-            border-radius: 14px;
-            padding: 12px;
-            cursor: pointer;
-            font: inherit;
-            color: inherit;
-            position: relative;
-        }
-        .package.selected {
-            border-color: var(--brand);
-            box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 18%, transparent);
-        }
-        .package .p-name { font-weight: 700; font-size: 15px; }
-        .package .p-desc { color: var(--muted); font-size: 12px; margin-top: 4px; }
-        .package .p-meta { color: var(--muted); font-size: 12px; margin-top: 6px; }
-        .package .p-price { margin-top: 8px; font-weight: 700; color: var(--brand); font-size: 16px; }
-        .package .p-badge {
-            display: inline-block;
-            font-size: 10px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: .02em;
-            background: color-mix(in srgb, var(--brand) 14%, #fff);
-            color: var(--brand);
-            border-radius: 999px;
-            padding: 2px 8px;
-            margin-top: 4px;
-        }
-        label.field-label { display: block; font-size: 13px; font-weight: 600; margin: 14px 0 6px; }
-        input[type=tel], input[type=text] {
-            width: 100%;
-            padding: 13px 12px;
-            font-size: 16px;
-            border: 1.5px solid var(--line);
-            border-radius: 12px;
-            background: #fff;
-            color: var(--ink);
-        }
-        input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 15%, transparent); }
-        .error { color: var(--danger); font-size: 13px; margin: 10px 0 0; min-height: 0; }
-        .back {
-            display: inline-block;
-            margin-top: 16px;
-            background: none;
-            border: 0;
-            color: var(--muted);
-            font-size: 14px;
-            cursor: pointer;
-            padding: 4px 0;
-        }
+        /* ---------- Overlay ---------- */
         .hidden { display: none !important; }
         .overlay {
             position: fixed;
             inset: 0;
-            background: rgba(255, 255, 255, .96);
+            background: rgba(255, 255, 255, .97);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -239,115 +386,239 @@
             z-index: 50;
         }
         .spinner {
-            width: 30px; height: 30px; border-radius: 50%;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
             border: 3px solid color-mix(in srgb, var(--brand) 25%, #fff);
             border-top-color: var(--brand);
             animation: spin .8s linear infinite;
             margin-bottom: 14px;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
+
         @media (min-width: 560px) {
-            .portal { max-width: 640px; }
+            .portal { max-width: 600px; }
+            .hero { padding: 26px 24px 24px; }
+            .panel { padding: 24px; }
             .grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
         }
     </style>
 </head>
 <body>
     <main class="portal">
-        <header class="brand-head">
-            <div class="brand-mark">
-                @if (! empty($portal['logo_url']))
-                    <img src="{{ $portal['logo_url'] }}" alt="{{ $portal['business_name'] }}">
-                @else
-                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <path d="M12 18.5a1.25 1.25 0 1 0 0-2.5 1.25 1.25 0 0 0 0 2.5Z" fill="currentColor"/>
-                        <path d="M8.2 14.3a5.5 5.5 0 0 1 7.6 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                        <path d="M5.5 11.4a9.5 9.5 0 0 1 13 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                        <path d="M2.8 8.5a13.5 13.5 0 0 1 18.4 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                    </svg>
-                @endif
+        <header class="hero">
+            <div class="hero-top">
+                <div class="brand-mark">
+                    <img src="{{ $portal['logo_url'] ?? asset('images/logo.png') }}" alt="{{ $portal['business_name'] }}">
+                </div>
+                <div class="hero-brand">
+                    <h1>{{ $portal['business_name'] }}</h1>
+                    @if (! empty($portal['router_name']))
+                        <div class="router-chip">
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <path d="M2.5 8.5a14 14 0 0 1 19 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                <path d="M5.5 11.8a9.6 9.6 0 0 1 13 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                <path d="M8.6 15.1a5.2 5.2 0 0 1 6.8 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                <circle cx="12" cy="18.5" r="1.2" fill="currentColor"/>
+                            </svg>
+                            {{ $portal['router_name'] }}
+                        </div>
+                    @endif
+                </div>
             </div>
-            <h1>{{ $portal['business_name'] }}</h1>
-            <p>{{ $portal['welcome_message'] }}</p>
-            @if (! empty($portal['router_name']))
-                <div class="router-note">{{ $portal['router_name'] }}</div>
-            @endif
-            <div class="header-support">
-                Kwa msaada:
-                <a href="tel:{{ $portal['contact_phone'] }}">{{ $portal['contact_phone'] }}</a>
-            </div>
+
+            <p class="welcome">{{ $portal['welcome_message'] }}</p>
+
+            <a class="support" href="tel:{{ $portal['contact_phone'] }}">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M6.6 3.8 4.9 3.5a1.6 1.6 0 0 0-1.8 1.3c-.6 5.9 3 11.7 8.9 13.4l1.7 1.4c.4.3 1 .3 1.4-.1l1.8-1.6a1.6 1.6 0 0 0 .1-2.3l-2-2.2a1.6 1.6 0 0 0-2.1-.2l-1 .8a10.8 10.8 0 0 1-4.4-4.9l.9-.9a1.6 1.6 0 0 0 .2-2.1l-1-1.3a1.6 1.6 0 0 0-1.4-.6Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                </svg>
+                <span class="support-text">
+                    <span class="support-title">Huduma kwa wateja · {{ $portal['contact_phone'] }}</span>
+                    <span class="support-desc">Bonyeza hapa kupiga huduma kwa wateja</span>
+                </span>
+            </a>
         </header>
 
         {{-- INITIAL STATE --}}
-        <section id="state-initial" class="card stack">
+        <section id="state-initial" class="panel">
             <div id="offerBanner" class="offer-banner hidden">
+                <span class="offer-tag">Ofa maalum</span>
                 <p class="offer-title" id="offerTitle"></p>
                 <p class="offer-desc" id="offerDesc"></p>
                 <p class="offer-meta" id="offerMeta"></p>
                 <button type="button" class="btn btn-offer" data-go="offer">Chukua ofa sasa</button>
             </div>
-            @if ($portal['allows_mobile_money'])
-                <button type="button" class="btn btn-primary" data-go="subscribe">Jiunge sasa</button>
-            @endif
-            @if ($portal['allows_voucher'])
-                <button type="button" class="btn {{ $portal['allows_mobile_money'] ? 'btn-outline' : 'btn-primary' }}" data-go="voucher">Jiunge kwa vocha</button>
-            @endif
-            <button type="button" class="btn btn-outline" data-go="redeem">Endeleza kifurushi</button>
+
+            <span class="panel-kicker">Karibu</span>
+            <h2 class="panel-title">Ungependa kuanza vipi?</h2>
+            <p class="panel-sub">Chagua njia inayokufaa ili kupata intaneti.</p>
+
+            <div class="actions">
+                @if ($portal['allows_mobile_money'])
+                    <button type="button" class="action-card primary" data-go="subscribe">
+                        <span class="action-icon">
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <rect x="6.5" y="2.5" width="11" height="19" rx="2.5" stroke="currentColor" stroke-width="1.7"/>
+                                <path d="M10.5 18.5h3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                            </svg>
+                        </span>
+                        <span class="action-body">
+                            <span class="action-title">Jiunge sasa</span>
+                            <span class="action-desc">Lipa kwa M-Pesa, Tigo Pesa, Airtel Money au HaloPesa.</span>
+                        </span>
+                        <span class="action-arrow">
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <path d="m9 5 7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </span>
+                    </button>
+                @endif
+
+                @if ($portal['allows_voucher'])
+                    <button type="button" class="action-card" data-go="voucher">
+                        <span class="action-icon">
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <path d="M3.5 9.5V6.8c0-.7.6-1.3 1.3-1.3h14.4c.7 0 1.3.6 1.3 1.3v2.7a2.5 2.5 0 0 0 0 5v2.7c0 .7-.6 1.3-1.3 1.3H4.8c-.7 0-1.3-.6-1.3-1.3v-2.7a2.5 2.5 0 0 0 0-5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                                <path d="M14 6v12" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2 3" stroke-linecap="round"/>
+                            </svg>
+                        </span>
+                        <span class="action-body">
+                            <span class="action-title">Jiunge kwa vocha</span>
+                            <span class="action-desc">Una namba ya vocha? Ijumuishe hapa.</span>
+                        </span>
+                        <span class="action-arrow">
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <path d="m9 5 7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </span>
+                    </button>
+                @endif
+
+                <button type="button" class="action-card" data-go="redeem">
+                    <span class="action-icon">
+                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M20 12a8 8 0 1 1-2.4-5.7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                            <path d="M20 4.5V9h-4.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M12 8v4.5l3 1.7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                    <span class="action-body">
+                        <span class="action-title">Endeleza kifurushi</span>
+                        <span class="action-desc">Tayari umelipia? Rejesha kifurushi chako kilichopo.</span>
+                    </span>
+                    <span class="action-arrow">
+                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="m9 5 7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                </button>
+            </div>
+
+            <div class="help-note">
+                Huna uhakika wa kuchagua? Piga
+                <a href="tel:{{ $portal['contact_phone'] }}">{{ $portal['contact_phone'] }}</a>
+                kwa msaada.
+            </div>
         </section>
 
         {{-- SUBSCRIBE STATE --}}
-        <section id="state-subscribe" class="card hidden">
-            <h2 class="section-title">Chagua kifurushi</h2>
-            <div id="packageGrid" class="grid"></div>
-            <p id="subscribeEmpty" class="error hidden">Hakuna vifurushi vinavyopatikana kwa sasa.</p>
+        <section id="state-subscribe" class="panel hidden">
+            <button type="button" class="back" data-back>
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="m15 5-7 7 7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Rudi nyuma
+            </button>
 
-            <label class="field-label" for="subscribePhone">Number ya simu</label>
-            <input id="subscribePhone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="Ingiza namba ya simu">
+            <span class="panel-kicker">Hatua 1</span>
+            <h2 class="panel-title">Chagua kifurushi</h2>
+            <p class="panel-sub">Bonyeza kifurushi unachokitaka, kisha ingiza namba yako ya simu.</p>
+
+            <div id="packageGrid" class="grid"></div>
+            <p id="subscribeEmpty" class="empty hidden">Hakuna vifurushi vinavyopatikana kwa sasa.</p>
+
+            <div class="field">
+                <label class="field-label" for="subscribePhone">Namba ya simu ya malipo</label>
+                <input id="subscribePhone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="Mfano: 0712 345 678">
+                <p class="field-hint">Utapokea ombi la malipo kwenye simu hii.</p>
+            </div>
 
             <p id="subscribeError" class="error"></p>
             <div id="subscribeStatus" class="status-box hidden"></div>
-            <button type="button" id="subscribeSubmit" class="btn btn-primary" style="margin-top:14px">Endelea</button>
-            <button type="button" class="back" data-back>&larr; Rudi nyuma</button>
+            <button type="button" id="subscribeSubmit" class="btn btn-primary submit">Endelea kulipa</button>
         </section>
 
         {{-- VOUCHER STATE --}}
-        <section id="state-voucher" class="card hidden">
-            <h2 class="section-title">Jiunge kwa vocha</h2>
+        <section id="state-voucher" class="panel hidden">
+            <button type="button" class="back" data-back>
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="m15 5-7 7 7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Rudi nyuma
+            </button>
 
-            <label class="field-label" for="voucherCode">Namba ya vocha</label>
-            <input id="voucherCode" type="text" inputmode="numeric" autocomplete="off" placeholder="Ingiza namba ya vocha">
+            <span class="panel-kicker">Vocha</span>
+            <h2 class="panel-title">Jiunge kwa vocha</h2>
+            <p class="panel-sub">Ingiza namba ya vocha yako ili kupata intaneti.</p>
 
-            <label class="field-label" for="voucherPhone">Number ya simu</label>
-            <input id="voucherPhone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="Ingiza namba ya simu">
+            <div class="field">
+                <label class="field-label" for="voucherCode">Namba ya vocha</label>
+                <input id="voucherCode" type="text" inputmode="numeric" autocomplete="off" placeholder="Ingiza namba ya vocha">
+            </div>
+
+            <div class="field">
+                <label class="field-label" for="voucherPhone">Namba ya simu</label>
+                <input id="voucherPhone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="Mfano: 0712 345 678">
+                <p class="field-hint">Tunatumia namba hii kukutambulisha.</p>
+            </div>
 
             <p id="voucherError" class="error"></p>
-            <button type="button" id="voucherSubmit" class="btn btn-primary" style="margin-top:14px">Endelea</button>
-            <button type="button" class="back" data-back>&larr; Rudi nyuma</button>
+            <button type="button" id="voucherSubmit" class="btn btn-primary submit">Tumia vocha</button>
         </section>
 
         {{-- REDEEM STATE --}}
-        <section id="state-redeem" class="card hidden">
-            <h2 class="section-title">Endeleza kifurushi</h2>
+        <section id="state-redeem" class="panel hidden">
+            <button type="button" class="back" data-back>
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="m15 5-7 7 7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Rudi nyuma
+            </button>
 
-            <label class="field-label" for="redeemPhone">Number ya simu</label>
-            <input id="redeemPhone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="Ingiza namba ya simu">
+            <span class="panel-kicker">Endeleza</span>
+            <h2 class="panel-title">Endeleza kifurushi</h2>
+            <p class="panel-sub">Umeshalipia awali? Ingiza namba yako ili kuendelea.</p>
+
+            <div class="field">
+                <label class="field-label" for="redeemPhone">Namba ya simu</label>
+                <input id="redeemPhone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="Mfano: 0712 345 678">
+            </div>
 
             <p id="redeemError" class="error"></p>
-            <button type="button" id="redeemSubmit" class="btn btn-primary" style="margin-top:14px">Endelea</button>
-            <button type="button" class="back" data-back>&larr; Rudi nyuma</button>
+            <button type="button" id="redeemSubmit" class="btn btn-primary submit">Endelea</button>
         </section>
 
         {{-- OFFER STATE --}}
-        <section id="state-offer" class="card hidden">
-            <h2 class="section-title" id="offerStateTitle">Ofa ya bure</h2>
-            <p class="offer-state-desc" id="offerStateDesc"></p>
+        <section id="state-offer" class="panel hidden">
+            <button type="button" class="back" data-back>
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="m15 5-7 7 7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Rudi nyuma
+            </button>
 
-            <label class="field-label" for="offerPhone">Number ya simu</label>
-            <input id="offerPhone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="Ingiza namba ya simu">
+            <span class="panel-kicker">Ofa</span>
+            <h2 class="panel-title" id="offerStateTitle">Ofa ya bure</h2>
+            <p class="panel-sub" id="offerStateDesc"></p>
+
+            <div class="field">
+                <label class="field-label" for="offerPhone">Namba ya simu</label>
+                <input id="offerPhone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="Mfano: 0712 345 678">
+            </div>
 
             <p id="offerError" class="error"></p>
-            <button type="button" id="offerSubmit" class="btn btn-primary" style="margin-top:14px">Chukua ofa</button>
-            <button type="button" class="back" data-back>&larr; Rudi nyuma</button>
+            <button type="button" id="offerSubmit" class="btn btn-primary submit">Chukua ofa</button>
         </section>
 
         <p class="footer">
