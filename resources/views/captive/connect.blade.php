@@ -451,7 +451,7 @@
             </div>
 
             <span class="panel-kicker">Karibu</span>
-            <h2 class="panel-title">Ungependa kuanza vipi?</h2>
+            <h2 class="panel-title">Ungependa kujiunga kwa Njia gani?</h2>
             <p class="panel-sub">Chagua njia inayokufaa ili kupata intaneti.</p>
 
             <div class="actions">
@@ -464,7 +464,7 @@
                             </svg>
                         </span>
                         <span class="action-body">
-                            <span class="action-title">Jiunge sasa</span>
+                            <span class="action-title">Lipa kwa simu ujiunge</span>
                             <span class="action-desc">Lipa kwa M-Pesa, Tigo Pesa, Airtel Money au HaloPesa.</span>
                         </span>
                         <span class="action-arrow">
@@ -546,7 +546,7 @@
 
             <p id="subscribeError" class="error"></p>
             <div id="subscribeStatus" class="status-box hidden"></div>
-            <button type="button" id="subscribeSubmit" class="btn btn-primary submit">Endelea kulipa</button>
+            <button type="button" id="subscribeSubmit" class="btn btn-primary submit">Bonyeza Hapa Kulipia</button>
         </section>
 
         {{-- VOUCHER STATE --}}
@@ -574,7 +574,7 @@
             </div>
 
             <p id="voucherError" class="error"></p>
-            <button type="button" id="voucherSubmit" class="btn btn-primary submit">Tumia vocha</button>
+            <button type="button" id="voucherSubmit" class="btn btn-primary submit">Bonyeza Hapa Kujiunga</button>
         </section>
 
         {{-- REDEEM STATE --}}
@@ -588,7 +588,7 @@
 
             <span class="panel-kicker">Endeleza</span>
             <h2 class="panel-title">Endeleza kifurushi</h2>
-            <p class="panel-sub">Umeshalipia awali? Ingiza namba yako ili kuendelea.</p>
+            <p class="panel-sub">Umeshalipia awali? Ingiza namba yako ya simu ili kuendelea.</p>
 
             <div class="field">
                 <label class="field-label" for="redeemPhone">Namba ya simu</label>
