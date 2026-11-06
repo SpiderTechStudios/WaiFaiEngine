@@ -10,6 +10,7 @@ use App\Models\InternetPlan;
 use App\Models\NetworkDevice;
 use App\Models\NetworkSession;
 use App\Models\User;
+use App\Services\CaptiveSessionService;
 use App\Services\RouterService;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
@@ -239,6 +240,109 @@ class MikroTikTest extends TestCase
             'id' => $session->network_session_id,
             'upload_bytes' => 111,
             'download_bytes' => 222,
+        ]);
+    }
+
+    public function test_sync_keeps_hotspot_user_while_the_grant_is_still_usable(): void
+    {
+        $router = $this->mikroTikRouter();
+        $session = $this->authenticatedSession($router, withNetworkSession: true);
+
+        $session->forceFill([
+            'mikrotik_username' => 'wf_'.$session->token,
+            'mikrotik_provisioned_at' => now(),
+            'router_last_seen_at' => now()->subMinutes(10),
+        ])->save();
+
+        Http::fake([
+            '*rest/system/resource' => Http::response(['version' => '7.15.3', 'uptime' => '1d2h'], 200),
+            '*rest/ip/hotspot/active' => Http::response([], 200),
+            '*rest/ip/hotspot/user' => Http::response([[
+                '.id' => '*U1',
+                'name' => 'wf_'.$session->token,
+                'comment' => 'wf|'.$this->company->id.'|'.$session->id.'|unlimited',
+            ]], 200),
+            '*rest/ip/hotspot/cookie' => Http::response([], 200),
+        ]);
+
+        $this->artisan('mikrotik:sync', ['--router' => $router->id])
+            ->assertExitCode(0);
+
+        $session->refresh();
+        $this->assertSame(CaptiveSession::STATUS_DISCONNECTED, $session->status);
+        $this->assertSame('wf_'.$session->token, $session->mikrotik_username);
+
+        Http::assertNotSent(function ($request): bool {
+            return $request->method() === 'DELETE'
+                && (str_contains($request->url(), '/ip/hotspot/user') || str_contains($request->url(), '/ip/hotspot/cookie'));
+        });
+    }
+
+    public function test_returning_device_resumes_from_a_usable_grant_after_network_session_ended(): void
+    {
+        $router = $this->mikroTikRouter();
+        $plan = $this->plan();
+
+        $customer = Customer::query()->create([
+            'company_id' => $this->company->id,
+            'name' => 'Voucher Guest',
+            'phone' => '0711000001',
+            'status' => 'active',
+        ]);
+
+        $grant = AccessGrant::query()->create([
+            'company_id' => $this->company->id,
+            'customer_id' => $customer->id,
+            'internet_plan_id' => $plan->id,
+            'source' => 'voucher',
+            'starts_at' => now()->subHour(),
+            'expires_at' => now()->addDays(3),
+            'status' => 'active',
+        ]);
+
+        $ended = NetworkSession::query()->create([
+            'company_id' => $this->company->id,
+            'customer_id' => $customer->id,
+            'access_grant_id' => $grant->id,
+            'internet_plan_id' => $plan->id,
+            'network_device_id' => $router->id,
+            'session_id' => str_repeat('c', 32),
+            'mac_address' => 'AA:BB:CC:DD:EE:FF',
+            'started_at' => now()->subHour(),
+            'last_activity_at' => now()->subMinutes(30),
+            'status' => 'ended',
+            'ended_at' => now()->subMinutes(30),
+        ]);
+
+        $pending = CaptiveSession::query()->create([
+            'company_id' => $this->company->id,
+            'network_device_id' => $router->id,
+            'gateway_id' => $router->gateway_id,
+            'client_mac' => 'AA:BB:CC:DD:EE:FF',
+            'client_ip' => '192.168.88.50',
+            'gw_address' => '192.168.88.1',
+            'gw_port' => 80,
+            'token' => str_repeat('b', 32),
+            'status' => CaptiveSession::STATUS_PENDING,
+            'expires_at' => now()->addMinutes(30),
+        ]);
+
+        $url = app(CaptiveSessionService::class)->resumeForReturningDevice($pending);
+
+        $this->assertNotNull($url);
+        $this->assertStringContainsString('/gateway/mikrotik/'.$pending->token, $url);
+
+        $pending->refresh();
+        $this->assertSame(CaptiveSession::STATUS_AUTHENTICATED, $pending->status);
+        $this->assertSame($grant->id, $pending->access_grant_id);
+        $this->assertNotNull($pending->network_session_id);
+        $this->assertSame('ended', $ended->fresh()->status);
+
+        $this->assertDatabaseHas('network_sessions', [
+            'id' => $pending->network_session_id,
+            'access_grant_id' => $grant->id,
+            'mac_address' => 'AA:BB:CC:DD:EE:FF',
+            'status' => 'active',
         ]);
     }
 

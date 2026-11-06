@@ -234,9 +234,13 @@ class CaptiveSessionService
     }
 
     /**
-     * Returning device: if this MAC still has an active hotspot session on a
-     * usable grant, authenticate the captive session with that grant so the
-     * portal can send the client straight back to the gateway.
+     * Returning device: if this client still has a usable access grant, resume
+     * the session so the portal can send it straight back to the gateway.
+     *
+     * A device that sleeps / leaves the hotspot is removed from
+     * /ip/hotspot/active, but its grant can still be valid for days. The
+     * previous network session is marked ended, so resuming must look at the
+     * grant attached to the client MAC, not only at an "active" session.
      *
      * Returns the gateway auth URL when the client can go straight online.
      */
@@ -244,7 +248,10 @@ class CaptiveSessionService
     {
         if ($session->isAuthenticated()) {
             $grant = $session->access_grant_id
-                ? AccessGrant::query()->whereKey($session->access_grant_id)->first()
+                ? AccessGrant::query()
+                    ->where('company_id', $session->company_id)
+                    ->whereKey($session->access_grant_id)
+                    ->first()
                 : null;
 
             return (! $session->access_grant_id || $grant?->isUsable())
@@ -252,27 +259,19 @@ class CaptiveSessionService
                 : null;
         }
 
-        if ($session->status !== CaptiveSession::STATUS_PENDING || blank($session->client_mac)) {
+        if (in_array($session->status, [CaptiveSession::STATUS_EXPIRED, CaptiveSession::STATUS_REJECTED], true)) {
             return null;
         }
 
-        $previous = NetworkSession::query()
-            ->with('accessGrant')
-            ->where('company_id', $session->company_id)
-            ->where('mac_address', $session->client_mac)
-            ->where('status', 'active')
-            ->whereNotNull('access_grant_id')
-            ->latest('id')
-            ->get()
-            ->first(fn (NetworkSession $candidate) => $candidate->accessGrant?->isUsable());
+        $grant = $this->usableGrantForSession($session);
 
-        if (! $previous) {
+        if (! $grant) {
             return null;
         }
 
         try {
             $session = $this->authenticate($session, [
-                'access_grant_id' => $previous->access_grant_id,
+                'access_grant_id' => $grant->id,
                 'mac_address' => $session->client_mac,
             ]);
         } catch (ValidationException $e) {
@@ -288,10 +287,47 @@ class CaptiveSessionService
         Log::channel('wifidog')->info('wifidog.captive_session_resumed', [
             'captive_session_id' => $session->id,
             'client_mac' => $session->client_mac,
-            'access_grant_id' => $previous->access_grant_id,
+            'access_grant_id' => $grant->id,
         ]);
 
         return $this->gatewayAuthRedirectUrl($session);
+    }
+
+    /**
+     * Find the newest usable grant for this captive session, either from the
+     * session itself or from any earlier network session for the same MAC.
+     */
+    private function usableGrantForSession(CaptiveSession $session): ?AccessGrant
+    {
+        if ($session->access_grant_id) {
+            $grant = AccessGrant::query()
+                ->where('company_id', $session->company_id)
+                ->whereKey($session->access_grant_id)
+                ->first();
+
+            if ($grant?->isUsable()) {
+                return $grant;
+            }
+        }
+
+        if (blank($session->client_mac)) {
+            return null;
+        }
+
+        return NetworkSession::query()
+            ->with('accessGrant')
+            ->where('company_id', $session->company_id)
+            ->where('mac_address', $session->client_mac)
+            ->whereNotNull('access_grant_id')
+            ->when($session->network_device_id, fn ($query) => $query->where(function ($inner) use ($session): void {
+                $inner->whereNull('network_device_id')
+                    ->orWhere('network_device_id', $session->network_device_id);
+            }))
+            ->latest('id')
+            ->limit(25)
+            ->get()
+            ->map(fn (NetworkSession $candidate) => $candidate->accessGrant)
+            ->first(fn (?AccessGrant $grant) => $grant?->isUsable());
     }
 
     /**
@@ -691,6 +727,7 @@ class CaptiveSessionService
             ->whereIn('status', [
                 CaptiveSession::STATUS_PENDING,
                 CaptiveSession::STATUS_AUTHENTICATED,
+                CaptiveSession::STATUS_DISCONNECTED,
             ])
             ->where('expires_at', '>', now())
             ->orderByDesc('id');

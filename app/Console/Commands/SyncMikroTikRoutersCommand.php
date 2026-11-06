@@ -156,7 +156,11 @@ class SyncMikroTikRoutersCommand extends Command
 
             $session = $byUsername->get($name);
 
-            if ($session && $session->isAuthenticated() && $session->accessGrant?->isUsable()) {
+            // Keep the router-side login (and its cookie) for as long as the
+            // access grant is valid, even if the hotspot entry is temporarily
+            // missing. Deleting it here makes a returning device unable to
+            // resume and breaks single-use vouchers.
+            if ($session && $session->accessGrant?->isUsable()) {
                 continue;
             }
 
