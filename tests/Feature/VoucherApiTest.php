@@ -451,6 +451,54 @@ class VoucherApiTest extends TestCase
         $this->assertEqualsWithDelta(500, $response->json('data.sold_value'), 0.01);
     }
 
+    public function test_voucher_usage_report_can_filter_by_used_date_and_customer(): void
+    {
+        $plan = $this->plan('masaa 6', 500, 6, 'HOURS');
+
+        $items = $this->withHeaders($this->headers)
+            ->postJson('/api/v1/vouchers', [
+                'router_id' => $this->router->id,
+                'package_id' => $plan->id,
+                'quantity' => 2,
+            ])
+            ->assertCreated()
+            ->json('data.items');
+
+        $this->postJson('/api/v1/portal/voucher-cafe/vouchers/redeem', [
+            'code' => $items[0]['code'],
+            'customer_name' => 'Alice Mushi',
+            'customer_phone' => '0712345678',
+        ])->assertCreated();
+
+        Carbon::setTestNow(Carbon::parse('2026-10-31 09:00:00', 'UTC'));
+
+        $this->postJson('/api/v1/portal/voucher-cafe/vouchers/redeem', [
+            'code' => $items[1]['code'],
+            'customer_name' => 'Bob Mwita',
+            'customer_phone' => '0755555555',
+        ])->assertCreated();
+
+        $this->withHeaders($this->headers)
+            ->getJson('/api/v1/vouchers?usage=used&used_from=2026-10-30&used_to=2026-10-30')
+            ->assertOk()
+            ->assertJsonPath('data.meta.total', 1)
+            ->assertJsonPath('data.items.0.code', $items[0]['code'])
+            ->assertJsonPath('data.items.0.used_by.phone', '0712345678');
+
+        $this->withHeaders($this->headers)
+            ->getJson('/api/v1/vouchers?usage=used&search=0755555555')
+            ->assertOk()
+            ->assertJsonPath('data.meta.total', 1)
+            ->assertJsonPath('data.items.0.code', $items[1]['code'])
+            ->assertJsonPath('data.items.0.used_by.name', 'Bob Mwita');
+
+        $this->withHeaders($this->headers)
+            ->getJson('/api/v1/vouchers?usage=used&search=Alice')
+            ->assertOk()
+            ->assertJsonPath('data.meta.total', 1)
+            ->assertJsonPath('data.items.0.code', $items[0]['code']);
+    }
+
     private function documentXml(\Illuminate\Testing\TestResponse $response): string
     {
         $path = (string) tempnam(sys_get_temp_dir(), 'voucher-docx-');

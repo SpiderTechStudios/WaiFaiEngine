@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:sanctum', 'active.user', 'company.context', 'company.required', 'subscription.active'])->group(function () {
     Route::get('/payments', [PaymentController::class, 'index'])->middleware('permission:'.Permissions::PAYMENTS_VIEW);
+    Route::get('/payments/summary', [PaymentController::class, 'summary'])->middleware('permission:'.Permissions::PAYMENTS_VIEW);
+    Route::get('/payments/export', [PaymentController::class, 'export'])->middleware('permission:'.Permissions::PAYMENTS_VIEW);
     Route::post('/payments', [PaymentController::class, 'store'])->middleware('permission:'.Permissions::PAYMENTS_CREATE);
     Route::get('/payments/{payment}', [PaymentController::class, 'show'])->middleware('permission:'.Permissions::PAYMENTS_VIEW);
 });

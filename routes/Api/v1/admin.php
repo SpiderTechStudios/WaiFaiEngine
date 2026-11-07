@@ -60,6 +60,8 @@ Route::prefix('superadmin')->middleware(['auth:sanctum', 'active.user', 'superad
     Route::get('/enrollments/{enrollment}', [SuperAdminEnrollmentController::class, 'show']);
 
     Route::get('/payments', [PaymentController::class, 'getAllPayments']);
+    Route::get('/payments/summary', [PaymentController::class, 'getAllPaymentsSummary']);
+    Route::get('/payments/export', [PaymentController::class, 'getAllPaymentsExport']);
     Route::get('/payments/{payment}', [PaymentController::class, 'getPayment']);
 
     Route::get('/withdrawals', [WithdrawalController::class, 'adminGetWithdrawals']);
