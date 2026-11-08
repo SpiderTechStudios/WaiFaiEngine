@@ -56,6 +56,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Frontend URL
+    |--------------------------------------------------------------------------
+    |
+    | Public web app used for user-facing links (e.g. email verification).
+    | Defaults to the API URL so links keep working when no frontend is set.
+    |
+    */
+
+    'frontend_url' => env('WEB_APP_URL', env('APP_URL', 'http://localhost')),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |
