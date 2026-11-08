@@ -15,6 +15,7 @@ use App\Services\VoucherWordExporter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Carbon;
 
 class VoucherController extends Controller
 {
@@ -38,13 +39,46 @@ class VoucherController extends Controller
             )
             ->when($request->filled('router_id'), fn ($query) => $query->where('network_device_id', $request->integer('router_id')))
             ->when($request->filled('package_id'), fn ($query) => $query->where('internet_plan_id', $request->integer('package_id')))
-            ->when($request->filled('search'), function ($query) use ($request) {
-                $term = '%'.$request->string('search').'%';
+            ->when($request->filled('used_from') || $request->filled('used_to'), function ($query) use ($request) {
+                $timezone = $this->currentCompany()->reportingTimezone();
+                $from = $this->dateBoundary($request->input('used_from'), $timezone, true);
+                $to = $this->dateBoundary($request->input('used_to'), $timezone, false);
 
-                $query->where(function ($builder) use ($term) {
-                    $builder->where('code', 'like', $term)
-                        ->orWhere('note', 'like', $term)
-                        ->orWhereHas('internetPlan', fn ($plan) => $plan->where('name', 'like', $term));
+                $query->whereHas('latestGrant', function ($grant) use ($from, $to) {
+                    if ($from) {
+                        $grant->where('created_at', '>=', $from);
+                    }
+                    if ($to) {
+                        $grant->where('created_at', '<=', $to);
+                    }
+                });
+            })
+            ->when($request->filled('search'), function ($query) use ($request) {
+                $term = trim((string) $request->input('search'));
+                $like = '%'.$term.'%';
+                $digits = preg_replace('/\D+/', '', $term) ?: '';
+                $phoneTerms = [];
+
+                if (strlen($digits) >= 3) {
+                    $phoneTerms[] = '%'.$digits.'%';
+                    if (str_starts_with($digits, '0')) {
+                        $phoneTerms[] = '%255'.substr($digits, 1).'%';
+                    } elseif (str_starts_with($digits, '255')) {
+                        $phoneTerms[] = '%0'.substr($digits, 3).'%';
+                    }
+                }
+
+                $query->where(function ($builder) use ($like, $phoneTerms) {
+                    $builder->where('code', 'like', $like)
+                        ->orWhere('note', 'like', $like)
+                        ->orWhereHas('internetPlan', fn ($plan) => $plan->where('name', 'like', $like))
+                        ->orWhereHas('latestGrant.customer', function ($customer) use ($like, $phoneTerms) {
+                            $customer->where('name', 'like', $like);
+
+                            foreach ($phoneTerms as $phoneTerm) {
+                                $customer->orWhere('phone', 'like', $phoneTerm);
+                            }
+                        });
                 });
             })
             ->latest('id')
@@ -184,6 +218,19 @@ class VoucherController extends Controller
                 'source' => $result['access_grant']->source,
             ],
         ], 'Voucher consumed');
+    }
+
+    private function dateBoundary(mixed $value, string $timezone, bool $start): ?Carbon
+    {
+        $date = (string) $value;
+
+        if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            return null;
+        }
+
+        return Carbon::parse($date, $timezone)
+            ->{$start ? 'startOfDay' : 'endOfDay'}()
+            ->utc();
     }
 
     private function expireOverdue(int $companyId): void
