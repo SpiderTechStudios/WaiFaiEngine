@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\Auth\EnrollmentController;
 use App\Http\Controllers\Api\V1\Auth\PasswordController;
 use App\Http\Controllers\Api\V1\Auth\RegisterAdminController;
 use App\Http\Controllers\Api\V1\Auth\SessionController;
+use App\Http\Controllers\Api\V1\Operations\TestEmailVerificationController;
 use App\Http\Controllers\Api\V1\Webhooks\PaymentProviderWebhookController;
 use App\Http\Controllers\Api\V1\Webhooks\PlatformPaymentWebhookController;
 use Illuminate\Support\Facades\Route;
@@ -37,6 +38,10 @@ Route::get('/auth/email/verify/{id}/{hash}', [EmailVerificationController::class
 
 Route::middleware(['auth:sanctum', 'active.user', 'superadmin'])->group(function () {
     Route::post('/auth/admin/register', [RegisterAdminController::class, 'store'])->name('auth.admin.register');
+
+    // TEMPORARY: clears email verification so the flow can be retested. Remove after testing.
+    Route::post('/test/email/unverify', [TestEmailVerificationController::class, 'unverify'])
+        ->middleware('throttle:10,1');
 });
 
 Route::middleware(['auth:sanctum', 'active.user', 'company.context'])->group(function () {

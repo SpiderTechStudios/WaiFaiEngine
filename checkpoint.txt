@@ -1,19 +1,73 @@
------------------------------- superadmin logs in
------------------------------- superadmin creates a payment provider & payout providers
------------------------------- superadmin edits payment providers & payout providers
------------------------------- enable disable providers
------------------------------- delete providers
-- get list of all payment providers & payout providers
-
-- superadmin adds items on market place.
-- superadmin edits items on market place
-- superadmin deletes item on marketplace
-- users gets list of available items on market place. 
-- users add items on cart
-- users get cart list
-- users remove item from cart
-- user changes quantity on cart.
-- user clears cart
-- user pays for the cart. 
-- superadmin delivers on the cart items. (processing, in-transit, delivered, cancelled, pending)
-
+[2026-11-08 10:38:02] local.ERROR: Unable to connect with STARTTLS: stream_socket_enable_crypto(): Peer certificate CN=`server22.tanzaniaservers.com' did not match expected CN=`mail.waifai.co.tz' {"userId":4,"exception":"[object] (Symfony\\Component\\Mailer\\Exception\\TransportException(code: 0): Unable to connect with STARTTLS: stream_socket_enable_crypto(): Peer certificate CN=`server22.tanzaniaservers.com' did not match expected CN=`mail.waifai.co.tz' at /www/wwwroot/api.waifai.co.tz/vendor/symfony/mailer/Transport/Smtp/Stream/SocketStream.php:171)
+[stacktrace]
+#0 [internal function]: Symfony\\Component\\Mailer\\Transport\\Smtp\\Stream\\SocketStream::{closure:Symfony\\Component\\Mailer\\Transport\\Smtp\\Stream\\SocketStream::startTLS():170}()
+#1 /www/wwwroot/api.waifai.co.tz/vendor/symfony/mailer/Transport/Smtp/Stream/SocketStream.php(174): stream_socket_enable_crypto()
+#2 /www/wwwroot/api.waifai.co.tz/vendor/symfony/mailer/Transport/Smtp/EsmtpTransport.php(185): Symfony\\Component\\Mailer\\Transport\\Smtp\\Stream\\SocketStream->startTLS()
+#3 /www/wwwroot/api.waifai.co.tz/vendor/symfony/mailer/Transport/Smtp/EsmtpTransport.php(150): Symfony\\Component\\Mailer\\Transport\\Smtp\\EsmtpTransport->doEhloCommand()
+#4 /www/wwwroot/api.waifai.co.tz/vendor/symfony/mailer/Transport/Smtp/SmtpTransport.php(248): Symfony\\Component\\Mailer\\Transport\\Smtp\\EsmtpTransport->executeCommand()
+#5 /www/wwwroot/api.waifai.co.tz/vendor/symfony/mailer/Transport/Smtp/SmtpTransport.php(274): Symfony\\Component\\Mailer\\Transport\\Smtp\\SmtpTransport->doHeloCommand()
+#6 /www/wwwroot/api.waifai.co.tz/vendor/symfony/mailer/Transport/Smtp/SmtpTransport.php(204): Symfony\\Component\\Mailer\\Transport\\Smtp\\SmtpTransport->start()
+#7 /www/wwwroot/api.waifai.co.tz/vendor/symfony/mailer/Transport/AbstractTransport.php(69): Symfony\\Component\\Mailer\\Transport\\Smtp\\SmtpTransport->doSend()
+#8 /www/wwwroot/api.waifai.co.tz/vendor/symfony/mailer/Transport/Smtp/SmtpTransport.php(142): Symfony\\Component\\Mailer\\Transport\\AbstractTransport->send()
+#9 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Mail/Mailer.php(584): Symfony\\Component\\Mailer\\Transport\\Smtp\\SmtpTransport->send()
+#10 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Mail/Mailer.php(331): Illuminate\\Mail\\Mailer->sendSymfonyMessage()
+#11 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Notifications/Channels/MailChannel.php(66): Illuminate\\Mail\\Mailer->send()
+#12 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Notifications/NotificationSender.php(161): Illuminate\\Notifications\\Channels\\MailChannel->send()
+#13 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Notifications/NotificationSender.php(116): Illuminate\\Notifications\\NotificationSender->sendToNotifiable()
+#14 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Support/Traits/Localizable.php(19): Illuminate\\Notifications\\NotificationSender->{closure:Illuminate\\Notifications\\NotificationSender::sendNow():111}()
+#15 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Notifications/NotificationSender.php(111): Illuminate\\Notifications\\NotificationSender->withLocale()
+#16 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Notifications/NotificationSender.php(89): Illuminate\\Notifications\\NotificationSender->sendNow()
+#17 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Notifications/ChannelManager.php(47): Illuminate\\Notifications\\NotificationSender->send()
+#18 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Notifications/RoutesNotifications.php(18): Illuminate\\Notifications\\ChannelManager->send()
+#19 /www/wwwroot/api.waifai.co.tz/app/Models/User.php(132): App\\Models\\User->notify()
+#20 /www/wwwroot/api.waifai.co.tz/app/Http/Controllers/Api/V1/Auth/EmailVerificationController.php(38): App\\Models\\User->sendEmailVerificationNotification()
+#21 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Routing/ControllerDispatcher.php(46): App\\Http\\Controllers\\Api\\V1\\Auth\\EmailVerificationController->resend()
+#22 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Routing/Route.php(265): Illuminate\\Routing\\ControllerDispatcher->dispatch()
+#23 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Routing/Route.php(211): Illuminate\\Routing\\Route->runController()
+#24 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Routing/Router.php(822): Illuminate\\Routing\\Route->run()
+#25 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(180): Illuminate\\Routing\\Router->{closure:Illuminate\\Routing\\Router::runRouteWithinStack():821}()
+#26 /www/wwwroot/api.waifai.co.tz/app/Http/Middleware/SetCompanyContext.php(51): Illuminate\\Pipeline\\Pipeline->{closure:Illuminate\\Pipeline\\Pipeline::prepareDestination():178}()
+#27 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): App\\Http\\Middleware\\SetCompanyContext->handle()
+#28 /www/wwwroot/api.waifai.co.tz/app/Http/Middleware/EnsureUserIsActive.php(29): Illuminate\\Pipeline\\Pipeline->{closure:{closure:Illuminate\\Pipeline\\Pipeline::carry():194}:195}()
+#29 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): App\\Http\\Middleware\\EnsureUserIsActive->handle()
+#30 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Routing/Middleware/SubstituteBindings.php(50): Illuminate\\Pipeline\\Pipeline->{closure:{closure:Illuminate\\Pipeline\\Pipeline::carry():194}:195}()
+#31 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\\Routing\\Middleware\\SubstituteBindings->handle()
+#32 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Routing/Middleware/ThrottleRequests.php(166): Illuminate\\Pipeline\\Pipeline->{closure:{closure:Illuminate\\Pipeline\\Pipeline::carry():194}:195}()
+#33 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Routing/Middleware/ThrottleRequests.php(93): Illuminate\\Routing\\Middleware\\ThrottleRequests->handleRequest()
+#34 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\\Routing\\Middleware\\ThrottleRequests->handle()
+#35 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Auth/Middleware/Authenticate.php(63): Illuminate\\Pipeline\\Pipeline->{closure:{closure:Illuminate\\Pipeline\\Pipeline::carry():194}:195}()
+#36 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\\Auth\\Middleware\\Authenticate->handle()
+#37 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(137): Illuminate\\Pipeline\\Pipeline->{closure:{closure:Illuminate\\Pipeline\\Pipeline::carry():194}:195}()
+#38 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Routing/Router.php(821): Illuminate\\Pipeline\\Pipeline->then()
+#39 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Routing/Router.php(800): Illuminate\\Routing\\Router->runRouteWithinStack()
+#40 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Routing/Router.php(764): Illuminate\\Routing\\Router->runRoute()
+#41 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Routing/Router.php(753): Illuminate\\Routing\\Router->dispatchToRoute()
+#42 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(200): Illuminate\\Routing\\Router->dispatch()
+#43 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(180): Illuminate\\Foundation\\Http\\Kernel->{closure:Illuminate\\Foundation\\Http\\Kernel::dispatchToRouter():197}()
+#44 /www/wwwroot/api.waifai.co.tz/app/Http/Middleware/LogWiFiDogRequests.php(45): Illuminate\\Pipeline\\Pipeline->{closure:Illuminate\\Pipeline\\Pipeline::prepareDestination():178}()
+#45 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): App\\Http\\Middleware\\LogWiFiDogRequests->handle()
+#46 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate\\Pipeline\\Pipeline->{closure:{closure:Illuminate\\Pipeline\\Pipeline::carry():194}:195}()
+#47 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ConvertEmptyStringsToNull.php(31): Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest->handle()
+#48 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\\Foundation\\Http\\Middleware\\ConvertEmptyStringsToNull->handle()
+#49 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate\\Pipeline\\Pipeline->{closure:{closure:Illuminate\\Pipeline\\Pipeline::carry():194}:195}()
+#50 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TrimStrings.php(51): Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest->handle()
+#51 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\\Foundation\\Http\\Middleware\\TrimStrings->handle()
+#52 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Http/Middleware/ValidatePostSize.php(27): Illuminate\\Pipeline\\Pipeline->{closure:{closure:Illuminate\\Pipeline\\Pipeline::carry():194}:195}()
+#53 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\\Http\\Middleware\\ValidatePostSize->handle()
+#54 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/PreventRequestsDuringMaintenance.php(109): Illuminate\\Pipeline\\Pipeline->{closure:{closure:Illuminate\\Pipeline\\Pipeline::carry():194}:195}()
+#55 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\\Foundation\\Http\\Middleware\\PreventRequestsDuringMaintenance->handle()
+#56 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Http/Middleware/HandleCors.php(74): Illuminate\\Pipeline\\Pipeline->{closure:{closure:Illuminate\\Pipeline\\Pipeline::carry():194}:195}()
+#57 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\\Http\\Middleware\\HandleCors->handle()
+#58 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Http/Middleware/TrustProxies.php(58): Illuminate\\Pipeline\\Pipeline->{closure:{closure:Illuminate\\Pipeline\\Pipeline::carry():194}:195}()
+#59 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\\Http\\Middleware\\TrustProxies->handle()
+#60 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/InvokeDeferredCallbacks.php(22): Illuminate\\Pipeline\\Pipeline->{closure:{closure:Illuminate\\Pipeline\\Pipeline::carry():194}:195}()
+#61 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\\Foundation\\Http\\Middleware\\InvokeDeferredCallbacks->handle()
+#62 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Http/Middleware/ValidatePathEncoding.php(26): Illuminate\\Pipeline\\Pipeline->{closure:{closure:Illuminate\\Pipeline\\Pipeline::carry():194}:195}()
+#63 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(219): Illuminate\\Http\\Middleware\\ValidatePathEncoding->handle()
+#64 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(137): Illuminate\\Pipeline\\Pipeline->{closure:{closure:Illuminate\\Pipeline\\Pipeline::carry():194}:195}()
+#65 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(175): Illuminate\\Pipeline\\Pipeline->then()
+#66 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate\\Foundation\\Http\\Kernel->sendRequestThroughRouter()
+#67 /www/wwwroot/api.waifai.co.tz/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1220): Illuminate\\Foundation\\Http\\Kernel->handle()
+#68 /www/wwwroot/api.waifai.co.tz/public/index.php(20): Illuminate\\Foundation\\Application->handleRequest()
+#69 {main}
+"} 
