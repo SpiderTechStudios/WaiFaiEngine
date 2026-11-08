@@ -97,6 +97,30 @@ class PaymentProviderSeeder extends Seeder
             ]
         );
 
+        PaymentProvider::query()->updateOrCreate(
+            ['slug' => PaymentProvider::SLUG_AFRIQOREPAY],
+            [
+                'name' => 'AfriqorePay',
+                'description' => 'AfriqorePay Tanzania mobile-money collections and mobile-money disbursements.',
+                'supports_payments' => true,
+                'supports_payouts' => true,
+                'is_active' => true,
+                'credentials' => array_filter([
+                    'app_id' => config('services.afriqorepay.app_id'),
+                    'passkey' => config('services.afriqorepay.passkey'),
+                    'webhook_secret' => config('services.afriqorepay.webhook_secret'),
+                    'payout_webhook_secret' => config('services.afriqorepay.payout_webhook_secret'),
+                    'api_base_url' => config('services.afriqorepay.base_url'),
+                ]),
+                'settings' => array_filter([
+                    'driver' => PaymentProvider::SLUG_AFRIQOREPAY,
+                    'timeout' => (int) config('services.afriqorepay.timeout', 30),
+                    'callback_url' => config('services.afriqorepay.callback_url'),
+                    'payout_callback_url' => config('services.afriqorepay.payout_callback_url'),
+                ], fn ($value) => $value !== null && $value !== ''),
+            ]
+        );
+
         // Prefer Flutterwave as platform default when a secret is configured; otherwise stub for local/tests.
         // PalmPay / PalmPesa are seeded active but must be set as default manually from the admin dashboard.
         if (filled(config('services.flutterwave.secret_key'))) {
@@ -116,7 +140,7 @@ class PaymentProviderSeeder extends Seeder
         }
 
         PaymentProvider::query()
-            ->whereIn('slug', [PaymentProvider::SLUG_PALMPAY, PaymentProvider::SLUG_PALMPESA])
+            ->whereIn('slug', [PaymentProvider::SLUG_PALMPAY, PaymentProvider::SLUG_PALMPESA, PaymentProvider::SLUG_AFRIQOREPAY])
             ->update([
                 'is_default_for_payments' => false,
                 'is_default_for_payouts' => false,

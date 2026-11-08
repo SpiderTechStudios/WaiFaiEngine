@@ -15,6 +15,8 @@ class PaymentProvider extends Model
 
     public const SLUG_PALMPESA = 'palmpesa';
 
+    public const SLUG_AFRIQOREPAY = 'afriqorepay';
+
     public const SLUG_STUB = 'stub';
 
     protected $fillable = [
@@ -135,6 +137,8 @@ class PaymentProvider extends Model
             'has_secret_key' => filled($credentials['secret_key'] ?? null) || filled($credentials['api_token'] ?? null),
             'has_encryption_key' => filled($credentials['encryption_key'] ?? null),
             'has_webhook_secret' => filled($credentials['webhook_secret'] ?? null),
+            'has_payout_webhook_secret' => filled($credentials['payout_webhook_secret'] ?? null),
+            'has_passkey' => filled($credentials['passkey'] ?? null),
             'has_private_key' => filled($credentials['private_key'] ?? null),
             'has_app_id' => filled($credentials['app_id'] ?? null),
             'has_api_token' => filled($credentials['api_token'] ?? null) || filled($credentials['secret_key'] ?? null),

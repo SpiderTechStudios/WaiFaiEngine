@@ -69,4 +69,16 @@ return [
         'vendor' => env('PALMPESA_VENDOR', 'TILL61103867'),
     ],
 
+    'afriqorepay' => [
+        'app_id' => env('AFRIQOREPAY_APP_ID'),
+        'passkey' => env('AFRIQOREPAY_PASSKEY'),
+        'base_url' => env('AFRIQOREPAY_BASE_URL', 'https://pay.afriqorepay.com/api/v2'),
+        'webhook_secret' => env('AFRIQOREPAY_WEBHOOK_SECRET'),
+        'payout_webhook_secret' => env('AFRIQOREPAY_PAYOUT_WEBHOOK_SECRET'),
+        'callback_url' => env('AFRIQOREPAY_CALLBACK_URL'),
+        'payout_callback_url' => env('AFRIQOREPAY_PAYOUT_CALLBACK_URL'),
+        'timeout' => (int) env('AFRIQOREPAY_TIMEOUT', 30),
+        'status_timeout' => (int) env('AFRIQOREPAY_STATUS_TIMEOUT', 8),
+    ],
+
 ];

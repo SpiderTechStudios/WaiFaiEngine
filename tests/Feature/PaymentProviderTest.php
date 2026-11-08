@@ -10,6 +10,7 @@ use App\Models\Order;
 use App\Models\PaymentProvider;
 use App\Models\PlatformPayment;
 use App\Models\User;
+use App\Payments\PaymentProviderManager;
 use App\Services\PaymentProviderService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -30,6 +31,7 @@ class PaymentProviderTest extends TestCase
         $this->assertContains('flutterwave', $slugs);
         $this->assertContains('palmpay', $slugs);
         $this->assertContains('palmpesa', $slugs);
+        $this->assertContains('afriqorepay', $slugs);
 
         $this->withHeaders($this->authHeaders($superadmin))
             ->postJson('/api/v1/superadmin/payment-providers', [
@@ -807,5 +809,188 @@ class PaymentProviderTest extends TestCase
                 'data.payment.0',
                 'Unable to initiate PalmPesa payment: Service Unavailable (HTTP 503)',
             );
+    }
+
+    public function test_afriqorepay_initiates_collection_and_marks_paid_from_signed_webhook(): void
+    {
+        $afriqorepay = $this->afriqorepayProvider([
+            'webhook_secret' => 'whsec_test',
+            'payout_webhook_secret' => 'paysec_test',
+        ]);
+
+        app(PaymentProviderService::class)->setDefaultForPayments($afriqorepay);
+
+        Http::fake([
+            '*/oauth/token' => Http::response([
+                'access_token' => 'afriqore-access-token',
+                'expires_in' => 3600,
+                'token_type' => 'Bearer',
+            ], 200),
+            '*/collections' => Http::response([
+                'status' => true,
+                'detail' => 'Payment request sent',
+                'transaction_id' => 'AFRQ-TX-001',
+                'reference' => 'ignored',
+                'network' => 'M-Pesa',
+            ], 200),
+            '*/collections/AFRQ-TX-001' => Http::response([
+                'transaction_id' => 'AFRQ-TX-001',
+                'amount' => 10000,
+                'currency' => 'TZS',
+                'status' => 'paid',
+            ], 200),
+        ]);
+
+        $reference = $this->postJson('/api/v1/auth/register', $this->enrollmentPayload())
+            ->assertCreated()
+            ->assertJsonPath('data.payment.provider', 'afriqorepay')
+            ->json('data.enrollment_reference');
+
+        $payment = Enrollment::query()->where('reference', $reference)->firstOrFail()
+            ->payments()->latest('id')->firstOrFail();
+
+        $this->assertSame('AFRQ-TX-001', $payment->external_reference);
+
+        $payload = [
+            'event' => 'collection.paid',
+            'data' => [
+                'transaction_id' => 'AFRQ-TX-001',
+                'reference' => $payment->reference,
+                'amount' => (int) round((float) $payment->amount),
+                'currency' => 'TZS',
+                'status' => 'paid',
+            ],
+        ];
+
+        $this->postJson('/api/v1/webhooks/payments/afriqorepay', $payload, [
+            'Afriqore-Signature' => $this->afriqoreSignature($payload, 'whsec_test'),
+        ])->assertOk()
+            ->assertJsonPath('data.status', 'paid');
+
+        $this->assertSame('paid', $payment->fresh()->status);
+        $this->assertDatabaseHas('users', ['email' => 'jane@example.com']);
+    }
+
+    public function test_afriqorepay_rejects_invalid_webhook_signature(): void
+    {
+        $this->afriqorepayProvider([
+            'webhook_secret' => 'whsec_test',
+            'payout_webhook_secret' => 'paysec_test',
+        ]);
+
+        $payload = [
+            'event' => 'collection.paid',
+            'data' => [
+                'transaction_id' => 'AFRQ-TX-002',
+                'reference' => 'PAY-DOES-NOT-EXIST',
+                'amount' => 10000,
+                'currency' => 'TZS',
+            ],
+        ];
+
+        $timestamp = (string) now()->timestamp;
+
+        $this->postJson('/api/v1/webhooks/payments/afriqorepay', $payload, [
+            'Afriqore-Signature' => 't='.$timestamp.',v1='.hash_hmac('sha256', $timestamp.'.'.json_encode($payload), 'wrong-secret'),
+        ])->assertUnauthorized();
+    }
+
+    public function test_afriqorepay_payout_webhook_uses_payout_secret(): void
+    {
+        $this->afriqorepayProvider([
+            'webhook_secret' => 'whsec_test',
+            'payout_webhook_secret' => 'paysec_test',
+        ]);
+
+        $payload = [
+            'event' => 'disbursement.succeeded',
+            'data' => [
+                'transaction_id' => 'AFRQ-DISB-001',
+                'reference' => 'WD-TEST-001',
+                'amount' => 10000,
+                'currency' => 'TZS',
+            ],
+        ];
+
+        $this->postJson('/api/v1/webhooks/payouts/afriqorepay', $payload, [
+            'Afriqore-Signature' => $this->afriqoreSignature($payload, 'paysec_test'),
+        ])->assertOk()
+            ->assertJsonPath('data.status', 'successful')
+            ->assertJsonPath('data.reference', 'WD-TEST-001')
+            ->assertJsonPath('data.provider_reference', 'AFRQ-DISB-001');
+
+        // The payment signing secret must not validate a payout callback.
+        $this->postJson('/api/v1/webhooks/payouts/afriqorepay', $payload, [
+            'Afriqore-Signature' => $this->afriqoreSignature($payload, 'whsec_test'),
+        ])->assertUnauthorized();
+    }
+
+    public function test_afriqorepay_initiate_payout_posts_disbursement_with_idempotency_key(): void
+    {
+        $afriqorepay = $this->afriqorepayProvider([
+            'webhook_secret' => 'whsec_test',
+            'payout_webhook_secret' => 'paysec_test',
+        ]);
+
+        Http::fake([
+            '*/oauth/token' => Http::response([
+                'access_token' => 'afriqore-access-token',
+                'expires_in' => 3600,
+            ], 200),
+            '*/disbursements' => Http::response([
+                'status' => true,
+                'transaction_id' => 'AFRQ-DISB-002',
+                'reference' => 'WD-TEST-002',
+                'charges' => 500,
+            ], 200),
+        ]);
+
+        $driver = app(PaymentProviderManager::class)->driverFor($afriqorepay);
+
+        $result = $driver->initiatePayout([
+            'amount' => 10000,
+            'currency' => 'TZS',
+            'phone' => '0744963858',
+            'reference' => 'WD-TEST-002',
+        ]);
+
+        $this->assertTrue($result->accepted);
+        $this->assertSame('AFRQ-DISB-002', $result->providerReference);
+
+        Http::assertSent(fn ($request) => str_ends_with($request->url(), '/disbursements')
+            && $request->hasHeader('Idempotency-Key', 'WD-TEST-002')
+            && $request['phone'] === '0744963858'
+            && $request['amount'] === 10000
+            && $request['reference'] === 'WD-TEST-002');
+    }
+
+    private function afriqorepayProvider(array $credentials = []): PaymentProvider
+    {
+        $provider = PaymentProvider::query()->where('slug', PaymentProvider::SLUG_AFRIQOREPAY)->firstOrFail();
+
+        $provider->forceFill([
+            'credentials' => array_filter([
+                'app_id' => 'app_test',
+                'passkey' => 'pass_test',
+                'api_base_url' => 'https://pay.afriqorepay.com/api/v2',
+                ...$credentials,
+            ]),
+            'is_active' => true,
+            'supports_payments' => true,
+            'supports_payouts' => true,
+        ])->save();
+
+        return $provider->fresh();
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function afriqoreSignature(array $payload, string $secret): string
+    {
+        $timestamp = (string) now()->timestamp;
+        $signature = hash_hmac('sha256', $timestamp.'.'.json_encode($payload), $secret);
+
+        return 't='.$timestamp.',v1='.$signature;
     }
 }

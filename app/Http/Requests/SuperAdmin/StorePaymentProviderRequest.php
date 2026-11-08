@@ -35,6 +35,8 @@ class StorePaymentProviderRequest extends FormRequest
             'credentials.app_id' => ['nullable', 'string'],
             'credentials.private_key' => ['nullable', 'string'],
             'credentials.api_token' => ['nullable', 'string'],
+            'credentials.passkey' => ['nullable', 'string'],
+            'credentials.payout_webhook_secret' => ['nullable', 'string'],
             'credentials.user_id' => ['nullable'],
             'settings' => ['nullable', 'array'],
         ];

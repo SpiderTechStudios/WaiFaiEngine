@@ -3,6 +3,7 @@
 namespace App\Payments;
 
 use App\Models\PaymentProvider;
+use App\Payments\Drivers\AfriqorePayPaymentProvider;
 use App\Payments\Drivers\FlutterwavePaymentProvider;
 use App\Payments\Drivers\PalmPayPaymentProvider;
 use App\Payments\Drivers\PalmPesaPaymentProvider;
@@ -20,6 +21,7 @@ class PaymentProviderManager
             PaymentProvider::SLUG_FLUTTERWAVE => new FlutterwavePaymentProvider($provider),
             PaymentProvider::SLUG_PALMPAY => new PalmPayPaymentProvider($provider),
             PaymentProvider::SLUG_PALMPESA => new PalmPesaPaymentProvider($provider),
+            PaymentProvider::SLUG_AFRIQOREPAY => new AfriqorePayPaymentProvider($provider),
             PaymentProvider::SLUG_STUB => new StubPaymentProvider($provider),
             default => throw new InvalidArgumentException("Unsupported payment provider [{$driverKey}]."),
         };

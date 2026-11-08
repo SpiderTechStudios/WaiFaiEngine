@@ -1,0 +1,70 @@
+Base Url
+https://pay.afriqorepay.com/api/v2
+
+appid
+app_tschc4fkcju7p9mihxhvbm5h
+
+
+passkey
+z0uLwOqFao7dZ8s4cXtaAIRz7nDDw7Hyer5mOdWwrlSFcc1i
+
+
+The environment comes from the hostname you call. Do not send an environment field in request bodies.
+
+1. Exchange app credentials for an access token
+Use HTTP Basic authentication. Access tokens are short-lived and inherit the app’s current scopes.
+
+curl -X POST https://pay.afriqorepay.com/api/v2/oauth/token \
+  -u "YOUR_APP_ID:YOUR_APP_PASSKEY" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=client_credentials"
+2. Create a mobile-money collection
+Use the access token and a unique idempotency key for every business operation.
+
+curl -X POST https://pay.afriqorepay.com/api/v2/collections \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: order-1234-collection" \
+  -d '{
+    "amount": 25000,
+    "currency": "TZS",
+    "phone": "0744963858",
+    "reference": "ORDER-1234",
+    "message": "Order 1234"
+  }'
+3. Take payment without leaving your site
+Create the checkout on your server, then open it in an overlay. Nothing secret reaches the browser and the amount is fixed by your server, not asserted by the page.
+
+<script src="https://pay.afriqorepay.com/inline.js"></script>
+<script>
+  // 1. Your server creates the checkout and returns its token.
+  const { token } = await fetch("/api/start-payment", { method: "POST" }).then(r => r.json());
+
+  // 2. Open it over your page.
+  AfriqorePay.open({
+    token,
+    onSuccess: (result) => {
+      // Show a thank-you. Confirm the payment from your webhook.
+      console.log("reference", result.reference);
+    },
+    onCancel: () => console.log("customer closed the checkout"),
+  });
+</script>
+onSuccess runs in the customer's browser and can be driven by anyone. Treat a payment as real only once your webhook arrives, or your server has read the status itself.
+
+
+4. Verify callbacks
+Store the webhook signing secret separately from the API passkey. Verify Afriqore-Signature, reject stale timestamps, and deduplicate by delivery ID.
+
+
+The webhook endpoint url i've put is https://api.waifai.co.tz/api/v1/api/v1/webhooks/payments/afriqorepay (collection.paid, collection.failed, collection.canceled)
+Signing secret for this webhook endpoint is 8S2uDRjEgiRRIxg5FdFhyiPoa9mnBro8mlqmE1OmWEBC3_zw
+
+
+
+this endpoint is for payout/disbursement https://api.waifai.co.tz/api/v1/api/v1/webhooks/payouts/afriqorepay (disbursement.succeded, disbursement.processing, disbursement.created, disbursement.failed)
+Signing secret for this disbursement webhook endpoint is gWHfvhUUpi5LpBDsvzmo0CsfGI7ItfiZMZisWwi-ABzbdjIH
+
+
+new payout secret disbursement yQ0vIroqlB179MFK_yZymXEAw0QIx1vbN2Pc91EpFDA87mLg
+new payments secret DUtlc28ctPTyJE8MgOMD5Z2QRPoBO5nKbgH3TnzAoHLeDXd4

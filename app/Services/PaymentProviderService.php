@@ -310,6 +310,8 @@ class PaymentProviderService
             'app_id' => $credentials['app_id'] ?? null,
             'private_key' => $credentials['private_key'] ?? null,
             'api_token' => $credentials['api_token'] ?? null,
+            'passkey' => $credentials['passkey'] ?? null,
+            'payout_webhook_secret' => $credentials['payout_webhook_secret'] ?? null,
             'user_id' => $credentials['user_id'] ?? null,
         ], fn ($value) => $value !== null && $value !== '');
     }
@@ -330,6 +332,8 @@ class PaymentProviderService
             'app_id',
             'private_key',
             'api_token',
+            'passkey',
+            'payout_webhook_secret',
             'user_id',
         ] as $key) {
             if (array_key_exists($key, $incoming) && filled($incoming[$key])) {
