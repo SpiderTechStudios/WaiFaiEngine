@@ -184,7 +184,7 @@ class WithdrawalService
 
         $this->sendOtp($withdrawal, $actor, $code);
 
-        return $withdrawal->fresh(['payoutAccount', 'paymentProvider']);
+        return $withdrawal->fresh(['payoutAccount', 'paymentProvider', 'paymentMethod']);
     }
 
     /**
@@ -332,7 +332,7 @@ class WithdrawalService
             ]);
         }
 
-        return $withdrawal->fresh(['payoutAccount', 'paymentProvider']);
+        return $withdrawal->fresh(['payoutAccount', 'paymentProvider', 'paymentMethod']);
     }
 
     public function resendOtp(Company $company, Withdrawal $withdrawal, User $actor): Withdrawal
@@ -364,7 +364,7 @@ class WithdrawalService
 
         $this->sendOtp($withdrawal, $actor, $code);
 
-        return $withdrawal->fresh(['payoutAccount', 'paymentProvider']);
+        return $withdrawal->fresh(['payoutAccount', 'paymentProvider', 'paymentMethod']);
     }
 
     /**
@@ -393,7 +393,7 @@ class WithdrawalService
 
             $this->auditLogger->log('withdrawal_cancelled', $actor, $withdrawal->company_id, Withdrawal::class, $withdrawal->id);
 
-            return $withdrawal->load('wallet');
+            return $withdrawal->load(['wallet', 'paymentMethod']);
         });
     }
 

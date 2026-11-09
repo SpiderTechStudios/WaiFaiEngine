@@ -23,6 +23,7 @@ class PayoutAccountService
     public function list(Company $company)
     {
         return PayoutAccount::query()
+            ->with('paymentMethod')
             ->where('company_id', $company->id)
             ->orderByDesc('is_default')
             ->latest('id')

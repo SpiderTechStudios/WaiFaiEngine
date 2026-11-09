@@ -1,10 +1,12 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Operations\PaymentMethodController;
 use App\Http\Controllers\Api\V1\Operations\PayoutAccountController;
 use App\Http\Controllers\Api\V1\Operations\WithdrawalController;
 use App\Support\Permissions;
 
 Route::middleware(['auth:sanctum', 'active.user', 'company.context', 'company.required', 'subscription.active'])->group(function () {
+    Route::get('/payment-methods', [PaymentMethodController::class, 'index']);
     Route::get('/withdrawals/stats', [WithdrawalController::class, 'stats'])->middleware('permission:'.Permissions::WITHDRAWALS_VIEW);
     Route::post('/withdrawals/preview', [WithdrawalController::class, 'preview'])->middleware('permission:'.Permissions::WITHDRAWALS_CREATE);
 

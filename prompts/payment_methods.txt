@@ -1,0 +1,198 @@
+Payment Methods — Backend Changes & Frontend Integration
+======================================================
+
+This document describes the canonical mobile-money payment methods added to the
+backend and how the frontend should consume them (especially for logos).
+
+
+1. Canonical methods
+--------------------
+Exactly five mobile-money networks exist:
+
+  slug          name                    prefixes
+  mixxbyyas     Mixx by Yas             065, 067, 071, 077
+  mpesa         M-Pesa                  074, 075, 076, 079
+  airtelmoney   Airtel Money            068, 069, 078
+  halopesa      HaloPesa                061, 062
+  tpesa         TTCL Pesa (T-Pesa)      073
+
+`mixxbyyas` covers the former Tigo Pesa (`tigopesa`) and Zantel.
+`voucher` is NOT a mobile network and has no row in `payment_methods`.
+
+Legacy aliases map to these slugs:
+  Mpesa / mpesa / vodacom                     -> mpesa
+  AirtelMoney / airtel / AIRTELMONEY          -> airtelmoney
+  Halopesa / halotel / HALOPESA               -> halopesa
+  MixxByYas / mixx / tigo / tigopesa / zantel -> mixxbyyas
+  TTCL / ttcl / tpesa                         -> tpesa
+
+
+2. Backend implementation
+-------------------------
+Table:
+  payment_methods
+    id, key (slug), name, type, logo_url, prefixes (json), is_active,
+    sort_order, timestamps
+
+  `key` is the value the frontend should use as the image slug.
+
+Foreign keys (all nullable):
+  payment_transactions.payment_method_id
+  platform_payments.payment_method_id
+  payment_attempts.payment_method_id
+  withdrawals.payment_method_id
+  payout_accounts.payment_method_id
+
+Resolution:
+  - `PaymentMethodResolver`
+      * detects the network from Tanzanian phone prefixes,
+      * maps legacy names and provider channel values to a canonical key,
+      * falls back to `NetworkDetector`.
+  - New writes set `payment_method_id` when the network is known:
+      * manual/portal payments (`PaymentService`)
+      * platform payments (`PlatformPaymentService`)
+      * withdrawals (`WithdrawalService`)
+      * payout accounts (`PayoutAccountService`)
+  - Provider webhooks update a missing FK when the payload reports
+    `network` or `channel`.
+  - Voucher, unknown prefixes, and rows with no phone stay null.
+
+Backfill:
+  php artisan payment-methods:backfill --dry-run
+  php artisan payment-methods:backfill
+  (chunked; leaves nulls for voucher/unknown and prints samples)
+
+Do NOT run `DatabaseSeeder` or `PaymentProviderSeeder` for this. The canonical
+rows are inserted by the migration `2026_11_09_200000_create_payment_methods_table`.
+
+
+3. Payment methods list API
+---------------------------
+GET /api/v1/payment-methods
+Auth: bearer token (company context / active subscription)
+
+Response:
+  {
+    "status": true,
+    "data": [
+      {
+        "id": 1,
+        "slug": "mixxbyyas",
+        "name": "Mixx by Yas",
+        "type": "mobile_money",
+        "logo_url": null,
+        "prefixes": ["065","067","071","077"]
+      },
+      { "id": 2, "slug": "mpesa", "name": "M-Pesa", ... }
+    ]
+  }
+
+Use `slug` to select the logo asset. `logo_url` is optional (null by default)
+for the case where logos are later managed from the backend.
+
+
+4. Fields returned on transactions, withdrawals and payout accounts
+--------------------------------------------------------------------
+Every payment, platform payment, portal payment, withdrawal and payout account
+now returns:
+
+  payment_method_id
+  payment_method_slug
+  payment_method_name
+  payment_method_logo_url
+
+Examples:
+
+GET /api/v1/payments
+  {
+    "payment_method": "Mpesa",              // legacy string, kept
+    "payment_method_id": 2,
+    "payment_method_slug": "mpesa",
+    "payment_method_name": "M-Pesa",
+    "payment_method_logo_url": null
+  }
+
+GET /api/v1/withdrawals
+  {
+    "network": "mpesa",                     // canonical key
+    "payment_method_id": 2,
+    "payment_method_slug": "mpesa",
+    "payment_method_name": "M-Pesa",
+    "payment_method_logo_url": null
+  }
+
+GET /api/v1/withdrawals/payout-accounts
+  {
+    "network": "airtelmoney",
+    "payment_method_id": 3,
+    "payment_method_slug": "airtelmoney",
+    "payment_method_name": "Airtel Money",
+    "payment_method_logo_url": null
+  }
+
+Voucher or unknown rows:
+  payment_method_id: null
+  payment_method_slug: null
+  payment_method_name: null
+  payment_method_logo_url: null
+
+The legacy `payment_method` string is still present on payment resources; keep
+it as a text fallback, but prefer slug/name for UI.
+
+
+5. Frontend instructions
+------------------------
+5.1 Fetch the canonical list once (cache it):
+  const res = await apiFetch<ApiEnvelope<PaymentMethod[]>>("/payment-methods");
+  // PaymentMethod = { id, slug, name, type, logo_url, prefixes }
+
+5.2 Store logo assets in the frontend, named by slug:
+  /public/assets/payment-methods/mpesa.svg
+  /public/assets/payment-methods/airtelmoney.svg
+  /public/assets/payment-methods/halopesa.svg
+  /public/assets/payment-methods/mixxbyyas.svg
+  /public/assets/payment-methods/tpesa.svg
+
+5.3 Resolve the image:
+  function paymentMethodLogo(slug?: string | null): string | null {
+    if (!slug) return null;
+    return `/assets/payment-methods/${slug}.svg`;
+  }
+
+  // If logo_url is provided by the backend, prefer it:
+  const src = row.payment_method_logo_url ?? paymentMethodLogo(row.payment_method_slug);
+
+5.4 Render in payment/withdrawal tables:
+  <img
+    src={src}
+    alt={row.payment_method_name ?? row.payment_method ?? "Mobile money"}
+    title={row.payment_method_name ?? row.payment_method}
+  />
+
+  If slug is null (voucher/unknown), show a generic wallet icon and the legacy
+  text (`payment_method` for payments, `network` for withdrawals).
+
+5.5 Filters:
+  - Prefer filtering by `payment_method_slug` (or `payment_method_id`) where
+    the API supports it.
+  - Do not rely on case-sensitive legacy values such as `Mpesa` vs `mpesa`.
+
+5.6 Payout account creation:
+  The backend detects the network from the phone number. Do not send a network
+  or slug; use the returned `payment_method_slug`/`name` to render the saved
+  account.
+
+5.7 Withdrawal preview/request:
+  Use the returned `network` (canonical slug) and the same logo mapping.
+
+
+6. Important notes
+------------------
+- `mixxbyyas` replaces `tigopesa` and `zantel`. Update any old frontend maps.
+- `tpesa` replaces `ttcl` in the canonical list; the legacy TTCL string still
+  appears on old payment rows.
+- `Support\PaymentProvider` reporting keys (`mpesa`, `mixx`, `airtel`, `ttcl`)
+  were left unchanged for backward compatibility; do not use them for logos.
+  Use `payment_method_slug`.
+- Never run the full database seeder in production; it resets payments/expenses.
+- Backfill historical rows before relying on slug/name for old data.

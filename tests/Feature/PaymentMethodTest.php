@@ -70,6 +70,27 @@ class PaymentMethodTest extends TestCase
             $this->idFor('mpesa'),
             $response->json('data.payment_method_id'),
         );
+        $this->assertSame('mpesa', $response->json('data.payment_method_slug'));
+        $this->assertSame('M-Pesa', $response->json('data.payment_method_name'));
+    }
+
+    public function test_payment_methods_list_endpoint_returns_logo_slug(): void
+    {
+        $owner = $this->createUser();
+        $this->createCompanyFor($owner);
+
+        $methods = $this->withHeaders($this->authHeaders($owner))
+            ->getJson('/api/v1/payment-methods')
+            ->assertOk()
+            ->json('data');
+
+        $this->assertSame('mixxbyyas', $methods[0]['slug']);
+        $this->assertSame('mpesa', $methods[1]['slug']);
+        $this->assertSame('airtelmoney', $methods[2]['slug']);
+        $this->assertSame('halopesa', $methods[3]['slug']);
+        $this->assertSame('tpesa', $methods[4]['slug']);
+        $this->assertArrayHasKey('name', $methods[0]);
+        $this->assertArrayHasKey('logo_url', $methods[0]);
     }
 
     public function test_withdrawal_and_payout_account_store_payment_method_fk(): void
@@ -85,6 +106,8 @@ class PaymentMethodTest extends TestCase
         ])->assertCreated()
             ->assertJsonPath('data.network', 'mpesa')
             ->assertJsonPath('data.payment_method_id', $this->idFor('mpesa'))
+            ->assertJsonPath('data.payment_method_slug', 'mpesa')
+            ->assertJsonPath('data.payment_method_name', 'M-Pesa')
             ->json('data.id');
 
         $withdrawalId = $this->withHeaders($headers)->postJson('/api/v1/withdrawals', [
@@ -92,6 +115,8 @@ class PaymentMethodTest extends TestCase
             'payout_account_id' => $accountId,
         ])->assertCreated()
             ->assertJsonPath('data.payment_method_id', $this->idFor('mpesa'))
+            ->assertJsonPath('data.payment_method_slug', 'mpesa')
+            ->assertJsonPath('data.payment_method_name', 'M-Pesa')
             ->json('data.id');
 
         $this->assertSame($this->idFor('mpesa'), Withdrawal::query()->findOrFail($withdrawalId)->payment_method_id);

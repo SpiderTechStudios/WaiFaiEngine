@@ -23,7 +23,7 @@ class PaymentController extends Controller
     public function index(Request $request): JsonResponse
     {
         $paginated = $this->filteredQuery($request, $this->currentCompany())
-            ->with(['customer', 'internetPlan', 'networkStation'])
+            ->with(['customer', 'internetPlan', 'networkStation', 'paymentMethod'])
             ->paginate($this->perPage($request));
 
         return $this->success(
@@ -74,7 +74,7 @@ class PaymentController extends Controller
         }
 
         return $this->success(
-            (new PaymentResource($payment->load(['customer', 'internetPlan', 'networkStation'])))->resolve(),
+            (new PaymentResource($payment->load(['customer', 'internetPlan', 'networkStation', 'paymentMethod'])))->resolve(),
             'Payment retrieved',
         );
     }
@@ -82,7 +82,7 @@ class PaymentController extends Controller
     public function getAllPayments(Request $request): JsonResponse
     {
         $paginated = $this->allPaymentsQuery($request)
-            ->with(['customer', 'internetPlan', 'company', 'networkStation'])
+            ->with(['customer', 'internetPlan', 'company', 'networkStation', 'paymentMethod'])
             ->paginate($this->perPage($request));
 
         return $this->success(
@@ -114,7 +114,7 @@ class PaymentController extends Controller
     public function getPayment(PaymentTransaction $payment): JsonResponse
     {
         return $this->success(
-            (new PaymentResource($payment->load(['customer', 'internetPlan', 'company', 'networkStation'])))->resolve(),
+            (new PaymentResource($payment->load(['customer', 'internetPlan', 'company', 'networkStation', 'paymentMethod'])))->resolve(),
             'Payment retrieved',
         );
     }
@@ -331,7 +331,7 @@ class PaymentController extends Controller
     private function paymentsCsv(Builder $query, string $from, string $to): StreamedResponse
     {
         $query->reorder()
-            ->with(['customer', 'internetPlan', 'networkStation'])
+            ->with(['customer', 'internetPlan', 'networkStation', 'paymentMethod'])
             ->orderBy('id');
 
         return response()->streamDownload(function () use ($query): void {

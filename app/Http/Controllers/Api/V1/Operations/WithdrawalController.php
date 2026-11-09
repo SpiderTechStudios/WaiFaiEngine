@@ -24,6 +24,7 @@ class WithdrawalController extends Controller
         $wallet = Wallet::query()->where('company_id', $company->id)->where('currency', 'TZS')->first();
 
         $paginated = Withdrawal::query()
+            ->with(['paymentMethod', 'payoutAccount', 'paymentProvider'])
             ->where('company_id', $company->id)
             ->latest('id')
             ->paginate($request->integer('per_page', 15));
@@ -85,6 +86,8 @@ class WithdrawalController extends Controller
         if ($withdrawal->company_id !== $this->currentCompany()->id) {
             abort(404);
         }
+
+        $withdrawal->load(['paymentMethod', 'payoutAccount', 'paymentProvider']);
 
         return $this->success((new WithdrawalResource($withdrawal))->resolve(), 'Withdrawal retrieved');
     }
@@ -149,7 +152,7 @@ class WithdrawalController extends Controller
     public function adminGetWithdrawals(Request $request): JsonResponse
     {
         $paginated = Withdrawal::query()
-            ->with('company')
+            ->with(['company', 'paymentMethod', 'payoutAccount', 'paymentProvider'])
             ->when($request->filled('company_id'), fn ($query) => $query->where('company_id', $request->integer('company_id')))
             ->when($request->filled('status'), fn ($query) => $query->where('status', $request->string('status')))
             ->latest('id')
@@ -164,7 +167,7 @@ class WithdrawalController extends Controller
     public function adminGetWithdrawal(Withdrawal $withdrawal): JsonResponse
     {
         return $this->success(
-            (new WithdrawalResource($withdrawal->load('company')))->resolve(),
+            (new WithdrawalResource($withdrawal->load(['company', 'paymentMethod', 'payoutAccount', 'paymentProvider'])))->resolve(),
             'Withdrawal retrieved',
         );
     }
