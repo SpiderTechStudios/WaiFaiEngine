@@ -12,6 +12,7 @@ class PaymentAttempt extends Model
         'payment_transaction_id',
         'provider_reference',
         'phone_number',
+        'payment_method_id',
         'amount',
         'status',
         'request_payload',
@@ -42,5 +43,10 @@ class PaymentAttempt extends Model
     public function paymentTransaction(): BelongsTo
     {
         return $this->belongsTo(PaymentTransaction::class);
+    }
+
+    public function paymentMethod(): BelongsTo
+    {
+        return $this->belongsTo(PaymentMethod::class);
     }
 }

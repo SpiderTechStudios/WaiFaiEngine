@@ -12,6 +12,7 @@ class PayoutAccount extends Model
         'name',
         'phone',
         'network',
+        'payment_method_id',
         'is_default',
     ];
 
@@ -28,5 +29,10 @@ class PayoutAccount extends Model
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function paymentMethod(): BelongsTo
+    {
+        return $this->belongsTo(PaymentMethod::class);
     }
 }

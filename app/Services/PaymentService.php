@@ -22,7 +22,7 @@ use Illuminate\Validation\ValidationException;
 
 class PaymentService
 {
-    public function __construct(private AuditLogger $auditLogger) {}
+    public function __construct(private AuditLogger $auditLogger, private PaymentMethodResolver $paymentMethods) {}
 
     public function create(Company $company, array $data, User $actor): PaymentTransaction
     {
@@ -33,8 +33,10 @@ class PaymentService
         $amount = $data['amount'] ?? $plan->price;
         $currency = $data['currency'] ?? 'TZS';
         $status = $data['status'] ?? 'paid';
+        $paymentMethod = $this->resolveNetworkPaymentMethod($data);
+        $paymentMethodId = $this->paymentMethods->idFor($paymentMethod, $data['customer_phone'] ?? null);
 
-        return DB::transaction(function () use ($company, $plan, $amount, $currency, $status, $data, $actor) {
+        return DB::transaction(function () use ($company, $plan, $amount, $currency, $status, $data, $actor, $paymentMethod, $paymentMethodId) {
             $customer = $this->findOrCreateCustomer($company, $data);
 
             $payment = PaymentTransaction::query()->create([
@@ -44,7 +46,8 @@ class PaymentService
                 'reference' => 'PAY-'.strtoupper(Str::random(10)),
                 'amount' => $amount,
                 'currency' => $currency,
-                'payment_method' => $this->resolveNetworkPaymentMethod($data),
+                'payment_method' => $paymentMethod,
+                'payment_method_id' => $paymentMethodId,
                 'status' => $status,
                 'initiated_at' => now(),
                 'paid_at' => $status === 'paid' ? now() : null,
@@ -73,7 +76,10 @@ class PaymentService
     {
         $plan = $this->resolveActivePlan($company, (int) $data['internet_plan_id']);
 
-        $payment = DB::transaction(function () use ($company, $plan, $data) {
+        $paymentMethod = $this->resolveNetworkPaymentMethod($data);
+        $paymentMethodId = $this->paymentMethods->idFor($paymentMethod, $data['customer_phone'] ?? null);
+
+        $payment = DB::transaction(function () use ($company, $plan, $data, $paymentMethod, $paymentMethodId) {
             $customer = $this->findOrCreateCustomer($company, $data);
 
             $payment = PaymentTransaction::query()->create([
@@ -83,7 +89,8 @@ class PaymentService
                 'reference' => 'PAY-'.strtoupper(Str::random(10)),
                 'amount' => $plan->price,
                 'currency' => config('platform.currency', 'TZS'),
-                'payment_method' => $this->resolveNetworkPaymentMethod($data),
+                'payment_method' => $paymentMethod,
+                'payment_method_id' => $paymentMethodId,
                 'status' => 'pending',
                 'initiated_at' => now(),
                 'paid_at' => null,

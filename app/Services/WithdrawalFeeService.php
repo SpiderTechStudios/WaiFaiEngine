@@ -7,51 +7,16 @@ use Illuminate\Validation\ValidationException;
 
 class WithdrawalFeeService
 {
-    /**
-     * Prefix map for Tanzanian mobile networks.
-     *
-     * @var array<string, string>
-     */
-    private array $networkPrefixes = [
-        '74' => 'mpesa',
-        '75' => 'mpesa',
-        '76' => 'mpesa',
-        '68' => 'airtel',
-        '69' => 'airtel',
-        '78' => 'airtel',
-        '65' => 'tigopesa',
-        '67' => 'tigopesa',
-        '71' => 'tigopesa',
-        '61' => 'halopesa',
-        '62' => 'halopesa',
-        '73' => 'ttcl',
-        '77' => 'zantel',
-    ];
+    public function __construct(private PaymentMethodResolver $paymentMethods) {}
 
     public function detectNetwork(string $phone): ?string
     {
-        $local = $this->normalizePhone($phone);
-
-        if (strlen($local) !== 10 || ! str_starts_with($local, '0')) {
-            return null;
-        }
-
-        return $this->networkPrefixes[substr($local, 1, 2)] ?? null;
+        return $this->paymentMethods->detect($phone)?->key;
     }
 
     public function normalizePhone(string $phone): string
     {
-        $digits = preg_replace('/\D+/', '', $phone) ?: '';
-
-        if (str_starts_with($digits, '255') && strlen($digits) >= 12) {
-            return '0'.substr($digits, 3, 9);
-        }
-
-        if (strlen($digits) === 9) {
-            return '0'.$digits;
-        }
-
-        return $digits;
+        return $this->paymentMethods->normalizePhone($phone) ?? '';
     }
 
     /**

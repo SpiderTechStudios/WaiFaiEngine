@@ -28,6 +28,7 @@ class PlatformPaymentService
         private InstallationRequestService $installationRequestService,
         private PaymentProviderManager $providerManager,
         private ExpenseService $expenseService,
+        private PaymentMethodResolver $paymentMethods,
     ) {}
 
     /**
@@ -497,6 +498,26 @@ class PlatformPaymentService
             abort(404, 'Payment not found.');
         }
 
+        if ($payment->payment_method_id === null) {
+            $network = $payload['network']
+                ?? $payload['channel']
+                ?? data_get($payload, 'data.network')
+                ?? data_get($payload, 'data.channel')
+                ?? data_get($payload, 'data.0.channel');
+
+            $paymentMethodId = $this->resolvePaymentMethodId([
+                'payment_method' => $payment->payment_method,
+                'phone' => $payment->phone,
+                'metadata' => array_merge($payment->metadata ?? [], array_filter([
+                    'network' => is_string($network) ? $network : null,
+                ])),
+            ]);
+
+            if ($paymentMethodId !== null) {
+                $payment->forceFill(['payment_method_id' => $paymentMethodId])->save();
+            }
+        }
+
         Log::info('payment_provider_webhook_resolved', [
             'provider' => $providerSlug,
             'payment_id' => $payment->id,
@@ -805,6 +826,29 @@ class PlatformPaymentService
         );
     }
 
+    private function resolvePaymentMethodId(array $payload): ?int
+    {
+        $candidates = [
+            $payload['payment_method'] ?? null,
+            data_get($payload, 'metadata.network'),
+            data_get($payload, 'metadata.provider_charge.raw.network'),
+            data_get($payload, 'metadata.provider_charge.raw.channel'),
+        ];
+
+        foreach ($candidates as $candidate) {
+            $id = $this->paymentMethods->idFor(
+                is_string($candidate) ? $candidate : null,
+                $payload['phone'] ?? null,
+            );
+
+            if ($id !== null) {
+                return $id;
+            }
+        }
+
+        return $this->paymentMethods->idFor(null, $payload['phone'] ?? null);
+    }
+
     /**
      * @param  array<string, mixed>  $payload
      */
@@ -836,6 +880,7 @@ class PlatformPaymentService
                 'amount' => $payload['amount'],
                 'currency' => $payload['currency'],
                 'payment_method' => $payload['payment_method'],
+                'payment_method_id' => $this->resolvePaymentMethodId($payload),
                 'phone' => $payload['phone'],
                 'status' => PlatformPayment::STATUS_PENDING,
                 'line_items' => $payload['line_items'],

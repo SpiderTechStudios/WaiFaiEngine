@@ -17,6 +17,7 @@ class WithdrawalResource extends JsonResource
             'reference' => $this->reference,
             'provider' => $this->provider,
             'network' => $this->network,
+            'payment_method_id' => $this->payment_method_id,
             'payment_provider_slug' => $this->payment_provider_slug,
             'payment_provider' => $this->whenLoaded('paymentProvider', fn () => [
                 'id' => $this->paymentProvider->id,

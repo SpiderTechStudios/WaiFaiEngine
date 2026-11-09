@@ -124,7 +124,7 @@ class WithdrawalFeeTest extends TestCase
                 'name' => 'Juma Ally',
                 'phone' => '0684000000',
             ])->assertCreated()
-            ->assertJsonPath('data.network', 'airtel')
+            ->assertJsonPath('data.network', 'airtelmoney')
             ->assertJsonPath('data.is_default', false)
             ->json('data.id');
 

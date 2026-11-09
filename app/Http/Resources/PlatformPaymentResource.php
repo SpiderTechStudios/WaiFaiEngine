@@ -23,6 +23,7 @@ class PlatformPaymentResource extends JsonResource
             'amount' => $this->amount,
             'currency' => $this->currency,
             'payment_method' => $this->payment_method,
+            'payment_method_id' => $this->payment_method_id,
             'status' => $this->status,
             'line_items' => $this->line_items,
             'paid_at' => $this->paid_at,

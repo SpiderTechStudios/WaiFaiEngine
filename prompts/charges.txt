@@ -260,3 +260,45 @@ Important limitations
     `/disbursements/preview` fee is not consulted at request time.
   - Payout completion depends on provider webhooks; if a webhook is missed,
     the withdrawal can remain "processing" and must be reconciled manually.
+
+
+Canonical mobile-money networks
+-------------------------------
+Table: payment_methods (id, key, name, type, logo_url, prefixes, is_active,
+sort_order). Exactly these five rows are seeded:
+
+  key           name                    prefixes
+  mixxbyyas     Mixx by Yas             065, 067, 071, 077
+  mpesa         M-Pesa                  074, 075, 076, 079
+  airtelmoney   Airtel Money            068, 069, 078
+  halopesa      HaloPesa                061, 062
+  tpesa         TTCL Pesa (T-Pesa)      073
+
+Legacy names are aliases:
+  Mpesa/mpesa/vodacom            -> mpesa
+  AirtelMoney/airtel             -> airtelmoney
+  Halopesa/halotel               -> halopesa
+  MixxByYas/mixx/tigo/tigopesa/
+  zantel/yas                     -> mixxbyyas
+  TTCL/ttcl/tpesa                -> tpesa
+
+The payout/withdrawal `network` field and payout accounts now store the
+canonical key. `voucher` is not a mobile network and keeps `payment_method_id`
+null.
+
+Foreign keys:
+  payment_transactions.payment_method_id
+  platform_payments.payment_method_id
+  payment_attempts.payment_method_id
+  withdrawals.payment_method_id
+  payout_accounts.payment_method_id
+
+All are nullable. New writes set the FK when the network is known. Historical
+rows are backfilled with:
+
+  php artisan payment-methods:backfill --dry-run
+  php artisan payment-methods:backfill
+
+The command maps legacy strings, provider payload network/channel values, and
+phone prefixes. Voucher, unknown prefixes, and rows with no phone stay null.
+

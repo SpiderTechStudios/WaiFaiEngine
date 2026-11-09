@@ -23,6 +23,7 @@ class WithdrawalService
         private AuditLogger $auditLogger,
         private WithdrawalFeeService $feeService,
         private PaymentProviderManager $providerManager,
+        private PaymentMethodResolver $paymentMethods,
     ) {}
 
     /**
@@ -75,10 +76,11 @@ class WithdrawalService
 
         $quote = $this->feeService->quote($provider, (float) $data['amount'], $account->phone);
         $network = $account->network ?: ($quote['network'] ?: ($data['provider'] ?? null));
+        $paymentMethod = $this->paymentMethods->resolve($network, $account->phone);
 
         $code = $this->generateOtp();
 
-        $withdrawal = DB::transaction(function () use ($company, $provider, $account, $quote, $network, $code, $data, $actor) {
+        $withdrawal = DB::transaction(function () use ($company, $provider, $account, $quote, $network, $paymentMethod, $code, $data, $actor) {
             $wallet = Wallet::query()
                 ->where('company_id', $company->id)
                 ->where('currency', $quote['currency'])
@@ -113,6 +115,7 @@ class WithdrawalService
                 'requested_by' => $actor->id,
                 'provider' => $network ?: (string) ($data['provider'] ?? 'mobile_money'),
                 'network' => $network,
+                'payment_method_id' => $paymentMethod?->id,
                 'destination_phone' => $account->phone,
                 'destination_name' => $account->name,
                 'reference' => 'WD-'.strtoupper(Str::random(10)),

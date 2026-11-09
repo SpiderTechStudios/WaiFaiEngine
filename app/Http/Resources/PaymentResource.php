@@ -21,6 +21,7 @@ class PaymentResource extends JsonResource
             'amount' => $this->amount,
             'currency' => $this->currency,
             'payment_method' => $this->payment_method,
+            'payment_method_id' => $this->payment_method_id,
             'provider' => PaymentProvider::key($this->payment_method, $metadata['network'] ?? null),
             'status' => $this->status,
             'paid_at' => $this->paid_at,

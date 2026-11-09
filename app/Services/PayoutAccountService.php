@@ -13,6 +13,7 @@ class PayoutAccountService
 {
     public function __construct(
         private WithdrawalFeeService $feeService,
+        private PaymentMethodResolver $paymentMethods,
         private AuditLogger $auditLogger,
     ) {}
 
@@ -65,6 +66,7 @@ class PayoutAccountService
                 'name' => trim((string) $data['name']),
                 'phone' => $phone,
                 'network' => $this->feeService->detectNetwork($phone),
+                'payment_method_id' => $this->paymentMethods->detect($phone)?->id,
                 'is_default' => $isDefault,
             ]);
 
@@ -107,6 +109,7 @@ class PayoutAccountService
 
                 $attributes['phone'] = $phone;
                 $attributes['network'] = $this->feeService->detectNetwork($phone);
+                $attributes['payment_method_id'] = $this->paymentMethods->detect($phone)?->id;
             }
 
             $account->fill($attributes)->save();

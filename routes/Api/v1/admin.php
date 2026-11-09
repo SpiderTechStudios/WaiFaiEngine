@@ -43,6 +43,17 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'active.user', 'platform.adm
     Route::delete('/expense-types/{expenseType}', [AdminExpenseTypeController::class, 'destroy']);
     Route::post('/expense-types/{expenseType}/activate', [AdminExpenseTypeController::class, 'activate']);
     Route::post('/expense-types/{expenseType}/deactivate', [AdminExpenseTypeController::class, 'deactivate']);
+
+    Route::get('/payment-providers', [PaymentProviderController::class, 'index']);
+    Route::post('/payment-providers', [PaymentProviderController::class, 'store']);
+    Route::get('/payment-providers/{paymentProvider}', [PaymentProviderController::class, 'show']);
+    Route::patch('/payment-providers/{paymentProvider}', [PaymentProviderController::class, 'update']);
+    Route::delete('/payment-providers/{paymentProvider}', [PaymentProviderController::class, 'destroy']);
+    Route::post('/payment-providers/{paymentProvider}/enable', [PaymentProviderController::class, 'enable']);
+    Route::post('/payment-providers/{paymentProvider}/disable', [PaymentProviderController::class, 'disable']);
+    Route::post('/payment-providers/{paymentProvider}/default-payments', [PaymentProviderController::class, 'setDefaultPayments']);
+    Route::post('/payment-providers/{paymentProvider}/default-payouts', [PaymentProviderController::class, 'setDefaultPayouts']);
+    Route::put('/payment-providers/{paymentProvider}/payout-fees', [PaymentProviderController::class, 'updatePayoutFees']);
 });
 
 Route::prefix('superadmin')->middleware(['auth:sanctum', 'active.user', 'superadmin'])->group(function () {

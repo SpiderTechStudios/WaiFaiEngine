@@ -73,6 +73,7 @@ class PlatformPayment extends Model
         'amount',
         'currency',
         'payment_method',
+        'payment_method_id',
         'phone',
         'status',
         'line_items',
@@ -126,6 +127,11 @@ class PlatformPayment extends Model
     public function provider(): BelongsTo
     {
         return $this->belongsTo(PaymentProvider::class, 'payment_provider_id');
+    }
+
+    public function paymentMethod(): BelongsTo
+    {
+        return $this->belongsTo(PaymentMethod::class);
     }
 
     public function enrollment(): BelongsTo

@@ -20,6 +20,7 @@ class PaymentTransaction extends Model
         'amount',
         'currency',
         'payment_method',
+        'payment_method_id',
         'status',
         'initiated_at',
         'paid_at',
@@ -61,6 +62,11 @@ class PaymentTransaction extends Model
     public function paymentGateway(): BelongsTo
     {
         return $this->belongsTo(PaymentGateway::class);
+    }
+
+    public function paymentMethod(): BelongsTo
+    {
+        return $this->belongsTo(PaymentMethod::class);
     }
 
     public function networkStation(): BelongsTo

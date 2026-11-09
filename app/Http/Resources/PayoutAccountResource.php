@@ -17,6 +17,7 @@ class PayoutAccountResource extends JsonResource
             'name' => $this->name,
             'phone' => $this->phone,
             'network' => $this->network,
+            'payment_method_id' => $this->payment_method_id,
             'is_default' => $this->is_default,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

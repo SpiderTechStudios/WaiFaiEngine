@@ -18,6 +18,7 @@ class Withdrawal extends Model
         'payment_gateway_id',
         'provider',
         'network',
+        'payment_method_id',
         'destination_phone',
         'destination_name',
         'reference',
@@ -88,6 +89,11 @@ class Withdrawal extends Model
     public function paymentProvider(): BelongsTo
     {
         return $this->belongsTo(PaymentProvider::class);
+    }
+
+    public function paymentMethod(): BelongsTo
+    {
+        return $this->belongsTo(PaymentMethod::class);
     }
 
     public function isAwaitingConfirmation(): bool
