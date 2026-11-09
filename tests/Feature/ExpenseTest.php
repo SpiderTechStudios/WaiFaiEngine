@@ -23,6 +23,23 @@ class ExpenseTest extends TestCase
         return (int) ExpenseType::query()->where('slug', $slug)->value('id');
     }
 
+    private function platformType(): ExpenseType
+    {
+        return ExpenseType::query()->firstOrCreate(
+            ['slug' => 'platform-subscription'],
+            [
+                'name' => 'Platform Subscription',
+                'category' => ExpenseType::CATEGORY_PLATFORM,
+                'is_active' => true,
+            ],
+        );
+    }
+
+    private function platformTypeId(): int
+    {
+        return (int) $this->platformType()->id;
+    }
+
     private function createRouter(User $owner): int
     {
         return (int) $this->withHeaders($this->authHeaders($owner))->postJson('/api/v1/routers', [
@@ -43,7 +60,7 @@ class ExpenseTest extends TestCase
     private function payload(array $overrides = []): array
     {
         return array_merge([
-            'expense_type_id' => $this->typeId('internet'),
+            'expense_type_id' => $this->typeId('bandwidth'),
             'description' => 'Monthly internet bundle',
             'amount' => 50000,
             'currency' => 'TZS',
@@ -90,7 +107,7 @@ class ExpenseTest extends TestCase
         $this->withHeaders($headers)->getJson('/api/v1/expenses/'.$id)
             ->assertOk()
             ->assertJsonPath('data.id', $id)
-            ->assertJsonPath('data.expense_type.slug', 'internet');
+            ->assertJsonPath('data.expense_type.slug', 'bandwidth');
     }
 
     public function test_business_wide_expense_has_null_router_and_is_filterable(): void
@@ -130,7 +147,7 @@ class ExpenseTest extends TestCase
         $headers = $this->authHeaders($owner);
 
         $this->withHeaders($headers)->postJson('/api/v1/expenses', $this->payload([
-            'expense_type_id' => $this->typeId('platform-subscription'),
+            'expense_type_id' => $this->platformTypeId(),
             'description' => 'WaiFai monthly subscription',
             'paid_to' => 'WaiFai',
         ]))->assertCreated()->assertJsonPath('data.category', 'platform');
@@ -162,7 +179,7 @@ class ExpenseTest extends TestCase
         ]))->assertCreated();
 
         $this->withHeaders($headers)->postJson('/api/v1/expenses', $this->payload([
-            'expense_type_id' => $this->typeId('platform-subscription'),
+            'expense_type_id' => $this->platformTypeId(),
             'paid_at' => '2026-08-01',
             'paid_to' => 'WaiFai',
             'description' => 'Platform subscription',
@@ -200,7 +217,7 @@ class ExpenseTest extends TestCase
         $headers = $this->authHeaders($owner);
 
         $this->withHeaders($headers)->postJson('/api/v1/expenses', $this->payload([
-            'expense_type_id' => $this->typeId('platform-subscription'),
+            'expense_type_id' => $this->platformTypeId(),
             'amount' => 50000,
             'paid_to' => 'WaiFai',
             'description' => 'Platform subscription',
@@ -214,7 +231,7 @@ class ExpenseTest extends TestCase
         ]))->assertCreated();
 
         $this->withHeaders($headers)->postJson('/api/v1/expenses', $this->payload([
-            'expense_type_id' => $this->typeId('internet'),
+            'expense_type_id' => $this->typeId('bandwidth'),
             'amount' => 30000,
             'paid_to' => 'Airtel',
             'description' => 'Internet',
@@ -243,7 +260,7 @@ class ExpenseTest extends TestCase
 
         $this->withHeaders($headers)->postJson('/api/v1/expenses', $this->payload([
             'router_id' => $routerId,
-            'expense_type_id' => $this->typeId('internet'),
+            'expense_type_id' => $this->typeId('bandwidth'),
             'amount' => 100000,
         ]))->assertCreated();
 
@@ -260,7 +277,7 @@ class ExpenseTest extends TestCase
             ->assertJsonPath('data.summary.total', 150000)
             ->assertJsonPath('data.summary.currency', 'TZS')
             ->assertJsonPath('data.meta.total', 2)
-            ->assertJsonPath('data.breakdown.0.expense_type', 'Internet')
+            ->assertJsonPath('data.breakdown.0.expense_type', 'Bandwidth')
             ->assertJsonPath('data.breakdown.0.total', 100000);
     }
 
@@ -276,7 +293,7 @@ class ExpenseTest extends TestCase
         ]))->assertCreated()->json('data.id');
 
         $this->withHeaders($headers)->patchJson('/api/v1/expenses/'.$id, [
-            'expense_type_id' => $this->typeId('platform-subscription'),
+            'expense_type_id' => $this->platformTypeId(),
             'amount' => 75000,
             'router_id' => null,
         ])->assertOk()
@@ -311,7 +328,7 @@ class ExpenseTest extends TestCase
         $this->createCompanyFor($owner);
         $headers = $this->authHeaders($owner);
 
-        $type = ExpenseType::query()->where('slug', 'internet')->firstOrFail();
+        $type = ExpenseType::query()->where('slug', 'bandwidth')->firstOrFail();
         $type->forceFill(['is_active' => false])->save();
 
         $this->withHeaders($headers)->postJson('/api/v1/expenses', $this->payload([
@@ -374,7 +391,7 @@ class ExpenseTest extends TestCase
         $company = $this->createCompanyFor($owner);
         $headers = $this->authHeaders($owner);
 
-        $type = ExpenseType::query()->where('slug', 'platform-subscription')->firstOrFail();
+        $type = $this->platformType();
 
         $expense = app(ExpenseService::class)->recordSystemExpense(
             company: $company,
@@ -405,14 +422,14 @@ class ExpenseTest extends TestCase
         $this->createCompanyFor($owner);
         $headers = $this->authHeaders($owner);
 
-        ExpenseType::query()->where('slug', 'repair')->update(['is_active' => false]);
+        ExpenseType::query()->where('slug', 'marketing')->update(['is_active' => false]);
 
         $response = $this->withHeaders($headers)->getJson('/api/v1/expense-types')->assertOk();
 
         $slugs = array_column($response->json('data'), 'slug');
 
-        $this->assertContains('internet', $slugs);
-        $this->assertNotContains('repair', $slugs);
+        $this->assertContains('bandwidth', $slugs);
+        $this->assertNotContains('marketing', $slugs);
     }
 
     public function test_operator_without_update_permission_cannot_delete(): void

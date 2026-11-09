@@ -33,7 +33,7 @@ class AdminExpenseTypeTest extends TestCase
 
         $this->withHeaders($headers)->getJson('/api/v1/admin/expense-types')
             ->assertOk()
-            ->assertJsonPath('data.meta.total', 17);
+            ->assertJsonPath('data.meta.total', 11);
 
         $this->withHeaders($headers)->getJson('/api/v1/admin/expense-types/'.$id)
             ->assertOk()
@@ -56,7 +56,7 @@ class AdminExpenseTypeTest extends TestCase
         $admin = $this->createUser(['is_admin' => true, 'status' => 'active']);
         $headers = $this->authHeaders($admin);
 
-        $type = ExpenseType::query()->where('slug', 'internet')->firstOrFail();
+        $type = ExpenseType::query()->where('slug', 'bandwidth')->firstOrFail();
 
         $this->withHeaders($headers)->postJson('/api/v1/admin/expense-types/'.$type->id.'/deactivate')
             ->assertOk()
@@ -77,7 +77,7 @@ class AdminExpenseTypeTest extends TestCase
         $owner = $this->createUser();
         $this->createCompanyFor($owner);
 
-        $type = ExpenseType::query()->where('slug', 'internet')->firstOrFail();
+        $type = ExpenseType::query()->where('slug', 'bandwidth')->firstOrFail();
 
         $this->withHeaders($this->authHeaders($owner))->postJson('/api/v1/expenses', [
             'expense_type_id' => $type->id,

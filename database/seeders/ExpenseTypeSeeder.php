@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Expense;
 use App\Models\ExpenseType;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
@@ -14,28 +15,50 @@ class ExpenseTypeSeeder extends Seeder
     private array $types = [
         ['name' => 'Platform Subscription', 'category' => ExpenseType::CATEGORY_PLATFORM],
 
-        ['name' => 'Internet', 'category' => ExpenseType::CATEGORY_OPERATIONAL],
+        ['name' => 'Hardware', 'category' => ExpenseType::CATEGORY_OPERATIONAL],
+        ['name' => 'Bandwidth', 'category' => ExpenseType::CATEGORY_OPERATIONAL],
         ['name' => 'Electricity', 'category' => ExpenseType::CATEGORY_OPERATIONAL],
-        ['name' => 'Router Purchase', 'category' => ExpenseType::CATEGORY_OPERATIONAL],
-        ['name' => 'Access Point Purchase', 'category' => ExpenseType::CATEGORY_OPERATIONAL],
-        ['name' => 'UPS Purchase', 'category' => ExpenseType::CATEGORY_OPERATIONAL],
-        ['name' => 'Switch Purchase', 'category' => ExpenseType::CATEGORY_OPERATIONAL],
-        ['name' => 'Cable/Accessories', 'category' => ExpenseType::CATEGORY_OPERATIONAL],
-        ['name' => 'Installation', 'category' => ExpenseType::CATEGORY_OPERATIONAL],
-        ['name' => 'Maintenance', 'category' => ExpenseType::CATEGORY_OPERATIONAL],
-        ['name' => 'Repair', 'category' => ExpenseType::CATEGORY_OPERATIONAL],
-        ['name' => 'Transport', 'category' => ExpenseType::CATEGORY_OPERATIONAL],
-        ['name' => 'Technician', 'category' => ExpenseType::CATEGORY_OPERATIONAL],
-        ['name' => 'Rent/Site', 'category' => ExpenseType::CATEGORY_OPERATIONAL],
-        ['name' => 'SIM/Data', 'category' => ExpenseType::CATEGORY_OPERATIONAL],
-        ['name' => 'Other', 'category' => ExpenseType::CATEGORY_OPERATIONAL],
+        ['name' => 'SMS', 'category' => ExpenseType::CATEGORY_OPERATIONAL],
+        ['name' => 'Salaries', 'category' => ExpenseType::CATEGORY_OPERATIONAL],
+        ['name' => 'Marketing', 'category' => ExpenseType::CATEGORY_OPERATIONAL],
+        ['name' => 'Rent', 'category' => ExpenseType::CATEGORY_OPERATIONAL],
+        ['name' => 'Utilities', 'category' => ExpenseType::CATEGORY_OPERATIONAL],
+        ['name' => 'Others', 'category' => ExpenseType::CATEGORY_OPERATIONAL],
+    ];
+
+    /**
+     * Old slug => new slug. Existing expenses are moved to the new type before
+     * obsolete types are deleted, so historical records keep a valid category.
+     *
+     * @var array<string, string>
+     */
+    private array $legacyMap = [
+        'internet' => 'bandwidth',
+        'electricity' => 'electricity',
+        'router-purchase' => 'hardware',
+        'access-point-purchase' => 'hardware',
+        'ups-purchase' => 'hardware',
+        'switch-purchase' => 'hardware',
+        'cable-accessories' => 'hardware',
+        'installation' => 'others',
+        'maintenance' => 'others',
+        'repair' => 'hardware',
+        'transport' => 'others',
+        'technician' => 'others',
+        'rent-site' => 'rent',
+        'sim-data' => 'utilities',
+        'other' => 'others',
     ];
 
     public function run(): void
     {
+        $kept = [];
+
         foreach ($this->types as $type) {
-            ExpenseType::updateOrCreate(
-                ['slug' => Str::slug($type['name'])],
+            $slug = Str::slug($type['name']);
+
+            $kept[$slug] = ExpenseType::query()->updateOrCreate(
+                ['slug' => $slug],
                 [
                     'name' => $type['name'],
                     'category' => $type['category'],
@@ -43,5 +66,23 @@ class ExpenseTypeSeeder extends Seeder
                 ],
             );
         }
+
+        $fallback = $kept['others'];
+
+        ExpenseType::query()
+            ->whereNotIn('slug', array_keys($kept))
+            ->get()
+            ->each(function (ExpenseType $type) use ($kept, $fallback) {
+                $target = $kept[$this->legacyMap[$type->slug] ?? 'others'] ?? $fallback;
+
+                Expense::withTrashed()
+                    ->where('expense_type_id', $type->id)
+                    ->update([
+                        'expense_type_id' => $target->id,
+                        'category' => $target->category,
+                    ]);
+
+                $type->delete();
+            });
     }
 }
