@@ -25,6 +25,7 @@ class PaymentProviderSeeder extends Seeder
                 ],
                 'settings' => [
                     'driver' => PaymentProvider::SLUG_STUB,
+                    'payout_fees' => $this->payoutFees(),
                 ],
             ]
         );
@@ -47,6 +48,7 @@ class PaymentProviderSeeder extends Seeder
                 'settings' => [
                     'driver' => PaymentProvider::SLUG_FLUTTERWAVE,
                     'mobile_money_charge_type' => 'mobile_money_tanzania',
+                    'payout_fees' => $this->payoutFees(),
                 ],
             ]
         );
@@ -73,6 +75,7 @@ class PaymentProviderSeeder extends Seeder
                     'goods_details' => '[{"goodsId":"-1"}]',
                     'minor_unit_factor' => 100,
                     'payout_path' => '/api/v2/payment/merchant/payout',
+                    'payout_fees' => $this->payoutFees(),
                 ],
             ]
         );
@@ -93,6 +96,7 @@ class PaymentProviderSeeder extends Seeder
                     'default_address' => 'Dar es Salaam',
                     'default_postcode' => '11111',
                     'callback_url' => config('services.palmpesa.callback_url'),
+                    'payout_fees' => $this->payoutFees(),
                 ], fn ($value) => $value !== null && $value !== ''),
             ]
         );
@@ -117,6 +121,7 @@ class PaymentProviderSeeder extends Seeder
                     'timeout' => (int) config('services.afriqorepay.timeout', 30),
                     'callback_url' => config('services.afriqorepay.callback_url'),
                     'payout_callback_url' => config('services.afriqorepay.payout_callback_url'),
+                    'payout_fees' => $this->payoutFees(),
                 ], fn ($value) => $value !== null && $value !== ''),
             ]
         );
@@ -145,5 +150,16 @@ class PaymentProviderSeeder extends Seeder
                 'is_default_for_payments' => false,
                 'is_default_for_payouts' => false,
             ]);
+    }
+
+    /**
+     * @return array{platform: array{percent: float, fixed: float}, provider: array{percent: float, fixed: float}}
+     */
+    private function payoutFees(): array
+    {
+        return [
+            'platform' => ['percent' => 0.0, 'fixed' => 0.0],
+            'provider' => ['percent' => 0.0, 'fixed' => 0.0],
+        ];
     }
 }

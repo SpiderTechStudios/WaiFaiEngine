@@ -76,4 +76,5 @@ Route::prefix('superadmin')->middleware(['auth:sanctum', 'active.user', 'superad
     Route::post('/payment-providers/{paymentProvider}/disable', [PaymentProviderController::class, 'disable']);
     Route::post('/payment-providers/{paymentProvider}/default-payments', [PaymentProviderController::class, 'setDefaultPayments']);
     Route::post('/payment-providers/{paymentProvider}/default-payouts', [PaymentProviderController::class, 'setDefaultPayouts']);
+    Route::put('/payment-providers/{paymentProvider}/payout-fees', [PaymentProviderController::class, 'updatePayoutFees']);
 });

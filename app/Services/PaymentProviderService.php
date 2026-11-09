@@ -98,6 +98,12 @@ class PaymentProviderService
                 $settings['driver'] = data_get($provider->settings, 'driver', $provider->slug);
             }
 
+            // Preserve payout fees when the caller updates other settings without
+            // sending the fee block (the dedicated endpoint owns that key).
+            if (! array_key_exists('payout_fees', $settings) && array_key_exists('payout_fees', $provider->settings ?? [])) {
+                $settings['payout_fees'] = $provider->settings['payout_fees'];
+            }
+
             $slug = $provider->slug;
             $oldSlug = $provider->slug;
 
@@ -227,6 +233,40 @@ class PaymentProviderService
 
             return $provider->fresh();
         });
+    }
+
+    /**
+     * Configure the platform and provider withdrawal fee for a payout provider.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function updatePayoutFees(PaymentProvider $provider, array $data, ?\App\Models\User $actor = null): PaymentProvider
+    {
+        $settings = $provider->settings ?? [];
+
+        $settings['payout_fees'] = [
+            'platform' => [
+                'percent' => (float) $data['platform_percent'],
+                'fixed' => (float) $data['platform_fixed'],
+            ],
+            'provider' => [
+                'percent' => (float) $data['provider_percent'],
+                'fixed' => (float) $data['provider_fixed'],
+            ],
+        ];
+
+        $provider->forceFill(['settings' => $settings])->save();
+
+        $this->auditLogger->log(
+            'payment_provider_payout_fees_updated',
+            $actor,
+            null,
+            PaymentProvider::class,
+            $provider->id,
+            newValues: $settings['payout_fees'],
+        );
+
+        return $provider->fresh();
     }
 
     /**

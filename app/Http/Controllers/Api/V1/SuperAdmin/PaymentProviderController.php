@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\SuperAdmin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SuperAdmin\StorePaymentProviderRequest;
 use App\Http\Requests\SuperAdmin\UpdatePaymentProviderRequest;
+use App\Http\Requests\SuperAdmin\UpdatePayoutFeesRequest;
 use App\Http\Resources\PaymentProviderResource;
 use App\Models\PaymentProvider;
 use App\Services\PaymentProviderService;
@@ -97,6 +98,20 @@ class PaymentProviderController extends Controller
         return $this->success(
             (new PaymentProviderResource($provider))->resolve(),
             'Default payout provider updated',
+        );
+    }
+
+    public function updatePayoutFees(UpdatePayoutFeesRequest $request, PaymentProvider $paymentProvider): JsonResponse
+    {
+        $provider = $this->paymentProviderService->updatePayoutFees(
+            $paymentProvider,
+            $request->validated(),
+            $request->user(),
+        );
+
+        return $this->success(
+            (new PaymentProviderResource($provider))->resolve(),
+            'Payout fees updated',
         );
     }
 }

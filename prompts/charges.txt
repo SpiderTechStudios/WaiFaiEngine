@@ -1,0 +1,262 @@
+WaiFai — Withdrawal Charges, Fees & Confirmation Flow
+=====================================================
+
+Summary
+-------
+Every withdrawal is charged two fees, both deducted from the gross amount the
+user requests:
+
+  1. Platform fee  — WaiFai's cut.
+  2. Provider fee  — the payout provider's cut (e.g. AfriqorePay, PalmPesa).
+
+The user sees the full breakdown before requesting, confirms with a 6-digit OTP,
+and only then is the payout sent to the provider.
+
+Both fees are configured per payout provider by a superadmin and stored on
+`payment_providers.settings.payout_fees`. Every withdrawal stores the computed
+amounts so historical records are auditable.
+
+
+Fee configuration (superadmin)
+------------------------------
+Endpoint:
+  PUT /api/v1/superadmin/payment-providers/{providerSlug}/payout-fees
+Auth:
+  auth:sanctum + superadmin
+Body:
+  {
+    "platform_percent": 2,      // 0..100
+    "platform_fixed": 1,        // fixed amount in TZS
+    "provider_percent": 1,      // 0..100
+    "provider_fixed": 0.5       // fixed amount in TZS
+  }
+
+Response (excerpt):
+  {
+    "status": true,
+    "data": {
+      "slug": "afriqorepay",
+      "payout_fees": {
+        "platform_percent": 2,
+        "platform_fixed": 1,
+        "provider_percent": 1,
+        "provider_fixed": 0.5
+      }
+    }
+  }
+
+GET /api/v1/superadmin/payment-providers also returns `payout_fees` for each
+provider.
+
+Notes:
+  - Configure fees on the provider that will actually perform the payout.
+  - A provider must be active and `supports_payouts = true` to be used for a
+    withdrawal. PalmPesa is currently seeded with `supports_payouts = false`.
+  - The default payout provider is set with:
+      POST /api/v1/superadmin/payment-providers/{providerSlug}/default-payouts
+
+
+Fee formula
+-----------
+Given gross amount A:
+
+  platform_fee = round(A * platform_percent / 100 + platform_fixed, 2)
+  provider_fee = round(A * provider_percent / 100 + provider_fixed, 2)
+  fee_total    = platform_fee + provider_fee
+  net_amount   = A - fee_total
+
+  wallet debit = A                 (the gross amount is held immediately)
+  provider payout = net_amount     (what reaches the customer's mobile wallet)
+
+If `net_amount` is below `WITHDRAWAL_MINIMUM_NET_AMOUNT` (default 1), the
+request is rejected.
+
+Example (A = 200, platform 2% + 1, provider 1% + 0.5):
+  platform_fee = 5.00
+  provider_fee = 2.50
+  fee_total    = 7.50
+  net_amount   = 192.50
+
+
+Withdrawal flow
+---------------
+1. Save payout details (optional once, reusable)
+   POST /api/v1/withdrawals/payout-accounts
+   {
+     "name": "Asha Mohamed",
+     "phone": "0754000000"
+   }
+   - The network is detected automatically from the phone prefix
+     (mpesa, airtel, tigopesa, halopesa, ttcl, zantel).
+   - The first saved account becomes the default.
+
+   List:    GET    /api/v1/withdrawals/payout-accounts
+   Update:  PATCH  /api/v1/withdrawals/payout-accounts/{id}
+   Default: POST   /api/v1/withdrawals/payout-accounts/{id}/default
+   Remove:  DELETE /api/v1/withdrawals/payout-accounts/{id}
+
+2. Preview the charge before requesting
+   POST /api/v1/withdrawals/preview
+   {
+     "amount": 200,
+     "payout_account_id": 3,
+     "payment_provider_slug": "afriqorepay"   // optional; defaults to default payout provider
+   }
+   (You may send `destination_phone` instead of `payout_account_id`.)
+
+   Response data:
+   {
+     "amount": 200,
+     "currency": "TZS",
+     "platform_fee": 5,
+     "provider_fee": 2.5,
+     "fee_total": 7.5,
+     "net_amount": 192.5,
+     "platform_percent": 2,
+     "platform_fixed": 1,
+     "provider_percent": 1,
+     "provider_fixed": 0.5,
+     "network": "mpesa",
+     "payment_provider": { "slug": "afriqorepay", "name": "AfriqorePay" },
+     "wallet_balance": 1000,
+     "sufficient_balance": true,
+     "payout_account": { "id": 3, "name": "Asha Mohamed", "phone": "0754000000", "network": "mpesa" }
+   }
+
+3. Request the withdrawal (OTP is sent)
+   POST /api/v1/withdrawals
+   {
+     "amount": 200,
+     "payout_account_id": 3,
+     "payment_provider_slug": "afriqorepay"
+   }
+   or, inline payout details:
+   {
+     "amount": 200,
+     "destination_phone": "0754000000",
+     "destination_name": "Asha Mohamed"
+   }
+
+   Effects:
+   - Wallet is debited by the gross amount (200) immediately (a hold).
+   - Withdrawal is created with status "pending".
+   - Fee columns + `fee_breakdown` are stored.
+   - A 6-digit OTP is emailed to the requesting user.
+
+   Response includes:
+     "status": "pending",
+     "requires_confirmation": true,
+     "platform_fee", "provider_fee", "fee_total", "net_amount",
+     "network", "payment_provider_slug", "payout_account".
+
+4. Confirm with OTP
+   POST /api/v1/withdrawals/{id}/confirm
+   { "otp": "123456" }
+
+   - Incorrect code: 422, attempt counter increases.
+   - Expired code: 422 (default TTL 10 minutes).
+   - Too many attempts (default 5): 422.
+   - Valid code: status becomes "processing" and the payout is sent to the
+     provider for `net_amount`.
+
+   If the provider rejects/fails to start the payout, the withdrawal becomes
+   "failed" and the gross amount is credited back to the wallet.
+
+5. Resend OTP
+   POST /api/v1/withdrawals/{id}/resend-otp
+   - Only while the withdrawal is pending/unconfirmed.
+   - Cooldown: `WITHDRAWAL_OTP_RESEND_SECONDS` (default 60s).
+
+6. Payout completion
+   Provider payout webhooks update the withdrawal:
+     POST /api/v1/webhooks/payouts/{providerSlug}
+
+   - disbursement.succeeded -> status "completed"
+   - disbursement.failed    -> status "failed"; gross amount refunded to wallet
+   - disbursement.processing/created -> status "processing"
+
+7. Cancel
+   DELETE /api/v1/withdrawals/{id}
+   - Only pending, unconfirmed withdrawals can be cancelled.
+   - The gross amount is credited back to the wallet.
+
+
+Withdrawal statuses
+-------------------
+  pending      Awaiting OTP confirmation (wallet already debited)
+  processing   OTP confirmed; payout sent to provider
+  completed    Provider confirmed payout
+  failed       Provider rejected/failed; gross refunded
+  cancelled    User cancelled before confirmation; gross refunded
+  expired      Reserved (OTP expired handling can move pending to expired)
+
+
+Recorded fields on each withdrawal
+----------------------------------
+  payment_provider_id / payment_provider_slug  payout provider
+  payout_account_id                            saved payout account
+  provider / network                           mobile network (e.g. mpesa)
+  destination_phone / destination_name         recipient
+  amount                                       gross debited from wallet
+  platform_fee                                 WaiFai cut
+  provider_fee                                 provider cut
+  fee_total                                    platform_fee + provider_fee
+  net_amount                                   amount - fee_total (paid out)
+  fee_breakdown                                full JSON (rates, fixed, slugs,
+                                               wallet balance before/after)
+  currency
+  otp_hash / otp_expires_at / otp_attempts / otp_sent_at / confirmed_at
+  external_reference                           provider transaction id
+  requested_at / processed_at / failed_at / cancelled_at / failure_reason
+
+
+Stats additions
+---------------
+GET /api/v1/withdrawals/stats now also returns for completed/processing rows:
+  processing_count, processing_amount,
+  platform_fee_total, provider_fee_total, fee_total, net_paid_total
+
+
+Configuration (.env)
+--------------------
+  WITHDRAWAL_OTP_TTL_MINUTES=10
+  WITHDRAWAL_OTP_MAX_ATTEMPTS=5
+  WITHDRAWAL_OTP_RESEND_SECONDS=60
+  WITHDRAWAL_MINIMUM_NET_AMOUNT=1
+
+OTP delivery:
+  - The user chooses where to receive withdrawal OTPs in profile settings:
+      PATCH /api/v1/auth/profile
+      { "otp_channel": "email" }   // default
+      { "otp_channel": "sms" }     // requires a phone number on the profile
+  - GET /api/v1/auth/me returns `data.user.otp_channel`.
+  - Email: delivered via WithdrawalOtpNotification using the existing mail config.
+  - SMS: delivered via SmsService. If the user chooses SMS but no phone is set,
+    the request is rejected. If SMS delivery fails (gateway down), the system
+    falls back to email and logs `withdrawal_otp_sms_failed_fallback_email`.
+  - The withdrawal response exposes `otp_channel` and `otp_expires_at`; the OTP
+    hash is never returned.
+
+SMS gateway configuration (.env):
+  SMS_DRIVER=log        # log (writes to laravel.log) or http
+  SMS_HTTP_URL=         # gateway endpoint that accepts {"to","message","sender"}
+  SMS_HTTP_TOKEN=       # Bearer token for the gateway
+  SMS_SENDER_ID=        # sender ID / shortcode
+
+
+Permissions
+-----------
+  withdrawals.view    preview? no — preview requires withdrawals.create
+  withdrawals.create  preview, request, confirm, resend OTP, payout accounts
+
+
+Important limitations
+---------------------
+  - Only providers whose driver implements payouts can complete a transfer.
+    AfriqorePay is implemented; PalmPesa currently throws "does not support
+    payouts". Flutterwave and PalmPay drivers have payout calls but are not
+    fully wired into this flow.
+  - Provider fees configured here are authoritative. AfriqorePay's live
+    `/disbursements/preview` fee is not consulted at request time.
+  - Payout completion depends on provider webhooks; if a webhook is missed,
+    the withdrawal can remain "processing" and must be reconciled manually.

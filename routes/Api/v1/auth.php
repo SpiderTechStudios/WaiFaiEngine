@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\Auth\EmailVerificationController;
 use App\Http\Controllers\Api\V1\Auth\EnrollmentController;
 use App\Http\Controllers\Api\V1\Auth\PasswordController;
+use App\Http\Controllers\Api\V1\Auth\ProfileController;
 use App\Http\Controllers\Api\V1\Auth\RegisterAdminController;
 use App\Http\Controllers\Api\V1\Auth\SessionController;
 use App\Http\Controllers\Api\V1\Operations\TestEmailVerificationController;
@@ -49,6 +50,7 @@ Route::middleware(['auth:sanctum', 'active.user', 'company.context'])->group(fun
     Route::post('/auth/logout', [SessionController::class, 'logout']);
     Route::post('/auth/logout-all', [SessionController::class, 'logoutAll']);
     Route::post('/auth/company/switch', [SessionController::class, 'switchCompany']);
+    Route::patch('/auth/profile', [ProfileController::class, 'update']);
     Route::put('/auth/password', [PasswordController::class, 'update']);
     Route::post('/auth/email/resend', [EmailVerificationController::class, 'resend'])->middleware('throttle:6,1');
 });

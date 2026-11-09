@@ -23,6 +23,7 @@ class PaymentProviderResource extends JsonResource
             'is_default_for_payments' => $this->is_default_for_payments,
             'is_default_for_payouts' => $this->is_default_for_payouts,
             'credentials' => $this->publicCredentials(),
+            'payout_fees' => $this->payoutFeeConfig(),
             'settings' => $this->settings,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

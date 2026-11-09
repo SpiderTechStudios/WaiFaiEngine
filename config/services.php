@@ -81,4 +81,11 @@ return [
         'status_timeout' => (int) env('AFRIQOREPAY_STATUS_TIMEOUT', 8),
     ],
 
+    'sms' => [
+        'driver' => env('SMS_DRIVER', 'log'), // log | http
+        'url' => env('SMS_HTTP_URL'),
+        'token' => env('SMS_HTTP_TOKEN'),
+        'sender' => env('SMS_SENDER_ID'),
+    ],
+
 ];

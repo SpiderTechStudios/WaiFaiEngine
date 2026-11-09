@@ -30,6 +30,7 @@ class User extends Authenticatable implements MustVerifyEmailContract
         'last_name',
         'email',
         'phone',
+        'otp_channel',
         'password',
         'status',
         'is_superadmin',
@@ -55,8 +56,7 @@ class User extends Authenticatable implements MustVerifyEmailContract
         return [
             'email_verified_at' => 'datetime',
             'last_login_at' => 'datetime',
-            'password' => 'hashed',
-            'is_superadmin' => 'boolean',
+            'password' => 'hashed',            'is_superadmin' => 'boolean',
             'is_admin' => 'boolean',
             'created_by' => 'integer',
             'current_company_id' => 'integer',

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\V1\Operations;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Operations\ConfirmWithdrawalRequest;
+use App\Http\Requests\Operations\PreviewWithdrawalRequest;
 use App\Http\Requests\Operations\StoreWithdrawalRequest;
 use App\Http\Resources\WithdrawalResource;
 use App\Models\Wallet;
@@ -33,11 +35,49 @@ class WithdrawalController extends Controller
         ], 'Withdrawals retrieved');
     }
 
+    public function preview(PreviewWithdrawalRequest $request): JsonResponse
+    {
+        $quote = $this->withdrawalService->preview($this->currentCompany(), $request->validated());
+
+        return $this->success($quote, 'Withdrawal quote');
+    }
+
     public function store(StoreWithdrawalRequest $request): JsonResponse
     {
-        $withdrawal = $this->withdrawalService->create($this->currentCompany(), $request->validated(), $request->user());
+        $withdrawal = $this->withdrawalService->request($this->currentCompany(), $request->validated(), $request->user());
 
-        return $this->success((new WithdrawalResource($withdrawal))->resolve(), 'Withdrawal requested', 201);
+        return $this->success((new WithdrawalResource($withdrawal))->resolve(), 'Withdrawal requested. Enter the confirmation code sent to you.', 201);
+    }
+
+    public function confirm(ConfirmWithdrawalRequest $request, Withdrawal $withdrawal): JsonResponse
+    {
+        if ($withdrawal->company_id !== $this->currentCompany()->id) {
+            abort(404);
+        }
+
+        $withdrawal = $this->withdrawalService->confirm(
+            $this->currentCompany(),
+            $withdrawal,
+            (string) $request->validated('otp'),
+            $request->user(),
+        );
+
+        return $this->success((new WithdrawalResource($withdrawal))->resolve(), 'Withdrawal confirmed and payout started');
+    }
+
+    public function resendOtp(Request $request, Withdrawal $withdrawal): JsonResponse
+    {
+        if ($withdrawal->company_id !== $this->currentCompany()->id) {
+            abort(404);
+        }
+
+        $withdrawal = $this->withdrawalService->resendOtp(
+            $this->currentCompany(),
+            $withdrawal,
+            $request->user(),
+        );
+
+        return $this->success((new WithdrawalResource($withdrawal))->resolve(), 'Confirmation code resent');
     }
 
     public function show(Withdrawal $withdrawal): JsonResponse
@@ -73,21 +113,34 @@ class WithdrawalController extends Controller
             ->keyBy('status');
 
         $pending = $byStatus->get('pending');
+        $processing = $byStatus->get('processing');
         $completed = $byStatus->get('completed') ?? $byStatus->get('paid') ?? $byStatus->get('success');
         $failed = $byStatus->get('failed');
         $cancelled = $byStatus->get('cancelled');
+
+        $fees = Withdrawal::query()
+            ->where('company_id', $company->id)
+            ->whereIn('status', ['completed', 'paid', 'success', 'processing'])
+            ->selectRaw('COALESCE(SUM(platform_fee), 0) as platform_fee, COALESCE(SUM(provider_fee), 0) as provider_fee, COALESCE(SUM(fee_total), 0) as fee_total, COALESCE(SUM(net_amount), 0) as net_amount')
+            ->first();
 
         return $this->success([
             'currency' => 'TZS',
             'wallet_balance' => (float) ($wallet?->balance ?? 0),
             'pending_count' => (int) ($pending?->total ?? 0),
             'pending_amount' => (float) ($pending?->amount ?? 0),
+            'processing_count' => (int) ($processing?->total ?? 0),
+            'processing_amount' => (float) ($processing?->amount ?? 0),
             'completed_count' => (int) ($completed?->total ?? 0),
             'completed_amount' => (float) ($completed?->amount ?? 0),
             'failed_count' => (int) ($failed?->total ?? 0),
             'failed_amount' => (float) ($failed?->amount ?? 0),
             'cancelled_count' => (int) ($cancelled?->total ?? 0),
             'cancelled_amount' => (float) ($cancelled?->amount ?? 0),
+            'platform_fee_total' => (float) ($fees?->platform_fee ?? 0),
+            'provider_fee_total' => (float) ($fees?->provider_fee ?? 0),
+            'fee_total' => (float) ($fees?->fee_total ?? 0),
+            'net_paid_total' => (float) ($fees?->net_amount ?? 0),
             'total_count' => (int) Withdrawal::query()->where('company_id', $company->id)->count(),
             'total_amount' => (float) Withdrawal::query()->where('company_id', $company->id)->sum('amount'),
         ], 'Withdrawal stats retrieved');

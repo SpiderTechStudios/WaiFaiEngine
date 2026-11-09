@@ -121,6 +121,23 @@ class PaymentProvider extends Model
     }
 
     /**
+     * Platform + provider withdrawal fees configured for this provider.
+     *
+     * @return array{platform_percent: float, platform_fixed: float, provider_percent: float, provider_fixed: float}
+     */
+    public function payoutFeeConfig(): array
+    {
+        $fees = $this->setting('payout_fees', []);
+
+        return [
+            'platform_percent' => (float) data_get($fees, 'platform.percent', 0),
+            'platform_fixed' => (float) data_get($fees, 'platform.fixed', 0),
+            'provider_percent' => (float) data_get($fees, 'provider.percent', 0),
+            'provider_fixed' => (float) data_get($fees, 'provider.fixed', 0),
+        ];
+    }
+
+    /**
      * Safe public view of credentials (never secrets).
      *
      * @return array<string, mixed>

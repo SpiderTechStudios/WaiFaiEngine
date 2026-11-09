@@ -19,6 +19,7 @@ class UserResource extends JsonResource
             'last_name' => $this->last_name,
             'email' => $this->email,
             'phone' => $this->phone,
+            'otp_channel' => $this->otp_channel ?: 'email',
             'status' => $this->status,
             'is_superadmin' => (bool) $this->is_superadmin,
             'is_admin' => (bool) $this->is_admin,
