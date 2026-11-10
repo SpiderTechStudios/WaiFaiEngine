@@ -237,11 +237,28 @@ OTP delivery:
   - The withdrawal response exposes `otp_channel` and `otp_expires_at`; the OTP
     hash is never returned.
 
-SMS gateway configuration (.env):
-  SMS_DRIVER=log        # log (writes to laravel.log) or http
-  SMS_HTTP_URL=         # gateway endpoint that accepts {"to","message","sender"}
-  SMS_HTTP_TOKEN=       # Bearer token for the gateway
-  SMS_SENDER_ID=        # sender ID / shortcode
+SMS gateway configuration (.env) — NextSMS:
+  NEXTSMS_USERNAME=
+  NEXTSMS_PASSWORD=
+  NEXTSMS_SENDER_ID=NEXTSMS
+  NEXTSMS_BASE_URL=https://messaging-service.co.tz
+  NEXTSMS_TEST_MODE=false
+  NEXTSMS_CALLBACK_SECRET=
+
+Superadmin SMS endpoints:
+  GET  /api/v1/superadmin/sms/balance
+  POST /api/v1/superadmin/sms/send
+       { "to": "0712345678", "text": "...", "reference": null, "from": null }
+  POST /api/v1/superadmin/sms/send-multiple
+       { "to": ["0712345678","0754123456"], "text": "..." }
+  POST /api/v1/superadmin/sms/broadcast
+       { "text": "...", "recipients": ["0712..."], "audience": "active", "company_id": null }
+       (omit `recipients` to broadcast to active users with a phone; `audience` can be active|all)
+
+NextSMS delivery-report callback (public):
+  GET|POST /api/v1/sms/delivery-report
+  If NEXTSMS_CALLBACK_SECRET is set, send it as X-NextSMS-Secret, ?secret= or body `secret`.
+
 
 
 Permissions

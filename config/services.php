@@ -81,11 +81,13 @@ return [
         'status_timeout' => (int) env('AFRIQOREPAY_STATUS_TIMEOUT', 8),
     ],
 
-    'sms' => [
-        'driver' => env('SMS_DRIVER', 'log'), // log | http
-        'url' => env('SMS_HTTP_URL'),
-        'token' => env('SMS_HTTP_TOKEN'),
-        'sender' => env('SMS_SENDER_ID'),
+    'nextsms' => [
+        'username' => env('NEXTSMS_USERNAME'),
+        'password' => env('NEXTSMS_PASSWORD'),
+        'sender_id' => env('NEXTSMS_SENDER_ID', 'NEXTSMS'),
+        'base_url' => env('NEXTSMS_BASE_URL', 'https://messaging-service.co.tz'),
+        'test_mode' => filter_var(env('NEXTSMS_TEST_MODE', false), FILTER_VALIDATE_BOOLEAN),
+        'callback_secret' => env('NEXTSMS_CALLBACK_SECRET'),
     ],
 
 ];

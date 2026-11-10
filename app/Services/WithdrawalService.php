@@ -620,7 +620,7 @@ class WithdrawalService
                 .' to '.$withdrawal->destination_phone
                 .'. Expires '.$expires.'.';
 
-            if (app(SmsService::class)->send((string) $actor->phone, $message)) {
+            if (app(SmsService::class)->sendOtp($actor, (string) $actor->phone, $message)) {
                 $this->recordOtpChannel($withdrawal, 'sms');
 
                 return;

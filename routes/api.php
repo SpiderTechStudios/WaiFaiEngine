@@ -31,4 +31,5 @@ Route::prefix('v1')->group(function () {
     require __DIR__.'/Api/v1/staff.php';
     require __DIR__.'/Api/v1/vouchers.php';
     require __DIR__.'/Api/v1/withdraw.php';
+    require __DIR__.'/Api/v1/sms.php';
 });

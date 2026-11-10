@@ -3,10 +3,12 @@
 namespace Tests\Feature;
 
 use App\Models\Company;
+use App\Models\SmsMessage;
 use App\Models\User;
 use App\Models\Wallet;
 use App\Models\Withdrawal;
 use App\Notifications\WithdrawalOtpNotification;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
@@ -211,6 +213,16 @@ class WithdrawalFeeTest extends TestCase
     {
         Notification::fake();
 
+        Http::fake([
+            'messaging-service.co.tz/*' => Http::response([
+                'messages' => [[
+                    'to' => '255754000000',
+                    'status' => ['groupName' => 'PENDING', 'name' => 'PENDING_ENROUTE'],
+                    'messageId' => 'msg-otp-1',
+                ]],
+            ], 200),
+        ]);
+
         $owner = $this->createUser(['phone' => '0754000000']);
         $company = $this->createCompanyFor($owner);
         $this->fundWallet($company, 1000);
@@ -230,6 +242,12 @@ class WithdrawalFeeTest extends TestCase
 
         $this->assertSame('sms', data_get($withdrawal->metadata, 'otp_channel'));
         Notification::assertNotSentTo($owner, WithdrawalOtpNotification::class);
+        $this->assertDatabaseHas('sms_messages', [
+            'provider' => 'nextsms',
+            'recipient' => '255754000000',
+            'provider_message_id' => 'msg-otp-1',
+        ]);
+        $this->assertSame(1, SmsMessage::query()->count());
     }
 
     private function fundWallet(Company $company, float $balance): Wallet
