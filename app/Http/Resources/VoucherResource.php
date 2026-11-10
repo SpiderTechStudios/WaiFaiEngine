@@ -32,6 +32,13 @@ class VoucherResource extends JsonResource
                 ] : null;
             }),
             'expires_at' => $this->expires_at,
+            'latest_grant' => $this->whenLoaded('latestGrant', fn () => $this->latestGrant ? [
+                'id' => $this->latestGrant->id,
+                'status' => $this->latestGrant->status,
+                'starts_at' => $this->latestGrant->starts_at,
+                'expires_at' => $this->latestGrant->expires_at,
+                'source' => $this->latestGrant->source,
+            ] : null),
             'note' => $this->note,
             'revoked_at' => $this->revoked_at,
             'router' => $this->whenLoaded('router', fn () => [

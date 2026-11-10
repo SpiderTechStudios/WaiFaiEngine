@@ -7,6 +7,14 @@ return [
     'session_ttl_minutes' => (int) env('CAPTIVE_SESSION_TTL', 30),
 
     /*
+    | How long a WiFiDog client may stay silent (no /auth counters or ping)
+    | before its live session is marked offline. Connected clients send
+    | counters every CheckInterval (typically 60s), so keep this above that.
+    | MikroTik presence is handled by mikrotik:sync + missing_session_grace.
+    */
+    'presence_timeout_minutes' => (int) env('CAPTIVE_PRESENCE_TIMEOUT_MINUTES', 5),
+
+    /*
     | Always send WiFiDog /login browsers to THIS backend's /connect page
     | ({APP_URL}/connect), not a separate frontend. Set to false only when
     | an external CAPTIVE_PORTAL_URL must be used.

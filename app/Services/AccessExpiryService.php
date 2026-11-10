@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Jobs\RevokeMikroTikSession;
+use App\Jobs\RevokeGatewaySession;
 use App\Models\AccessGrant;
 use App\Models\CaptiveSession;
 use App\Models\NetworkSession;
@@ -104,7 +104,7 @@ class AccessExpiryService
         });
 
         foreach ($captiveSessionIds as $captiveSessionId) {
-            DB::afterCommit(fn () => RevokeMikroTikSession::dispatch((int) $captiveSessionId));
+            DB::afterCommit(fn () => RevokeGatewaySession::dispatch((int) $captiveSessionId));
         }
 
         return $result;
@@ -112,7 +112,7 @@ class AccessExpiryService
 
     private function endSessionsForExpiredGrants(): int
     {
-        return NetworkSession::query()
+        $query = NetworkSession::query()
             ->where('status', 'active')
             ->whereHas('accessGrant', function ($query): void {
                 $query->where('status', 'expired')
@@ -121,16 +121,30 @@ class AccessExpiryService
                             ->whereNotNull('expires_at')
                             ->where('expires_at', '<=', now());
                     });
-            })
-            ->update([
-                'status' => 'ended',
-                'ended_at' => now(),
-            ]);
+            });
+
+        $networkSessionIds = (clone $query)->pluck('id');
+
+        $captiveSessionIds = CaptiveSession::query()
+            ->whereIn('network_session_id', $networkSessionIds)
+            ->where('status', CaptiveSession::STATUS_AUTHENTICATED)
+            ->pluck('id');
+
+        $updated = $query->update([
+            'status' => 'ended',
+            'ended_at' => now(),
+        ]);
+
+        foreach ($captiveSessionIds as $captiveSessionId) {
+            RevokeGatewaySession::dispatch((int) $captiveSessionId);
+        }
+
+        return $updated;
     }
 
     private function expireCaptiveSessionsForExpiredGrants(): int
     {
-        return CaptiveSession::query()
+        $query = CaptiveSession::query()
             ->where('status', CaptiveSession::STATUS_AUTHENTICATED)
             ->where(function ($query): void {
                 $query->where(function ($inner): void {
@@ -144,9 +158,18 @@ class AccessExpiryService
                                 ->where('expires_at', '<=', now());
                         });
                 });
-            })
-            ->update([
-                'status' => CaptiveSession::STATUS_EXPIRED,
-            ]);
+            });
+
+        $captiveSessionIds = (clone $query)->pluck('id');
+
+        $updated = $query->update([
+            'status' => CaptiveSession::STATUS_EXPIRED,
+        ]);
+
+        foreach ($captiveSessionIds as $captiveSessionId) {
+            RevokeGatewaySession::dispatch((int) $captiveSessionId);
+        }
+
+        return $updated;
     }
 }

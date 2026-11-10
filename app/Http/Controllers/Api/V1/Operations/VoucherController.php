@@ -30,7 +30,41 @@ class VoucherController extends Controller
         $paginated = Voucher::query()
             ->with(['router', 'internetPlan', 'latestGrant.customer'])
             ->where('company_id', $companyId)
-            ->when($request->filled('status'), fn ($query) => $query->where('status', $request->string('status')))
+            ->when($request->filled('status'), function ($query) use ($request) {
+                $status = $request->string('status')->toString();
+
+                if ($status === Voucher::STATUS_EXPIRED) {
+                    $query->where(function ($inner) {
+                        $inner->where('status', Voucher::STATUS_EXPIRED)
+                            ->orWhere(function ($used) {
+                                $used->where('uses_count', '>', 0)
+                                    ->whereHas('latestGrant', function ($grant) {
+                                        $grant->where(function ($access) {
+                                            $access->where('status', 'expired')
+                                                ->orWhere(function ($window) {
+                                                    $window->whereNotNull('expires_at')
+                                                        ->where('expires_at', '<=', now());
+                                                });
+                                        });
+                                    });
+                            });
+                    });
+                } elseif ($status === Voucher::STATUS_ACTIVE) {
+                    $query->where('status', Voucher::STATUS_ACTIVE)
+                        ->where(function ($inner) {
+                            $inner->where('uses_count', 0)
+                                ->orWhereHas('latestGrant', function ($grant) {
+                                    $grant->where('status', 'active')
+                                        ->where(function ($window) {
+                                            $window->whereNull('expires_at')
+                                                ->orWhere('expires_at', '>', now());
+                                        });
+                                });
+                        });
+                } else {
+                    $query->where('status', $status);
+                }
+            })
             ->when(
                 in_array($request->input('usage'), ['used', 'unused'], true),
                 fn ($query) => $request->input('usage') === 'used'
@@ -105,7 +139,21 @@ class VoucherController extends Controller
             ->where('status', Voucher::STATUS_ACTIVE)
             ->where('uses_count', 0)
             ->count();
-        $expired = (clone $query)->where('status', Voucher::STATUS_EXPIRED)->count();
+        $expired = (clone $query)->where(function ($inner) {
+            $inner->where('status', Voucher::STATUS_EXPIRED)
+                ->orWhere(function ($used) {
+                    $used->where('uses_count', '>', 0)
+                        ->whereHas('latestGrant', function ($grant) {
+                            $grant->where(function ($access) {
+                                $access->where('status', 'expired')
+                                    ->orWhere(function ($window) {
+                                        $window->whereNotNull('expires_at')
+                                            ->where('expires_at', '<=', now());
+                                    });
+                            });
+                        });
+                });
+        })->count();
         $revoked = (clone $query)->where('status', Voucher::STATUS_REVOKED)->count();
         $soldValue = (float) RevenueRecord::query()
             ->where('company_id', $companyId)

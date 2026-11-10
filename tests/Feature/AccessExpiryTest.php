@@ -2,25 +2,38 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\RevokeGatewaySession;
 use App\Models\AccessGrant;
 use App\Models\CaptiveSession;
+use App\Models\Company;
 use App\Models\Customer;
 use App\Models\InternetPlan;
 use App\Models\NetworkDevice;
 use App\Models\NetworkSession;
 use App\Services\AccessExpiryService;
+use App\Services\GatewayAccessRevoker;
 use App\Services\RouterService;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class AccessExpiryTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Queue::fake();
+    }
+
     public function test_access_expire_command_marks_grant_and_clears_sessions_without_deleting_customer(): void
     {
         [$company, $headers, $customer, $grant, $networkSession, $captive] = $this->seedExpiredAccess();
 
         Artisan::call('access:expire');
 
+        Queue::assertPushed(RevokeGatewaySession::class);
         $this->assertDatabaseHas('access_grants', [
             'id' => $grant->id,
             'status' => 'expired',
@@ -98,8 +111,29 @@ class AccessExpiryTest extends TestCase
         $this->assertSame(0, $second['grants']);
     }
 
+    public function test_wifidog_session_revocation_calls_gateway_logout(): void
+    {
+        [, , , , , $captive] = $this->seedExpiredAccess();
+
+        Http::fake([
+            '*' => Http::response('', 200),
+        ]);
+
+        (new RevokeGatewaySession($captive->id))->handle(app(GatewayAccessRevoker::class));
+
+        Http::assertSent(fn ($request) => str_contains($request->url(), '/wifidog/auth')
+            && str_contains($request->url(), 'logout=1')
+            && str_contains($request->url(), 'token='.$captive->token));
+
+        $this->assertDatabaseHas('captive_sessions', [
+            'id' => $captive->id,
+            'status' => CaptiveSession::STATUS_DISCONNECTED,
+            'mikrotik_username' => null,
+        ]);
+    }
+
     /**
-     * @return array{0: \App\Models\Company, 1: array<string, string>, 2: Customer, 3: AccessGrant, 4: NetworkSession, 5: CaptiveSession, 6: NetworkDevice}
+     * @return array{0: Company, 1: array<string, string>, 2: Customer, 3: AccessGrant, 4: NetworkSession, 5: CaptiveSession, 6: NetworkDevice}
      */
     private function seedExpiredAccess(): array
     {
