@@ -84,7 +84,7 @@ class OperationsDocumentation
         tags: ['Routers'],
         security: [['sanctum' => []]],
         requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(required: ['gateway_type', 'name'], properties: [
-            new OA\Property(property: 'gateway_type', type: 'string', enum: ['mikrotik', 'ruijie', 'wavlink'], example: 'mikrotik'),
+            new OA\Property(property: 'gateway_type', type: 'string', enum: ['mikrotik', 'ruijie', 'wavlink', 'omada'], example: 'mikrotik'),
             new OA\Property(property: 'name', type: 'string', example: 'MikroTik-Hotspot', description: 'MikroTik identity / gateway name / Wavlink router label'),
             new OA\Property(property: 'lan_ip', type: 'string', nullable: true, example: '192.168.88.1', description: 'Required for mikrotik and ruijie. Optional for wavlink.'),
             new OA\Property(property: 'api_host', type: 'string', nullable: true, example: '41.59.12.34', description: 'MikroTik only. Public IP or DDNS. Never a private IP.'),
@@ -127,7 +127,7 @@ class OperationsDocumentation
         security: [['sanctum' => []]],
         parameters: [new OA\Parameter(name: 'router', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
         requestBody: new OA\RequestBody(content: new OA\JsonContent(properties: [
-            new OA\Property(property: 'gateway_type', type: 'string', enum: ['mikrotik', 'ruijie', 'wavlink'], example: 'mikrotik'),
+            new OA\Property(property: 'gateway_type', type: 'string', enum: ['mikrotik', 'ruijie', 'wavlink', 'omada'], example: 'mikrotik'),
             new OA\Property(property: 'name', type: 'string', example: 'MikroTik-Hotspot', description: 'MikroTik identity / gateway name / Wavlink router label'),
             new OA\Property(property: 'lan_ip', type: 'string', nullable: true, example: '192.168.88.1', description: 'Required for mikrotik and ruijie. Optional for wavlink.'),
             new OA\Property(property: 'api_host', type: 'string', nullable: true, example: '41.59.12.34', description: 'MikroTik only. Public IP or DDNS. Never a private IP.'),
@@ -1016,3 +1016,4 @@ class OperationsDocumentation
     )]
     public function updateSettings(): void {}
 }
+

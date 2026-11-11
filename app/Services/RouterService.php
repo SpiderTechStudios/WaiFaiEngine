@@ -5,8 +5,10 @@ namespace App\Services;
 use App\Models\AuditLog;
 use App\Models\Company;
 use App\Models\NetworkDevice;
+use App\Models\OmadaIntegration;
 use App\Models\User;
 use App\Services\MikroTik\MikroTikService;
+use App\Services\Omada\OmadaIntegrationService;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -18,6 +20,7 @@ class RouterService
         private BranchService $branchService,
         private RuijieCloudService $ruijieCloudService,
         private MikroTikService $mikroTikService,
+        private OmadaIntegrationService $omadaIntegrationService,
     ) {}
 
     public function create(Company $company, array $data, User $actor): NetworkDevice
@@ -25,6 +28,7 @@ class RouterService
         $station = $this->branchService->defaultStation($company, $data['branch_id'] ?? null);
         $gatewayType = $data['gateway_type'];
         $isMikroTik = $gatewayType === NetworkDevice::GATEWAY_MIKROTIK;
+        $isOmada = $gatewayType === NetworkDevice::GATEWAY_OMADA;
 
         $router = NetworkDevice::query()->create([
             'company_id' => $company->id,
@@ -33,23 +37,28 @@ class RouterService
             'gateway_type' => $gatewayType,
             'name' => $data['name'],
             'lan_ip' => $data['lan_ip'] ?? null,
-            'api_host' => $isMikroTik ? ($data['api_host'] ?? null) : null,
-            'api_port' => $isMikroTik
-                ? (int) ($data['api_port'] ?? 443)
-                : null,
-            'api_username' => $isMikroTik ? ($data['api_username'] ?? null) : null,
+            'api_host' => ($isMikroTik || $isOmada) ? ($data['api_host'] ?? null) : null,
+            'api_port' => match (true) {
+                $isMikroTik => (int) ($data['api_port'] ?? 443),
+                $isOmada => (int) ($data['api_port'] ?? config('omada.default_port', 8043)),
+                default => null,
+            },
+            'api_username' => ($isMikroTik || $isOmada) ? ($data['api_username'] ?? null) : null,
             'api_password' => $isMikroTik && filled($data['api_password'] ?? null)
                 ? Crypt::encryptString($data['api_password'])
                 : null,
             'gateway_id' => match (true) {
                 $isMikroTik => (string) ($data['gateway_id'] ?? $data['serial_number'] ?? 'mt-'.Str::lower(Str::random(10))),
+                $isOmada => $data['gateway_id'] ?? $data['omada_controller_id'] ?? null,
                 $gatewayType === NetworkDevice::GATEWAY_RUIJIE => $data['gateway_id'] ?? null,
                 default => $data['gateway_id'] ?? null,
             },
-            'serial_number' => in_array($gatewayType, [NetworkDevice::GATEWAY_RUIJIE, NetworkDevice::GATEWAY_MIKROTIK], true)
-                ? ($data['serial_number'] ?? null)
+            'serial_number' => in_array($gatewayType, [NetworkDevice::GATEWAY_RUIJIE, NetworkDevice::GATEWAY_MIKROTIK, NetworkDevice::GATEWAY_OMADA], true)
+                ? ($data['serial_number'] ?? $data['omada_controller_id'] ?? null)
                 : null,
-            'router_identity' => $isMikroTik ? ($data['router_identity'] ?? $data['serial_number'] ?? null) : null,
+            'router_identity' => $isMikroTik
+                ? ($data['router_identity'] ?? $data['serial_number'] ?? null)
+                : ($isOmada ? ($data['router_identity'] ?? $data['omada_controller_id'] ?? null) : null),
             'wifidog_port' => $gatewayType === NetworkDevice::GATEWAY_RUIJIE
                 ? (int) ($data['wifidog_port'] ?? 2060)
                 : null,
@@ -60,8 +69,8 @@ class RouterService
             'callback_secret' => $isMikroTik
                 ? Crypt::encryptString(Str::random((int) config('mikrotik.callback_secret_length', 48)))
                 : null,
-            'api_verify_tls' => $isMikroTik ? (bool) ($data['api_verify_tls'] ?? true) : true,
-            'connection_mode' => $isMikroTik ? ($data['connection_mode'] ?? 'public') : 'public',
+            'api_verify_tls' => ($isMikroTik || $isOmada) ? (bool) ($data['api_verify_tls'] ?? true) : true,
+            'connection_mode' => ($isMikroTik || $isOmada) ? ($data['connection_mode'] ?? 'public') : 'public',
             'status' => $data['status'] ?? 'active',
         ]);
 
@@ -80,6 +89,7 @@ class RouterService
 
         $gatewayType = $data['gateway_type'] ?? $router->gateway_type;
         $isMikroTik = $gatewayType === NetworkDevice::GATEWAY_MIKROTIK;
+        $isOmada = $gatewayType === NetworkDevice::GATEWAY_OMADA;
 
         if (array_key_exists('api_password', $data)) {
             $data['api_password'] = filled($data['api_password'])
@@ -107,6 +117,10 @@ class RouterService
 
         if ($isMikroTik && blank($router->gateway_id)) {
             $data['gateway_id'] = 'mt-'.Str::lower(Str::random(10));
+        }
+
+        if ($isOmada && array_key_exists('api_port', $data) && blank($data['api_port'])) {
+            $data['api_port'] = (int) ($router->api_port ?: config('omada.default_port', 8043));
         }
 
         if ($gatewayType === NetworkDevice::GATEWAY_RUIJIE && array_key_exists('wifidog_port', $data) && blank($data['wifidog_port'])) {
@@ -199,6 +213,24 @@ class RouterService
 
         if ($router->gateway_type === NetworkDevice::GATEWAY_MIKROTIK) {
             return $this->mikroTikService->test($router);
+        }
+
+        if ($router->gateway_type === NetworkDevice::GATEWAY_OMADA) {
+            $integration = OmadaIntegration::query()
+                ->where('company_id', $router->company_id)
+                ->where('network_device_id', $router->id)
+                ->first();
+
+            if (! $integration) {
+                return [
+                    'gateway_type' => $router->gateway_type,
+                    'reachable' => false,
+                    'authenticated' => false,
+                    'message' => 'The Omada integration for this router is not configured yet.',
+                ];
+            }
+
+            return $this->omadaIntegrationService->test($integration);
         }
 
         $host = $router->lan_ip;
@@ -328,7 +360,54 @@ class RouterService
             $walledGardenCommands[] = '/ip hotspot walled-garden ip add action=accept dst-address='.$serverHost.' comment="WaiFai API"';
         }
 
+        $omadaIntegration = $router->gateway_type === NetworkDevice::GATEWAY_OMADA
+            ? OmadaIntegration::query()
+                ->where('company_id', $router->company_id)
+                ->where('network_device_id', $router->id)
+                ->first()
+            : null;
+        $omadaPortalUrl = $omadaIntegration
+            ? $baseUrl.'/api/omada/portal/'.$omadaIntegration->portal_key
+            : null;
+
         $steps = match ($router->gateway_type) {
+            NetworkDevice::GATEWAY_OMADA => [
+                [
+                    'title' => 'Create an Open API application',
+                    'description' => 'In the Omada controller open Global view > Settings > Platform Integration > Open API, add an app in Client Credentials mode, grant the site privileges WaiFai needs, and copy the Client ID and Client Secret.',
+                    'commands' => [
+                        'Controller URL: '.($router->api_host ?: '—'),
+                        'Controller port: '.(string) ($router->api_port ?: config('omada.default_port', 8043)),
+                        'Controller ID: '.($router->gateway_id ?: '—'),
+                    ],
+                ],
+                [
+                    'title' => 'Create a Hotspot Operator',
+                    'description' => 'Add a Hotspot Operator in the Omada hotspot manager. WaiFai uses these credentials only to call the external-portal authorization endpoint.',
+                    'commands' => ['Hotspot Manager > Operator > Add New Operator'],
+                ],
+                [
+                    'title' => 'Select site, access points and SSID',
+                    'description' => 'Run Test Connection, then choose the site, the APs participating in WaiFai, and the SSID whose portal should use WaiFai.',
+                    'commands' => [
+                        'POST /api/v1/omada/integrations/'.$router->id.'/test',
+                        'GET /api/v1/omada/integrations/'.$router->id.'/sites',
+                    ],
+                ],
+                [
+                    'title' => 'Enable the external portal in Omada',
+                    'description' => 'On the selected SSID enable the external portal server and paste the WaiFai portal URL. Omada appends clientMac, apMac, ssidName, radioId, site and t automatically.',
+                    'commands' => array_filter([
+                        'Portal URL: '.($omadaPortalUrl ?: 'Save the integration first'),
+                        'Auth type: External Portal Server',
+                    ]),
+                ],
+                [
+                    'title' => 'Test the captive portal',
+                    'description' => 'Connect a phone to the SSID, confirm the WaiFai portal opens, and verify the client is authorized after payment. Controller versions without external-portal support cannot authorize clients.',
+                    'commands' => ['Test Connection: POST /api/v1/routers/'.$router->id.'/test'],
+                ],
+            ],
             NetworkDevice::GATEWAY_RUIJIE => [
                 [
                     'title' => 'Point the gateway to WaiFai',

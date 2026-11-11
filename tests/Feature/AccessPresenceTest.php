@@ -16,7 +16,7 @@ use Tests\TestCase;
 
 class AccessPresenceTest extends TestCase
 {
-    public function test_silent_wifidog_session_is_marked_offline_but_keeps_the_grant(): void
+    public function test_silent_wifidog_session_keeps_access_until_grant_expiry(): void
     {
         [$company, $router, $customer, $grant, $plan] = $this->fixtures();
 
@@ -52,10 +52,47 @@ class AccessPresenceTest extends TestCase
 
         Artisan::call('access:presence');
 
-        $this->assertSame('ended', $session->fresh()->status);
-        $this->assertSame(CaptiveSession::STATUS_DISCONNECTED, $captive->fresh()->status);
+        $this->assertSame('active', $session->fresh()->status);
+        $this->assertSame(CaptiveSession::STATUS_AUTHENTICATED, $captive->fresh()->status);
         $this->assertSame('active', $grant->fresh()->status);
         $this->assertTrue($grant->fresh()->isUsable());
+
+        $this->get('/api/wifidog/auth?stage=counters&token='.$captive->token
+            .'&gw_id='.$router->gateway_id
+            .'&mac=AA:BB:CC:DD:EE:FF'
+            .'&incoming=10&outgoing=20')
+            ->assertOk()
+            ->assertSee('Auth:1');
+    }
+
+    public function test_legacy_disconnected_session_with_valid_grant_is_recovered(): void
+    {
+        [$company, $router, $customer, $grant, $plan] = $this->fixtures();
+
+        $captive = CaptiveSession::query()->create([
+            'company_id' => $company->id,
+            'network_device_id' => $router->id,
+            'gateway_id' => $router->gateway_id,
+            'client_mac' => 'AA:BB:CC:DD:EE:FF',
+            'client_ip' => '192.168.0.131',
+            'gw_address' => $router->lan_ip,
+            'gw_port' => $router->wifidog_port,
+            'token' => str_repeat('d', 32),
+            'status' => CaptiveSession::STATUS_DISCONNECTED,
+            'access_grant_id' => $grant->id,
+            'authenticated_at' => now()->subHours(2),
+            'expires_at' => $grant->expires_at,
+            'last_seen_at' => now()->subHour(),
+        ]);
+
+        $allowed = app(CaptiveSessionService::class)->authorizeToken($captive->token, $captive->client_mac);
+
+        $this->assertTrue($allowed);
+        $this->assertSame(CaptiveSession::STATUS_AUTHENTICATED, $captive->fresh()->status);
+        $this->assertDatabaseHas('network_sessions', [
+            'access_grant_id' => $grant->id,
+            'status' => 'active',
+        ]);
     }
 
     public function test_returning_device_recovers_while_grant_is_still_valid(): void

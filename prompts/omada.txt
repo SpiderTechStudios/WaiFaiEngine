@@ -1,0 +1,695 @@
+# TASK: Implement a Complete Multi-Tenant TP-Link Omada Integration in WaiFai
+
+You are working on the existing WaiFai platform.
+
+WaiFai is a paid Wi-Fi management platform built with:
+- Laravel REST API backend.
+- React frontend.
+- Existing MikroTik integration.
+- Existing Ruijie Reyee / WiFiDog integration.
+- Payment integrations and captive portal functionality.
+
+Your task is to implement a complete, production-ready **TP-Link Omada integration** that allows every WaiFai customer to connect their own Omada Controller and manage their Omada access points through WaiFai.
+
+This must work as a reusable integration for multiple independent WaiFai customers.
+
+## 1. CRITICAL: PROTECT EXISTING FUNCTIONALITY
+
+Before writing or modifying code:
+
+1. Inspect the entire existing project structure.
+2. Identify the current MikroTik integration architecture.
+3. Identify the current Ruijie / WiFiDog integration architecture.
+4. Identify how customers currently register network devices.
+5. Identify how router credentials, API connections, device records and authentication sessions are stored.
+6. Identify the existing captive portal and payment-success authorization flow.
+7. Identify existing database relationships and tenant isolation mechanisms.
+8. Identify the existing frontend device registration forms and connection-testing patterns.
+
+**DO NOT:**
+- Delete, replace or rewrite existing MikroTik functionality.
+- Delete, replace or rewrite existing Ruijie functionality.
+- Change existing MikroTik API endpoints or connection logic unnecessarily.
+- Change existing Ruijie WiFiDog endpoints or authentication logic.
+- Rename existing database tables, fields, routes or services without a compelling compatibility reason.
+- Change existing payment processing or package logic.
+- Break existing customer device configurations.
+- Introduce a new architecture that conflicts with established project conventions.
+
+Implement Omada as an independent integration module.
+
+Reuse existing abstractions and services where appropriate, but keep Omada-specific functionality isolated.
+
+All database changes must be additive migrations.
+
+Before modifying shared code, explain why the change is necessary and how backward compatibility will be preserved.
+
+## 2. OBJECTIVE
+
+A WaiFai customer should be able to:
+
+1. Open their WaiFai dashboard.
+2. Navigate to Network Devices.
+3. Select Add Device.
+4. Select TP-Link Omada.
+5. Choose their Omada Controller deployment type.
+6. Enter the required controller connection information.
+7. Test the connection.
+8. Retrieve available Omada sites.
+9. Select the site they want to connect.
+10. Discover the access points belonging to that site.
+11. Configure their SSID and external captive portal.
+12. Save the integration.
+13. Start accepting customers through the WaiFai captive portal.
+
+A customer must never see or access another WaiFai customer's Omada controllers, sites, credentials, devices or client sessions.
+
+## 3. SUPPORT ALL THREE OMADA DEPLOYMENT TYPES
+
+The integration must support:
+
+### A. Omada Software Controller
+- Windows installation.
+- Linux installation.
+- Self-hosted installations.
+- Custom controller domains and IP addresses.
+- Custom management/API ports.
+- HTTPS certificates, including properly configured private or self-signed certificate environments where appropriate.
+
+### B. Omada Hardware Controller
+- OC200.
+- OC300.
+- Other supported Omada hardware controller models.
+
+### C. Omada Cloud Controller
+- Cloud-hosted Omada deployments.
+- Officially supported cloud API and authentication mechanisms.
+- Any required cloud account, controller ID, site ID or API credentials.
+
+Do not assume that all three deployment types use the same API endpoints, authentication methods or network requirements.
+
+Research and follow the official TP-Link Omada API documentation for each supported controller version and deployment type.
+
+If a deployment type or controller version does not support the required external portal authorization functionality, clearly identify the limitation rather than pretending that it works.
+
+## 4. CUSTOMER DEVICE REGISTRATION FORM
+
+Create a clean registration experience consistent with the existing WaiFai device registration UI.
+
+The customer must first select:
+
+**Controller Deployment Type**
+- Software Controller
+- Hardware Controller (OC200 / OC300)
+- Cloud Controller
+
+Show only the fields applicable to the selected deployment type.
+
+### Common connection information
+
+Collect the following where applicable:
+
+- Device/integration name.
+- Controller deployment type.
+- Controller hostname or public IP address.
+- Controller management URL.
+- Controller HTTPS/API port.
+- Controller ID, if required.
+- Controller version, if available.
+- Controller username or API account, if required.
+- Hotspot Operator username.
+- Hotspot Operator password.
+- Connection method.
+
+### Site information
+
+After successful connection, retrieve available sites from the controller.
+
+Allow the customer to select the site they want to associate with WaiFai.
+
+Store:
+- Controller identifier.
+- Site identifier.
+- Site name.
+- Site timezone, where available.
+- Relevant site configuration.
+
+Support multiple sites belonging to the same controller where appropriate.
+
+### Access point discovery
+
+After selecting a site, retrieve its available Omada access points.
+
+Display:
+- Access point name.
+- MAC address.
+- Model.
+- IP address.
+- Firmware version.
+- Online/offline status.
+- Adoption/connection status, where available.
+
+Allow the customer to select the APs or site that should participate in WaiFai authentication.
+
+Do not require customers to manually enter access point MAC addresses if the controller API can discover them.
+
+### SSID configuration
+
+Retrieve available SSIDs/WLANs where supported.
+
+Allow the customer to select the SSID that should use WaiFai authentication.
+
+Store:
+- SSID name.
+- WLAN/network identifier.
+- Associated site.
+- Associated controller.
+- External portal configuration status.
+
+Where configuration cannot be retrieved automatically, provide a manual configuration field and explain the required Omada settings.
+
+## 5. CONNECTION TESTING AND VALIDATION
+
+Implement a proper Test Connection function.
+
+It should:
+
+1. Validate the supplied URL and port.
+2. Establish network connectivity to the controller.
+3. Authenticate using the appropriate supported API method.
+4. Validate credentials.
+5. Retrieve controller information.
+6. Retrieve available sites.
+7. Confirm that the selected site is accessible.
+8. Verify the required hotspot/external portal capabilities.
+9. Return a meaningful success or failure response.
+
+Display useful errors, such as:
+- Controller unreachable.
+- Invalid credentials.
+- Invalid controller ID.
+- Invalid site ID.
+- Unsupported controller version.
+- API permission denied.
+- TLS/certificate problem.
+- Required API functionality unavailable.
+- Network connection problem.
+
+Never expose passwords, session tokens or sensitive API responses in frontend error messages or application logs.
+
+## 6. NETWORK CONNECTIVITY ARCHITECTURE
+
+This is particularly important.
+
+Omada controllers can be located:
+- On the customer's local network.
+- Behind NAT.
+- On a public IP.
+- On a customer-managed cloud environment.
+
+A private address such as 192.168.x.x cannot be reached directly from the WaiFai VPS.
+
+Design the integration to support appropriate secure connection methods, including:
+
+- Public HTTPS controller endpoints.
+- Secure VPN/WireGuard connectivity.
+- Supported cloud-controller API access.
+- Other officially supported secure connectivity mechanisms.
+
+Do not require every customer to expose their controller directly to the public internet.
+
+Do not hardcode any test controller address or credentials.
+
+If a secure tunnel or customer-side agent is necessary, design it as an optional, independently managed connectivity component.
+
+## 7. OMADA EXTERNAL CAPTIVE PORTAL INTEGRATION
+
+The goal is for Omada customers to use the existing WaiFai captive portal.
+
+Expected flow:
+
+1. A user connects to the customer's Omada SSID.
+2. Omada redirects the user to the WaiFai external captive portal.
+3. WaiFai receives the Omada client information.
+4. WaiFai displays the existing package selection and payment interface.
+5. The user selects a package.
+6. The user completes payment through the existing WaiFai payment system.
+7. WaiFai verifies payment through the existing payment verification mechanism.
+8. WaiFai authorizes the client through the correct Omada Controller API.
+9. Omada grants internet access.
+10. The customer receives access according to the purchased package duration.
+
+### External portal parameters
+
+Implement handling for the actual parameters supplied by Omada, including where available:
+
+- clientMac
+- clientIp
+- apMac
+- ssidName
+- site
+- redirectUrl
+- radioId
+- timestamp parameter `t`
+
+Preserve the original Omada parameters throughout the package selection and payment process.
+
+Do not rely only on IP address to identify a client.
+
+Use the appropriate combination of:
+- Client MAC.
+- Client IP.
+- AP MAC.
+- Site ID.
+- SSID/WLAN.
+- Controller identity.
+
+Validate all incoming parameters.
+
+Do not trust client-submitted information as proof of successful payment or authorization.
+
+### Captive portal URL
+
+Generate the correct WaiFai captive portal URL for each customer and their configured network.
+
+Follow the existing WaiFai portal routing and subdomain architecture.
+
+Do not create a separate payment interface for Omada.
+
+Reuse the existing WaiFai captive portal and payment flow.
+
+## 8. OMADA CLIENT AUTHORIZATION
+
+Implement a dedicated Omada authorization service.
+
+After verified payment, the Laravel backend must communicate with the correct customer's Omada Controller and authorize the client.
+
+Follow the official API documentation for the specific controller version and deployment type.
+
+Implement:
+- Controller authentication.
+- API session/token handling.
+- Client authorization.
+- Access duration.
+- Authorization response validation.
+- Session tracking.
+- Client disconnection/deauthorization.
+- Reconnection handling.
+- API token/session refresh where necessary.
+
+Do not assume the API endpoints are identical across controller generations.
+
+Do not hardcode API endpoints based on an old Omada example.
+
+### Duration handling
+
+Map WaiFai package durations to the actual authorization duration supported by the controller API.
+
+For example:
+- 30 minutes.
+- 1 hour.
+- 3 hours.
+- 12 hours.
+- 24 hours.
+- Custom package duration.
+
+If the controller requires a different duration format, convert it correctly.
+
+### Payment security
+
+Only authorize a device after successful payment verification.
+
+Prevent:
+- Double authorization caused by repeated payment callbacks.
+- Duplicate sessions.
+- Unauthorized access caused by forged portal requests.
+- Reusing another customer's payment or authorization data.
+
+Authorization must be idempotent.
+
+If payment succeeds but the controller is temporarily unavailable, retain the verified payment state and implement a safe retry mechanism.
+
+Never mark the client as successfully authorized until the controller confirms authorization.
+
+## 9. SESSION MANAGEMENT
+
+Implement proper client session management.
+
+Store relevant information:
+- WaiFai customer/account ID.
+- Omada integration ID.
+- Controller ID.
+- Site ID.
+- Client MAC.
+- Client IP.
+- AP MAC.
+- SSID.
+- Package ID.
+- Payment transaction ID.
+- Authorization status.
+- Authorization timestamp.
+- Expiry timestamp.
+- Disconnection timestamp.
+- Controller response/reference.
+- Last synchronization status.
+
+Support:
+- Active sessions.
+- Expired sessions.
+- Disconnected sessions.
+- Failed authorization attempts.
+- Session renewal where supported.
+
+When a package expires, disconnect the client or revoke its authorization through the supported Omada API.
+
+Ensure that reconnecting customers are handled correctly according to their existing valid package/session.
+
+Do not assume that a client's previous authorization remains valid forever.
+
+## 10. DATABASE DESIGN
+
+Inspect the existing database before creating new tables.
+
+Follow existing naming conventions and relationships.
+
+Create the necessary additive migrations for Omada-specific records.
+
+Suggested logical entities:
+
+### Omada integrations
+- id
+- account_id / tenant_id
+- integration_name
+- deployment_type
+- controller_url
+- controller_host
+- controller_port
+- controller_id
+- controller_version
+- connection_method
+- credential references
+- connection_status
+- last_connected_at
+- created_at
+- updated_at
+
+### Omada sites
+- integration_id
+- site_id
+- site_name
+- timezone
+- status
+
+### Omada access points
+- integration_id
+- site_id
+- device_id
+- device_name
+- mac_address
+- model
+- ip_address
+- firmware_version
+- online_status
+- selected_for_waiFai
+
+### Omada SSIDs
+- integration_id
+- site_id
+- wlan_id
+- ssid_name
+- status
+- portal_enabled
+
+### Omada client sessions
+- integration_id
+- site_id
+- client_mac
+- client_ip
+- ap_mac
+- ssid_name
+- package_id
+- payment_transaction_id
+- authorized_at
+- expires_at
+- disconnected_at
+- authorization_status
+
+These are suggested structures, not instructions to duplicate existing functionality.
+
+Reuse existing WaiFai account, payment, package and session tables where appropriate.
+
+Use foreign keys and indexes.
+
+Ensure tenant/account isolation on every query and operation.
+
+## 11. SECURITY REQUIREMENTS
+
+- Encrypt controller credentials at rest using Laravel encryption facilities.
+- Never return passwords or API tokens to the frontend.
+- Never log controller passwords or session tokens.
+- Validate controller URLs to prevent SSRF.
+- Restrict controller connection destinations and validate resolved IP addresses.
+- Prevent access to localhost, private infrastructure and cloud metadata endpoints unless explicitly required by a properly configured private-network connection.
+- Protect against cross-tenant access.
+- Use authorization policies and middleware.
+- Validate all external portal requests.
+- Use secure token/session management.
+- Implement appropriate request timeouts and rate limiting.
+- Do not disable TLS certificate verification in production.
+- Do not allow customers to use another customer's controller credentials.
+
+## 12. BACKEND ENVIRONMENT CONFIGURATION
+
+Create the necessary Omada-specific backend configuration.
+
+Inspect the existing `.env` and Laravel configuration structure first.
+
+Create a dedicated configuration file, for example:
+
+`config/omada.php`
+
+Use environment variables for platform-wide integration settings, such as:
+
+OMADA_ENABLED=true
+OMADA_API_TIMEOUT=15
+OMADA_CONNECTION_RETRIES=3
+OMADA_TOKEN_CACHE_TTL=300
+OMADA_SESSION_SYNC_INTERVAL=5
+OMADA_VERIFY_TLS=true
+OMADA_QUEUE_CONNECTION=database
+
+These are suggested configuration names. Adapt them to the actual implementation.
+
+Important distinction:
+
+Platform-wide settings belong in `.env`.
+
+Individual customers' controller URLs, IDs, credentials, sites and settings must be stored in their own encrypted database records, not in the platform's `.env` file.
+
+Do not store every customer's controller credentials in a shared environment file.
+
+## 13. FRONTEND IMPLEMENTATION
+
+Add Omada to the existing Add Network Device experience.
+
+The user should see the available integrations consistently:
+
+- MikroTik.
+- Ruijie.
+- TP-Link Omada.
+
+When the customer selects Omada, show a guided setup process:
+
+Step 1: Choose controller type.
+
+Step 2: Enter controller connection information.
+
+Step 3: Test connection.
+
+Step 4: Select site.
+
+Step 5: Select access points.
+
+Step 6: Select SSID.
+
+Step 7: Configure/verify external portal settings.
+
+Step 8: Review and save.
+
+The interface should:
+- Follow the existing WaiFai design system.
+- Be clean and simple.
+- Avoid overwhelming customers with technical fields they do not need.
+- Explain where customers can find required information.
+- Display connection status.
+- Allow editing and reconnecting.
+- Allow refreshing sites and access points.
+- Display meaningful error messages.
+
+Do not modify the existing MikroTik or Ruijie registration screens unless necessary for shared compatibility.
+
+## 14. OMADA DASHBOARD AND MONITORING
+
+After registration, display:
+- Controller connection status.
+- Deployment type.
+- Controller version.
+- Number of sites.
+- Number of registered APs.
+- Online/offline AP count.
+- Configured SSIDs.
+- Active authenticated clients.
+- Failed authorizations.
+- Last synchronization time.
+
+Provide actions:
+- Test connection.
+- Refresh sites.
+- Refresh access points.
+- Refresh SSIDs.
+- Edit connection.
+- Disconnect integration.
+
+Do not claim a controller or AP is online unless its actual status has been retrieved.
+
+## 15. API AND CODE STRUCTURE
+
+Follow the existing Laravel architecture.
+
+Create isolated Omada services, controllers, requests, resources, jobs, events and policies as appropriate.
+
+Suggested service names:
+
+- OmadaControllerService
+- OmadaAuthenticationService
+- OmadaSiteService
+- OmadaDeviceService
+- OmadaWlanService
+- OmadaPortalService
+- OmadaClientAuthorizationService
+- OmadaSessionService
+
+Suggested API capabilities:
+
+- Register Omada integration.
+- Test controller connection.
+- Retrieve controller information.
+- Retrieve sites.
+- Select a site.
+- Retrieve APs.
+- Select APs.
+- Retrieve SSIDs.
+- Configure external portal details.
+- Save integration.
+- Refresh integration.
+- Retrieve integration status.
+- Retrieve client sessions.
+- Disconnect a client.
+- Remove an Omada integration safely.
+
+Follow existing route prefixes, authentication conventions, response structures and permission checks.
+
+Do not expose internal controller credentials through API responses.
+
+## 16. DOCUMENTATION AND OFFICIAL API VALIDATION
+
+Before implementing Omada API calls:
+
+- Consult current official TP-Link Omada API documentation.
+- Verify the API for software controllers.
+- Verify the API for OC200/OC300.
+- Verify cloud-controller API availability and limitations.
+- Verify authentication requirements.
+- Verify Hotspot Operator permissions.
+- Verify the exact external portal authorization request.
+- Verify client disconnection/deauthorization.
+- Verify supported controller versions.
+
+Do not invent API endpoints, request payloads, headers or response structures.
+
+If TP-Link documentation is incomplete, isolate the uncertain functionality behind a version-specific adapter and document what must be verified.
+
+## 17. TESTING REQUIREMENTS
+
+Create tests for:
+
+1. Omada integration registration.
+2. Credential encryption.
+3. Invalid controller credentials.
+4. Successful controller connection.
+5. Site discovery.
+6. AP discovery.
+7. SSID discovery.
+8. Client portal parameter validation.
+9. Successful payment followed by authorization.
+10. Failed payment with no authorization.
+11. Duplicate payment callback.
+12. Authorization retry.
+13. Session expiry.
+14. Client disconnection.
+15. Multiple sites.
+16. Multiple controllers belonging to one customer.
+17. Isolation between different WaiFai customers.
+18. Unsupported controller versions.
+19. Controller downtime.
+20. Existing MikroTik and Ruijie regression tests.
+
+Mock Omada API responses for automated tests.
+
+Do not run destructive migrations or modify production data.
+
+## 18. IMPLEMENTATION APPROACH
+
+Do not attempt to rewrite the entire platform in one operation.
+
+Proceed in controlled phases:
+
+**Phase 1:** Inspect the project, identify existing architecture and produce an implementation plan.
+
+**Phase 2:** Implement additive database migrations, Omada configuration and secure credential storage.
+
+**Phase 3:** Implement controller adapters, authentication and connection testing.
+
+**Phase 4:** Implement site, AP and SSID discovery.
+
+**Phase 5:** Implement frontend registration and management screens.
+
+**Phase 6:** Implement external captive portal parameter handling and client authorization.
+
+**Phase 7:** Implement session management, expiry and disconnection.
+
+**Phase 8:** Implement tests, documentation and regression verification.
+
+After each phase:
+- Explain what was changed.
+- List created and modified files.
+- Run relevant tests.
+- Report any unresolved API limitations.
+- Wait for review before making risky shared-code changes.
+
+## 19. FINAL ACCEPTANCE CRITERIA
+
+The integration is complete only when:
+
+- A new WaiFai customer can register their own Omada controller.
+- Software, hardware and supported cloud deployments are handled correctly.
+- Multiple independent customers can connect different controllers.
+- Customers can select their own sites, APs and SSIDs.
+- Omada redirects clients to the existing WaiFai captive portal.
+- WaiFai receives and validates Omada client information.
+- A successful payment causes the correct controller to authorize the correct client.
+- Package duration is enforced.
+- Expired clients lose access.
+- Controller outages do not corrupt payment records.
+- Credentials remain encrypted and isolated.
+- Existing MikroTik and Ruijie integrations continue working without regression.
+
+**MOST IMPORTANT FINAL INSTRUCTION:**
+
+Do not start by changing existing MikroTik or Ruijie code.
+
+First inspect the repository and provide a concise architecture assessment, implementation plan, proposed database changes and list of files likely to be affected.
+
+Then begin Phase 1 and proceed incrementally.
+
+The goal is to make Omada a permanent, reusable, multi-customer integration within WaiFai—not merely to make the test EAP110 access point work with one Windows controller.

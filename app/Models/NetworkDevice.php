@@ -20,10 +20,13 @@ class NetworkDevice extends Model
 
     public const GATEWAY_WAVLINK = 'wavlink';
 
+    public const GATEWAY_OMADA = 'omada';
+
     public const GATEWAY_TYPES = [
         self::GATEWAY_MIKROTIK,
         self::GATEWAY_RUIJIE,
         self::GATEWAY_WAVLINK,
+        self::GATEWAY_OMADA,
     ];
 
     protected $fillable = [

@@ -67,6 +67,14 @@ class CaptiveSessionService
                         : now()->addMinutes($this->ttlMinutes()),
                 ])->save();
 
+                // A returned client whose grant is still valid must recover
+                // automatically. Older presence logic marked quiet sessions as
+                // disconnected, which forced a paid customer to re-authenticate.
+                if ($existing->status === CaptiveSession::STATUS_DISCONNECTED) {
+                    $this->resumeForReturningDevice($existing);
+                    $existing = $existing->fresh();
+                }
+
                 Log::channel('wifidog')->info('wifidog.captive_session_reused', [
                     'gw_id' => $gateway->gateway_id,
                     'gateway_id' => $gateway->id,
@@ -82,7 +90,7 @@ class CaptiveSessionService
                     'status' => $existing->status,
                 ]);
 
-                return $existing->fresh();
+                return $existing;
             }
 
             $session = CaptiveSession::query()->create([
@@ -155,7 +163,10 @@ class CaptiveSessionService
             ->where('company_id', $gateway->company_id)
             ->where('network_device_id', $gateway->id)
             ->where('client_mac', $normalized)
-            ->where('status', CaptiveSession::STATUS_AUTHENTICATED)
+            ->whereIn('status', [
+                CaptiveSession::STATUS_AUTHENTICATED,
+                CaptiveSession::STATUS_DISCONNECTED,
+            ])
             ->where(function ($query): void {
                 $query->whereNull('expires_at')->orWhere('expires_at', '>', now());
             })
@@ -401,6 +412,14 @@ class CaptiveSessionService
             ]);
 
             return false;
+        }
+
+        // Recover sessions that were disconnected by the old activity-based
+        // presence check. The paid/voucher grant is the source of truth, so a
+        // still-valid grant always wins over a stale "disconnected" flag.
+        if ($session->status === CaptiveSession::STATUS_DISCONNECTED && ! $session->isExpired()) {
+            $this->resumeForReturningDevice($session);
+            $session = $session->fresh();
         }
 
         if ($session->markExpiredIfNeeded() || ! $session->isAuthenticated()) {

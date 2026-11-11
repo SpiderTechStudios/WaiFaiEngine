@@ -33,23 +33,28 @@ A successful payment/voucher creates a live `network_sessions` row with
 status `active` and a `captive_sessions` row with status `authenticated`.
 That is what makes the customer "online".
 
+Access is **time-based, never activity-based**. Once a payment or voucher
+creates an active access grant, the client keeps access until that grant
+expires. A phone sleeping, Wi-Fi power saving, a brief drop, or a missed
+counter/poll must not disconnect a paid customer.
+
 MikroTik:
 - `mikrotik:sync` runs every minute and records active hotspot clients.
-- A session missing from the router for longer than
-  `MIKROTIK_MISSING_SESSION_GRACE` (default 120s) is marked ended and the
-  captive session disconnected. The access grant is kept.
+- A session missing from `/ip/hotspot/active` no longer ends the network
+  session or disconnects the captive session. The router-side hotspot user is
+  also kept while the grant is usable.
 
 WiFiDog (Ruijie, Wavlink, etc.):
 - The gateway sends `/api/wifidog/auth?stage=counters` while the client is
   connected. `WiFiDogService::recordCounters()` updates
   `network_sessions.last_activity_at`.
-- `access:presence` runs every minute. Any active WiFiDog session whose
-  `last_activity_at` is older than `CAPTIVE_PRESENCE_TIMEOUT_MINUTES`
-  (default 5 minutes) is marked ended, and its captive session is marked
-  `disconnected`. The grant is NOT expired or modified.
+- `access:presence` is a legacy no-op. It no longer ends sessions or marks
+  captive sessions disconnected.
 
-So: leave the WiFi and the customer becomes offline; the paid time keeps
-counting down in the background.
+Sessions that were already marked `disconnected` by the old presence logic are
+recovered automatically when the gateway next calls `/api/wifidog/auth` (or
+when the client returns to `/api/wifidog/login`), provided the grant is still
+usable. Access is only removed by `access:expire` at the grant's `expires_at`.
 
 
 3. Returning before expiry (online again)
@@ -94,14 +99,13 @@ and do not expire on time.
 ------------------------
 `routes/console.php`:
 
-  every minute  access:expire     expiry + router logout/kick
-  every minute  access:presence   WiFiDog online -> offline when counters stop
-  every minute  mikrotik:sync     MikroTik presence + active users
+  every minute  access:expire     expiry + router logout/kick (only at grant expiry)
+  every minute  mikrotik:sync     MikroTik heartbeat + active users
 
 Manual commands:
 
   php artisan access:expire
-  php artisan access:presence
+  php artisan access:presence    (legacy no-op)
   php artisan mikrotik:sync
 
 
@@ -120,20 +124,23 @@ Note: WiFiDog logout requires the backend to reach the gateway LAN IP. If the
 gateway is behind NAT and unreachable, the logout call fails but the gateway
 will still deny the client with `Auth:0` on its next auth check.
 
-Omada is not implemented in this codebase. Supported `gateway_type` values are
-`mikrotik`, `ruijie` and `wavlink`.
+Supported `gateway_type` values are `mikrotik`, `ruijie`, `wavlink` and
+`omada`. Omada uses its own session table (`omada_client_sessions`) and
+authorization endpoint; see `docs/omada-integration.md`.
 
 
 7. Configuration
 ----------------
-  CAPTIVE_PRESENCE_TIMEOUT_MINUTES=5   # WiFiDog silence before offline
-  MIKROTIK_MISSING_SESSION_GRACE=120   # MikroTik silence before offline
+  CAPTIVE_PRESENCE_TIMEOUT_MINUTES=5   # deprecated / no-op
+  MIKROTIK_MISSING_SESSION_GRACE=120   # deprecated / no-op
 
   config/captive.php
     'presence_timeout_minutes' => env('CAPTIVE_PRESENCE_TIMEOUT_MINUTES', 5)
 
   config/mikrotik.php
     'missing_session_grace_seconds' (env MIKROTIK_MISSING_SESSION_GRACE)
+
+  Access is controlled by the access grant's `expires_at`, not by these values.
 
 
 8. Data model

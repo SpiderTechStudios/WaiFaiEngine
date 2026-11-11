@@ -97,13 +97,121 @@ class WithdrawalFeeTest extends TestCase
         $this->withHeaders($this->authHeaders($owner))
             ->postJson('/api/v1/withdrawals/'.$id.'/confirm', ['otp' => $code])
             ->assertOk()
-            ->assertJsonPath('data.status', 'processing')
-            ->assertJsonPath('data.requires_confirmation', false);
+            ->assertJsonPath('data.status', 'pending_approval')
+            ->assertJsonPath('data.requires_confirmation', false)
+            ->assertJsonPath('data.requires_approval', true);
 
         $withdrawal = Withdrawal::query()->findOrFail($id);
         $this->assertNotNull($withdrawal->confirmed_at);
+        $this->assertNull($withdrawal->external_reference);
+
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->withHeaders($this->authHeaders($admin))
+            ->postJson('/api/v1/admin/withdrawals/'.$id.'/approve')
+            ->assertOk()
+            ->assertJsonPath('data.status', 'processing');
+
+        $withdrawal->refresh();
+        $this->assertNotNull($withdrawal->approved_at);
+        $this->assertSame($admin->id, $withdrawal->approved_by);
         $this->assertStringStartsWith('STUB-PAYOUT-', (string) $withdrawal->external_reference);
         $this->assertEquals(800, (float) $wallet->fresh()->balance);
+    }
+
+    public function test_admin_can_deny_confirmed_withdrawal_and_refund_wallet(): void
+    {
+        Notification::fake();
+
+        $owner = $this->createUser();
+        $company = $this->createCompanyFor($owner);
+        $wallet = $this->fundWallet($company, 1000);
+
+        $id = $this->withHeaders($this->authHeaders($owner))
+            ->postJson('/api/v1/withdrawals', [
+                'amount' => 200,
+                'destination_phone' => '0754000000',
+                'destination_name' => 'Asha Mohamed',
+            ])->assertCreated()->json('data.id');
+
+        $code = null;
+        Notification::assertSentTo(
+            $owner,
+            WithdrawalOtpNotification::class,
+            function (WithdrawalOtpNotification $notification) use (&$code) {
+                $code = $notification->code;
+
+                return true;
+            },
+        );
+
+        $this->withHeaders($this->authHeaders($owner))
+            ->postJson('/api/v1/withdrawals/'.$id.'/confirm', ['otp' => $code])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'pending_approval');
+
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->withHeaders($this->authHeaders($admin))
+            ->postJson('/api/v1/admin/withdrawals/'.$id.'/deny', [
+                'reason' => 'Suspicious destination number',
+            ])->assertOk()
+            ->assertJsonPath('data.status', 'denied')
+            ->assertJsonPath('data.denial_reason', 'Suspicious destination number');
+
+        $withdrawal = Withdrawal::query()->findOrFail($id);
+        $this->assertNotNull($withdrawal->denied_at);
+        $this->assertSame($admin->id, $withdrawal->denied_by);
+        $this->assertEquals(1000, (float) $wallet->fresh()->balance);
+        $this->assertDatabaseHas('wallet_transactions', [
+            'reference_type' => Withdrawal::class,
+            'reference_id' => $id,
+            'type' => 'credit',
+            'amount' => 200,
+        ]);
+    }
+
+    public function test_non_admin_cannot_approve_or_deny_withdrawal(): void
+    {
+        Notification::fake();
+
+        $owner = $this->createUser();
+        $company = $this->createCompanyFor($owner);
+        $this->fundWallet($company, 1000);
+
+        $id = $this->withHeaders($this->authHeaders($owner))
+            ->postJson('/api/v1/withdrawals', [
+                'amount' => 200,
+                'destination_phone' => '0754000000',
+            ])->assertCreated()->json('data.id');
+
+        $this->withHeaders($this->authHeaders($owner))
+            ->postJson('/api/v1/admin/withdrawals/'.$id.'/approve')
+            ->assertForbidden();
+
+        $this->withHeaders($this->authHeaders($owner))
+            ->postJson('/api/v1/admin/withdrawals/'.$id.'/deny', ['reason' => 'Nope'])
+            ->assertForbidden();
+    }
+
+    public function test_withdrawal_cannot_be_approved_before_otp_confirmation(): void
+    {
+        $owner = $this->createUser();
+        $company = $this->createCompanyFor($owner);
+        $this->fundWallet($company, 1000);
+
+        $id = $this->withHeaders($this->authHeaders($owner))
+            ->postJson('/api/v1/withdrawals', [
+                'amount' => 200,
+                'destination_phone' => '0754000000',
+            ])->assertCreated()->json('data.id');
+
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->withHeaders($this->authHeaders($admin))
+            ->postJson('/api/v1/admin/withdrawals/'.$id.'/approve')
+            ->assertStatus(422)
+            ->assertJsonPath('data.withdrawal.0', 'Only OTP-confirmed withdrawals can be approved.');
     }
 
     public function test_payout_accounts_detect_network_and_manage_default(): void

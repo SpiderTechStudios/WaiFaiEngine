@@ -13,5 +13,5 @@ Schedule::command('payments:reconcile-palmpesa')->everyMinute();
 Schedule::command('payments:expire-pending')->everyFiveMinutes();
 Schedule::command('enrollments:complete-paid')->everyMinute();
 Schedule::command('access:expire')->everyMinute();
-Schedule::command('access:presence')->everyMinute();
 Schedule::command('mikrotik:sync')->everyMinute();
+Schedule::command('omada:sync')->everyFiveMinutes();

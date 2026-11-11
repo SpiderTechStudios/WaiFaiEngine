@@ -127,6 +127,16 @@ class Company extends Model
         return $this->hasMany(NetworkConnection::class);
     }
 
+    public function omadaIntegrations(): HasMany
+    {
+        return $this->hasMany(OmadaIntegration::class);
+    }
+
+    public function omadaClientSessions(): HasMany
+    {
+        return $this->hasMany(OmadaClientSession::class);
+    }
+
     public function networkSsids(): HasMany
     {
         return $this->hasMany(NetworkSsid::class);

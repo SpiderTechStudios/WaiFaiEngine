@@ -243,7 +243,7 @@ class MikroTikTest extends TestCase
         ]);
     }
 
-    public function test_sync_keeps_hotspot_user_while_the_grant_is_still_usable(): void
+    public function test_sync_keeps_session_authenticated_while_the_grant_is_still_usable(): void
     {
         $router = $this->mikroTikRouter();
         $session = $this->authenticatedSession($router, withNetworkSession: true);
@@ -269,8 +269,9 @@ class MikroTikTest extends TestCase
             ->assertExitCode(0);
 
         $session->refresh();
-        $this->assertSame(CaptiveSession::STATUS_DISCONNECTED, $session->status);
+        $this->assertSame(CaptiveSession::STATUS_AUTHENTICATED, $session->status);
         $this->assertSame('wf_'.$session->token, $session->mikrotik_username);
+        $this->assertSame('active', $session->networkSession?->fresh()->status);
 
         Http::assertNotSent(function ($request): bool {
             return $request->method() === 'DELETE'

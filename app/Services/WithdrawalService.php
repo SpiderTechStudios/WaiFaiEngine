@@ -253,12 +253,91 @@ class WithdrawalService
                 'otp_hash' => null,
                 'otp_expires_at' => null,
                 'otp_attempts' => 0,
-                'status' => Withdrawal::STATUS_PROCESSING,
+                'status' => Withdrawal::STATUS_PENDING_APPROVAL,
             ])->save();
         });
 
         $withdrawal = $withdrawal->fresh();
 
+        $this->auditLogger->log(
+            'withdrawal_confirmed',
+            $actor,
+            $company->id,
+            Withdrawal::class,
+            $withdrawal->id,
+        );
+
+        return $withdrawal->fresh(['payoutAccount', 'paymentProvider', 'paymentMethod']);
+    }
+
+    public function approve(Withdrawal $withdrawal, User $admin): Withdrawal
+    {
+        $withdrawal = DB::transaction(function () use ($withdrawal, $admin) {
+            $locked = Withdrawal::query()->whereKey($withdrawal->id)->lockForUpdate()->firstOrFail();
+
+            if ($locked->status !== Withdrawal::STATUS_PENDING_APPROVAL || $locked->confirmed_at === null) {
+                throw ValidationException::withMessages([
+                    'withdrawal' => ['Only OTP-confirmed withdrawals can be approved.'],
+                ]);
+            }
+
+            $locked->forceFill([
+                'status' => Withdrawal::STATUS_PROCESSING,
+                'approved_at' => now(),
+                'approved_by' => $admin->id,
+            ])->save();
+
+            $this->auditLogger->log(
+                'withdrawal_approved',
+                $admin,
+                $locked->company_id,
+                Withdrawal::class,
+                $locked->id,
+            );
+
+            return $locked->fresh();
+        });
+
+        return $this->startPayout($withdrawal, $admin);
+    }
+
+    public function deny(Withdrawal $withdrawal, User $admin, string $reason): Withdrawal
+    {
+        return DB::transaction(function () use ($withdrawal, $admin, $reason) {
+            $locked = Withdrawal::query()->whereKey($withdrawal->id)->lockForUpdate()->firstOrFail();
+
+            if ($locked->status !== Withdrawal::STATUS_PENDING_APPROVAL || $locked->confirmed_at === null) {
+                throw ValidationException::withMessages([
+                    'withdrawal' => ['Only OTP-confirmed withdrawals can be denied.'],
+                ]);
+            }
+
+            $this->refundWallet($locked, 'Withdrawal denied '.$locked->reference);
+
+            $locked->forceFill([
+                'status' => Withdrawal::STATUS_DENIED,
+                'denied_at' => now(),
+                'denied_by' => $admin->id,
+                'denial_reason' => Str::limit($reason, 1000, ''),
+                'otp_hash' => null,
+                'otp_expires_at' => null,
+            ])->save();
+
+            $this->auditLogger->log(
+                'withdrawal_denied',
+                $admin,
+                $locked->company_id,
+                Withdrawal::class,
+                $locked->id,
+                newValues: ['reason' => $reason],
+            );
+
+            return $locked->load(['payoutAccount', 'paymentProvider', 'paymentMethod']);
+        });
+    }
+
+    private function startPayout(Withdrawal $withdrawal, User $actor): Withdrawal
+    {
         $provider = PaymentProvider::query()->find($withdrawal->payment_provider_id)
             ?? PaymentProvider::query()->where('slug', $withdrawal->payment_provider_slug)->first();
 
@@ -305,7 +384,7 @@ class WithdrawalService
             $this->auditLogger->log(
                 'withdrawal_payout_initiated',
                 $actor,
-                $company->id,
+                $withdrawal->company_id,
                 Withdrawal::class,
                 $withdrawal->id,
                 newValues: [

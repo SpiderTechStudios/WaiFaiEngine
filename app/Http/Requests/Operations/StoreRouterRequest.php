@@ -23,6 +23,7 @@ class StoreRouterRequest extends FormRequest
         $gatewayType = $this->input('gateway_type');
         $isMikroTik = $gatewayType === NetworkDevice::GATEWAY_MIKROTIK;
         $isRuijie = $gatewayType === NetworkDevice::GATEWAY_RUIJIE;
+        $isOmada = $gatewayType === NetworkDevice::GATEWAY_OMADA;
 
         return [
             'gateway_type' => [$requiredOnCreate, 'string', Rule::in(NetworkDevice::GATEWAY_TYPES)],
@@ -35,7 +36,12 @@ class StoreRouterRequest extends FormRequest
                 'nullable',
                 'ip',
             ],
-            'api_host' => ['nullable', 'string', 'max:255'],
+            'api_host' => [
+                Rule::requiredIf(fn () => $this->isMethod('post') && $isOmada),
+                'nullable',
+                'string',
+                'max:255',
+            ],
             'api_port' => ['nullable', 'integer', 'min:1', 'max:65535'],
             'api_username' => [
                 Rule::requiredIf(fn () => $this->isMethod('post') && $isMikroTik),
@@ -62,6 +68,21 @@ class StoreRouterRequest extends FormRequest
             ],
             'serial_number' => ['nullable', 'string', 'max:100'],
             'wifidog_port' => ['nullable', 'integer', 'min:1', 'max:65535'],
+
+            // TP-Link Omada controller fields (stored in the isolated omada_* tables).
+            'omada_integration_name' => ['nullable', 'string', 'max:255'],
+            'omada_deployment_type' => ['nullable', 'string', Rule::in(['software', 'hardware', 'cloud'])],
+            'omada_controller_url' => ['nullable', 'string', 'max:255'],
+            'omada_controller_port' => ['nullable', 'integer', 'min:1', 'max:65535'],
+            'omada_controller_id' => ['nullable', 'string', 'max:64'],
+            'omada_client_id' => ['nullable', 'string', 'max:255'],
+            'omada_client_secret' => ['nullable', 'string', 'max:255'],
+            'omada_operator_username' => ['nullable', 'string', 'max:255'],
+            'omada_operator_password' => ['nullable', 'string', 'max:255'],
+            'omada_verify_tls' => ['nullable', 'boolean'],
+            'omada_site_id' => ['nullable', 'string', 'max:64'],
+            'omada_site_name' => ['nullable', 'string', 'max:255'],
+            'omada_site_timezone' => ['nullable', 'string', 'max:64'],
         ];
     }
 

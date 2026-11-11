@@ -29,7 +29,7 @@ class PlatformAdminDocumentation
         security: [['sanctum' => []]],
         parameters: [
             new OA\Parameter(name: 'company_id', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
-            new OA\Parameter(name: 'gateway_type', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['mikrotik', 'ruijie', 'wavlink'])),
+            new OA\Parameter(name: 'gateway_type', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['mikrotik', 'ruijie', 'wavlink', 'omada'])),
             new OA\Parameter(name: 'status', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['active', 'inactive', 'offline'])),
             new OA\Parameter(name: 'per_page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 15)),
         ],
@@ -49,7 +49,7 @@ class PlatformAdminDocumentation
         security: [['sanctum' => []]],
         requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(required: ['company_id', 'gateway_type', 'name'], properties: [
             new OA\Property(property: 'company_id', type: 'integer', example: 1),
-            new OA\Property(property: 'gateway_type', type: 'string', enum: ['mikrotik', 'ruijie', 'wavlink'], example: 'mikrotik'),
+            new OA\Property(property: 'gateway_type', type: 'string', enum: ['mikrotik', 'ruijie', 'wavlink', 'omada'], example: 'mikrotik'),
             new OA\Property(property: 'name', type: 'string', example: 'MikroTik-Hotspot'),
             new OA\Property(property: 'lan_ip', type: 'string', nullable: true, example: '192.168.88.1'),
             new OA\Property(property: 'api_host', type: 'string', nullable: true, example: '41.59.12.34'),
@@ -95,7 +95,7 @@ class PlatformAdminDocumentation
         parameters: [new OA\Parameter(name: 'router', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
         requestBody: new OA\RequestBody(content: new OA\JsonContent(properties: [
             new OA\Property(property: 'company_id', type: 'integer', example: 1),
-            new OA\Property(property: 'gateway_type', type: 'string', enum: ['mikrotik', 'ruijie', 'wavlink'], example: 'mikrotik'),
+            new OA\Property(property: 'gateway_type', type: 'string', enum: ['mikrotik', 'ruijie', 'wavlink', 'omada'], example: 'mikrotik'),
             new OA\Property(property: 'name', type: 'string', example: 'MikroTik-Hotspot'),
             new OA\Property(property: 'lan_ip', type: 'string', nullable: true, example: '192.168.88.1'),
             new OA\Property(property: 'api_host', type: 'string', nullable: true, example: '41.59.12.34'),
@@ -344,3 +344,4 @@ class PlatformAdminDocumentation
     )]
     public function billingPayments(): void {}
 }
+

@@ -36,6 +36,11 @@ class Withdrawal extends Model
         'otp_attempts',
         'otp_sent_at',
         'confirmed_at',
+        'approved_at',
+        'approved_by',
+        'denied_at',
+        'denied_by',
+        'denial_reason',
         'requested_at',
         'processed_at',
         'failed_at',
@@ -47,11 +52,15 @@ class Withdrawal extends Model
 
     public const STATUS_PENDING = 'pending';
 
+    public const STATUS_PENDING_APPROVAL = 'pending_approval';
+
     public const STATUS_PROCESSING = 'processing';
 
     public const STATUS_COMPLETED = 'completed';
 
     public const STATUS_FAILED = 'failed';
+
+    public const STATUS_DENIED = 'denied';
 
     public const STATUS_CANCELLED = 'cancelled';
 
@@ -73,6 +82,8 @@ class Withdrawal extends Model
             'otp_expires_at' => 'datetime',
             'otp_sent_at' => 'datetime',
             'confirmed_at' => 'datetime',
+            'approved_at' => 'datetime',
+            'denied_at' => 'datetime',
             'requested_at' => 'datetime',
             'processed_at' => 'datetime',
             'failed_at' => 'datetime',
@@ -96,11 +107,27 @@ class Withdrawal extends Model
         return $this->belongsTo(PaymentMethod::class);
     }
 
+    public function approvedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function deniedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'denied_by');
+    }
+
     public function isAwaitingConfirmation(): bool
     {
         return $this->status === self::STATUS_PENDING
             && $this->confirmed_at === null
             && $this->otp_hash !== null;
+    }
+
+    public function isAwaitingApproval(): bool
+    {
+        return $this->status === self::STATUS_PENDING_APPROVAL
+            && $this->confirmed_at !== null;
     }
 
     public function isSettled(): bool
@@ -110,6 +137,7 @@ class Withdrawal extends Model
             self::STATUS_FAILED,
             self::STATUS_CANCELLED,
             self::STATUS_EXPIRED,
+            self::STATUS_DENIED,
         ], true);
     }
 

@@ -16,6 +16,11 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('admin')->middleware(['auth:sanctum', 'active.user', 'platform.admin'])->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'show']);
 
+    Route::get('/withdrawals', [WithdrawalController::class, 'adminGetWithdrawals']);
+    Route::get('/withdrawals/{withdrawal}', [WithdrawalController::class, 'adminGetWithdrawal']);
+    Route::post('/withdrawals/{withdrawal}/approve', [WithdrawalController::class, 'approve']);
+    Route::post('/withdrawals/{withdrawal}/deny', [WithdrawalController::class, 'deny']);
+
     // Platform billing: what clients pay WaiFai + subscription lifecycle.
     Route::get('/billing/summary', [AdminBillingController::class, 'summary']);
     Route::get('/billing/clients', [AdminBillingController::class, 'clients']);
@@ -77,6 +82,8 @@ Route::prefix('superadmin')->middleware(['auth:sanctum', 'active.user', 'superad
 
     Route::get('/withdrawals', [WithdrawalController::class, 'adminGetWithdrawals']);
     Route::get('/withdrawals/{withdrawal}', [WithdrawalController::class, 'adminGetWithdrawal']);
+    Route::post('/withdrawals/{withdrawal}/approve', [WithdrawalController::class, 'approve']);
+    Route::post('/withdrawals/{withdrawal}/deny', [WithdrawalController::class, 'deny']);
 
     Route::get('/payment-providers', [PaymentProviderController::class, 'index']);
     Route::post('/payment-providers', [PaymentProviderController::class, 'store']);

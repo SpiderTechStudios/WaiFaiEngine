@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Route;
 */
 require __DIR__.'/Api/wifidog.php';
 require __DIR__.'/Api/mikrotik.php';
+require __DIR__.'/Api/omada.php';
 
 Route::prefix('v1')->group(function () {
     require __DIR__.'/Api/v1/portal.php';
@@ -18,6 +19,7 @@ Route::prefix('v1')->group(function () {
     require __DIR__.'/Api/v1/business.php';
     require __DIR__.'/Api/v1/installation_requests.php';
     require __DIR__.'/Api/v1/routers.php';
+    require __DIR__.'/Api/v1/omada.php';
     require __DIR__.'/Api/v1/branches.php';
     require __DIR__.'/Api/v1/customers.php';
     require __DIR__.'/Api/v1/dashboard.php';

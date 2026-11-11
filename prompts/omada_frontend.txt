@@ -1,0 +1,518 @@
+# TASK: Add TP-Link Omada to the WaiFai dashboard
+
+You are working on the WaiFai frontend (React or equivalent SPA) that consumes the
+WaiFai Laravel API.
+
+Implement TP-Link Omada as a new **Network Device** type alongside MikroTik and
+Ruijie. Do not change the existing MikroTik or Ruijie registration screens except
+for adding Omada as a selectable option.
+
+The Omada backend module is already implemented. This task is frontend only.
+
+---
+
+## 1. Environment
+
+```
+VITE_API_BASE_URL=https://api.waifai.co.tz/api/v1
+VITE_OMADA_ENABLED=true
+```
+
+- Do not put any Omada controller credentials in frontend environment variables.
+  Every customer enters their own controller credentials; the backend stores them
+  encrypted.
+- Do not expose `client_secret`, `operator_password`, or any token in the UI,
+  logs, analytics, or error reports.
+
+## 2. Auth and permissions
+
+All tenant endpoints use the existing auth/company context:
+
+```
+Authorization: Bearer {sanctum_token}
+Accept: application/json
+```
+
+Reuse the existing router permissions:
+
+| Action | Permission |
+| --- | --- |
+| List/view/test/status | `routers.view` |
+| Create integration | `routers.create` |
+| Update, select site/AP/SSID, disconnect | `routers.update` |
+| Sync | `routers.sync` |
+| Delete | `routers.delete` |
+
+## 3. Response envelope
+
+Every endpoint returns:
+
+```json
+{
+  "status": true,
+  "code": 200,
+  "message": "Success",
+  "data": {}
+}
+```
+
+Errors use the same envelope with `status: false`:
+
+```json
+{
+  "status": false,
+  "code": 422,
+  "message": "Validation Error",
+  "data": { "field": ["message"] }
+}
+```
+
+Handle:
+
+| Code | Meaning |
+| --- | --- |
+| 401 | Not authenticated |
+| 403 | Missing permission / inactive company |
+| 404 | Not found or another tenant's integration |
+| 422 | Validation error; render `data` field errors |
+| 429 | Rate limited; honour `retry_after` seconds |
+| 502 | Omada controller/API failure; show `message` |
+
+A connection test that fails authentication usually returns **HTTP 200** with
+`data.authenticated = false` and a `message`. Do not treat that as a transport
+error.
+
+## 4. Step 1 — Add device type
+
+On the "Add Network Device" screen add a third option:
+
+- MikroTik
+- Ruijie
+- **TP-Link Omada**
+
+Selecting Omada starts the wizard below. Existing MikroTik/Ruijie forms remain
+unchanged.
+
+## 5. Wizard steps
+
+### Step 1 — Controller deployment type
+
+Required: `deployment_type`
+
+| Value | Label |
+| --- | --- |
+| `software` | Software Controller (Windows/Linux/self-hosted) |
+| `hardware` | Hardware Controller (OC200 / OC300) |
+| `cloud` | Cloud Controller |
+
+Only show fields relevant to the selected type.
+
+### Step 2 — Controller connection
+
+Required for create:
+
+- `name` — integration/device name
+- `controller_url` — controller management URL or hostname
+- `client_id` — Omada Open API Client ID
+- `client_secret` — Omada Open API Client Secret
+- `operator_username` — Omada Hotspot Operator username
+- `operator_password` — Omada Hotspot Operator password
+
+Optional:
+
+- `controller_port` — defaults to 8043 (software) or 443 (hardware); allow override
+- `controller_id` — Omada Controller ID / `omadacId`; can be discovered
+- `connection_method` — `public` (default), `vpn`, `cloud`
+- `verify_tls` — boolean, default `true`
+- `branch_id` — optional existing branch/station id
+
+Rules to show in helper text:
+
+- Use HTTPS. HTTP is only allowed when the platform explicitly enables it.
+- Private addresses (192.168.x, 10.x, 172.16–31.x, localhost) are rejected unless
+  `connection_method` is `vpn` and the platform allows private hosts.
+- Disabling TLS verification is rejected unless the platform allows self-signed
+  certificates. Prefer uploading a trusted certificate to the controller.
+- How to get Client ID/Secret: Omada Global view → Settings → Platform Integration
+  → Open API → Add New App → Client Credentials mode.
+- How to get the Hotspot Operator: Omada Hotspot Manager → Operator → Add New
+  Operator. This is not the controller admin account.
+
+### Step 3 — Test connection
+
+Call the pre-save test endpoint (no integration id required):
+
+```
+POST /api/v1/omada/integrations/test
+```
+
+```json
+{
+  "deployment_type": "software",
+  "controller_url": "https://controller.example.com:8043",
+  "controller_port": 8043,
+  "controller_id": "optional-omadac-id",
+  "connection_method": "public",
+  "client_id": "client-id",
+  "client_secret": "client-secret",
+  "verify_tls": true
+}
+```
+
+Success data:
+
+```json
+{
+  "reachable": true,
+  "authenticated": true,
+  "controller_id": "abc123",
+  "controller_version": "6.2.10.17",
+  "api_version": "3",
+  "sites_count": 1,
+  "sites": [
+    { "site_id": "site-1", "name": "HQ", "timezone": "Africa/Dar_es_Salaam" }
+  ],
+  "latency_ms": 42,
+  "message": "Connected to the Omada controller."
+}
+```
+
+Show meaningful errors:
+
+- Controller unreachable / network problem
+- Invalid Client ID or Client Secret
+- Invalid Controller ID
+- API permission denied
+- Unsupported controller version or endpoint
+- TLS/certificate problem
+- External portal capability unavailable
+
+Never include the submitted secret values in the error UI.
+
+### Step 4 — Save the integration
+
+After a successful test:
+
+```
+POST /api/v1/omada/integrations
+```
+
+```json
+{
+  "name": "Omada HQ",
+  "deployment_type": "software",
+  "controller_url": "https://controller.example.com:8043",
+  "controller_port": 8043,
+  "controller_id": "abc123",
+  "connection_method": "public",
+  "client_id": "client-id",
+  "client_secret": "client-secret",
+  "operator_username": "operator",
+  "operator_password": "operator-secret",
+  "verify_tls": true
+}
+```
+
+Response `201` data is an integration object (see §9). Keep `id` for later steps.
+
+If save succeeds but discovery fails, still show the saved integration with
+`connection_status` and allow "Refresh".
+
+### Step 5 — Select site
+
+```
+GET /api/v1/omada/integrations/{id}/sites
+```
+
+This performs a live refresh and returns `data.items[]`.
+
+```json
+{
+  "id": 1,
+  "site_id": "site-1",
+  "site_name": "HQ",
+  "timezone": "Africa/Dar_es_Salaam",
+  "status": "active",
+  "selected": false,
+  "updated_at": "2026-11-11T09:00:00+00:00"
+}
+```
+
+Select:
+
+```
+PUT /api/v1/omada/integrations/{id}/site
+{ "site_id": "site-1" }
+```
+
+Support multiple sites per controller. One WaiFai integration selects one site;
+the customer can create another integration for another site.
+
+### Step 6 — Select access points
+
+```
+GET /api/v1/omada/integrations/{id}/access-points
+```
+
+Returns `data.items[]`:
+
+```json
+{
+  "id": 1,
+  "device_id": "AA-BB-CC-DD-EE-FF",
+  "device_name": "Lobby AP",
+  "mac_address": "AA-BB-CC-DD-EE-FF",
+  "model": "EAP225",
+  "ip_address": "10.0.0.5",
+  "firmware_version": "5.0.9",
+  "online_status": "online",
+  "selected_for_waifai": false,
+  "site_id": "site-1",
+  "updated_at": "2026-11-11T09:00:00+00:00"
+}
+```
+
+Save the selection:
+
+```
+PUT /api/v1/omada/integrations/{id}/access-points
+{ "device_ids": ["AA-BB-CC-DD-EE-FF"] }
+```
+
+`device_ids` may be empty to deselect all. Never require the customer to type AP
+MAC addresses manually.
+
+### Step 7 — Select SSID and portal
+
+```
+GET /api/v1/omada/integrations/{id}/ssids
+```
+
+Returns `data.items[]`:
+
+```json
+{
+  "id": 1,
+  "wlan_id": "wlan-1",
+  "ssid_name": "WaiFai Guest",
+  "status": "active",
+  "portal_enabled": true,
+  "selected_for_waifai": false,
+  "site_id": "site-1",
+  "updated_at": "2026-11-11T09:00:00+00:00"
+}
+```
+
+Save the SSID:
+
+```
+PUT /api/v1/omada/integrations/{id}/ssid
+{ "wlan_id": "wlan-1" }
+```
+
+Then show the external portal URL from the integration object
+(`data.portal_url`, format `https://api.../api/omada/portal/{portalKey}`).
+
+Instructions to display:
+
+1. In Omada open the selected site → Hotspot → External Portal Server.
+2. Enable the external portal on the selected SSID.
+3. Paste the WaiFai portal URL.
+4. Keep the default Omada parameters; Omada appends `clientMac`, `clientIp`,
+   `apMac`, `ssidName`, `radioId`, `site`, `redirectUrl` and `t`.
+5. If the controller version does not support external portal authorization,
+   show that limitation instead of claiming success.
+
+Also show a manual fallback field with the portal URL in case automatic SSID
+portal configuration is unavailable.
+
+### Step 8 — Review and save
+
+Show:
+
+- Deployment type
+- Controller host/port/version and connection status
+- Site name and timezone
+- Selected APs
+- Selected SSID
+- Portal URL
+- Operator/Client credentials set (masked booleans, never values)
+
+Then finish.
+
+## 6. Dashboard / management screen
+
+For each integration show:
+
+- Connection status (`connected`, `unreachable`, `unauthorized`, `misconfigured`, `unknown`)
+- Deployment type
+- Controller version
+- Number of sites
+- Number of APs, online/offline counts
+- Configured SSIDs
+- Active authenticated clients
+- Failed authorizations
+- Last sync time
+
+Actions:
+
+- Test connection: `POST /api/v1/omada/integrations/{id}/test`
+- Sync all: `POST /api/v1/omada/integrations/{id}/sync`
+- Refresh sites: `GET /api/v1/omada/integrations/{id}/sites`
+- Refresh APs: `GET /api/v1/omada/integrations/{id}/access-points`
+- Refresh SSIDs: `GET /api/v1/omada/integrations/{id}/ssids`
+- Status summary: `GET /api/v1/omada/integrations/{id}/status`
+- Edit connection: `PATCH /api/v1/omada/integrations/{id}`
+- Disconnect a client: `POST /api/v1/omada/integrations/{id}/clients/{mac}/disconnect`
+- Remove integration: `DELETE /api/v1/omada/integrations/{id}`
+
+Do not claim a controller or AP is online until the API returns that status.
+
+## 7. Client sessions
+
+```
+GET /api/v1/omada/integrations/{id}/sessions?status=authorized
+```
+
+```json
+{
+  "id": 1,
+  "client_mac": "AA-BB-CC-DD-EE-FF",
+  "client_ip": "10.0.0.20",
+  "ap_mac": "AA-BB-CC-DD-EE-01",
+  "ssid_name": "WaiFai Guest",
+  "site_id": "site-1",
+  "package_id": 3,
+  "payment_transaction_id": 900,
+  "access_grant_id": null,
+  "authorization_status": "authorized",
+  "authorized_at": "2026-11-11T09:05:00+00:00",
+  "expires_at": "2026-11-11T10:05:00+00:00",
+  "disconnected_at": null,
+  "controller_reference": "AA-BB-CC-DD-EE-FF",
+  "last_sync_status": "authorized",
+  "created_at": "2026-11-11T09:00:00+00:00"
+}
+```
+
+Statuses: `pending`, `authorized`, `failed`, `expired`, `disconnected`.
+
+## 8. Captive portal and payment wiring (important)
+
+Omada redirects the client browser to:
+
+```
+GET /api/omada/portal/{portalKey}?clientMac=...&clientIp=...&apMac=...&ssidName=...&site=...&radioId=...&redirectUrl=...&t=...
+```
+
+The backend validates the parameters, creates/reuses an `OmadaClientSession`, and
+returns:
+
+```json
+{
+  "integration": { "id": 1, "name": "Omada HQ", "deployment_type": "software", "site_id": "site-1", "site_name": "HQ" },
+  "client": { "mac": "AA-BB-CC-DD-EE-FF", "ip": "10.0.0.20", "ap_mac": "AA-BB-CC-DD-EE-01", "ssid": "WaiFai Guest" },
+  "client_session_id": 15,
+  "authorization_status": "pending",
+  "portal_url": "https://api.../connect?subdomain=omada-cafe",
+  "authorize_url": "https://api.../api/omada/portal/{portalKey}/authorize"
+}
+```
+
+After the existing WaiFai payment flow reports the transaction as `paid`, call:
+
+```
+POST /api/omada/portal/{portalKey}/authorize
+{ "client_session_id": 15, "payment_transaction_id": 900 }
+```
+
+or, when an access grant/voucher is used:
+
+```
+POST /api/omada/portal/{portalKey}/authorize
+{ "client_session_id": 15, "access_grant_id": 44 }
+```
+
+Rules:
+
+- Authorization must be idempotent; do not call it repeatedly from polling loops.
+- Never send `clientMac`, `site`, or `ssidName` as proof of payment.
+- Only a backend-verified `paid` transaction or a valid active grant authorizes.
+- If the controller is temporarily unavailable, keep the paid state and retry.
+- Never show "connected" until the authorize response says `authorization_status: authorized`.
+
+**Current limitation:** the shared `/connect` portal and `PaymentService` do not
+call the Omada authorize endpoint yet. Until that backend hook is added, the
+frontend must perform this call after verified payment, or the integration must be
+considered "authorization not wired". Do not fake success in the UI.
+
+## 9. Integration object fields
+
+```ts
+interface OmadaIntegration {
+  id: number;
+  name: string;
+  deployment_type: 'software' | 'hardware' | 'cloud';
+  controller_url: string;
+  controller_host: string;
+  controller_port: number;
+  controller_id: string | null;
+  controller_version: string | null;
+  connection_method: 'public' | 'vpn' | 'cloud';
+  verify_tls: boolean;
+  site_id: string | null;
+  site_name: string | null;
+  site_timezone: string | null;
+  connection_status: 'connected' | 'unreachable' | 'unauthorized' | 'misconfigured' | 'unknown';
+  status: 'active' | 'inactive';
+  last_connected_at: string | null;
+  last_synced_at: string | null;
+  credentials_set: {
+    client_id: boolean;
+    client_secret: boolean;
+    operator_username: boolean;
+    operator_password: boolean;
+  };
+  portal_url: string | null;
+  router_id: number | null;
+  sites_count?: number;
+  access_points_count?: number;
+  ssids_count?: number;
+  active_clients_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+```
+
+`credentials_set` is the only credential information the API returns.
+
+## 10. Error and UX copy
+
+Use clear, non-technical messages:
+
+- "The Omada controller could not be reached. Check the URL, port, internet access, and firewall."
+- "The Omada Client ID or Client Secret is invalid. Create or re-check the Open API app on the controller."
+- "The Omada Controller ID is invalid."
+- "The Omada API account is not allowed to perform this action."
+- "This controller version does not expose the required API."
+- "The controller certificate could not be verified. Upload a trusted certificate to the controller."
+- "The external portal is not enabled for this SSID."
+
+Do not echo raw controller responses, passwords, tokens, or stack traces.
+
+## 11. Acceptance checklist
+
+- [ ] Omada appears as a third device type without changing MikroTik/Ruijie screens.
+- [ ] Deployment type changes which fields are shown.
+- [ ] Test connection works before saving.
+- [ ] Save creates an integration and shows it in the list.
+- [ ] Sites can be listed, selected, and refreshed.
+- [ ] APs are discovered from the controller; no manual MAC entry required.
+- [ ] SSIDs are discovered and one can be selected.
+- [ ] Portal URL is displayed and copyable.
+- [ ] Secrets are never returned to or shown in the UI.
+- [ ] Cross-tenant integrations return 404 (frontend handles it as not found).
+- [ ] Errors from 422/502 are rendered meaningfully.
+- [ ] Sessions list and disconnect actions work.
+- [ ] Authorization is only called after verified payment/grant.
+- [ ] Multiple controllers and multiple sites per customer are supported.

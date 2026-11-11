@@ -7,10 +7,10 @@ return [
     'session_ttl_minutes' => (int) env('CAPTIVE_SESSION_TTL', 30),
 
     /*
-    | How long a WiFiDog client may stay silent (no /auth counters or ping)
-    | before its live session is marked offline. Connected clients send
-    | counters every CheckInterval (typically 60s), so keep this above that.
-    | MikroTik presence is handled by mikrotik:sync + missing_session_grace.
+    | DEPRECATED / no-op. Access is time-based: a paid or voucher session keeps
+    | working until its access grant expires, even if the client stops sending
+    | WiFiDog counters (phone sleep, power saving, brief Wi-Fi drop). Access is
+    | ended by access:expire at grant expiry, never by activity silence.
     */
     'presence_timeout_minutes' => (int) env('CAPTIVE_PRESENCE_TIMEOUT_MINUTES', 5),
 

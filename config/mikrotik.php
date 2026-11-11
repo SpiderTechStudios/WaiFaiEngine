@@ -37,8 +37,9 @@ return [
     'callback_secret_length' => 48,
 
     /*
-    | Number of seconds a session may be missing from /ip hotspot active before
-    | the sync command marks it ended (avoids DHCP/session flaps).
+    | DEPRECATED / no-op. Missing from /ip hotspot active no longer ends a
+    | session or disconnects the captive session; the access grant owns access
+    | until expiry. Kept for config compatibility.
     */
     'missing_session_grace_seconds' => (int) env('MIKROTIK_MISSING_SESSION_GRACE', 120),
 ];

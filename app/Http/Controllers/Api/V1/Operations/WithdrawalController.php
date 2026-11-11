@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Operations;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\DenyWithdrawalRequest;
 use App\Http\Requests\Operations\ConfirmWithdrawalRequest;
 use App\Http\Requests\Operations\PreviewWithdrawalRequest;
 use App\Http\Requests\Operations\StoreWithdrawalRequest;
@@ -116,9 +117,11 @@ class WithdrawalController extends Controller
             ->keyBy('status');
 
         $pending = $byStatus->get('pending');
+        $pendingApproval = $byStatus->get('pending_approval');
         $processing = $byStatus->get('processing');
         $completed = $byStatus->get('completed') ?? $byStatus->get('paid') ?? $byStatus->get('success');
         $failed = $byStatus->get('failed');
+        $denied = $byStatus->get('denied');
         $cancelled = $byStatus->get('cancelled');
 
         $fees = Withdrawal::query()
@@ -132,12 +135,16 @@ class WithdrawalController extends Controller
             'wallet_balance' => (float) ($wallet?->balance ?? 0),
             'pending_count' => (int) ($pending?->total ?? 0),
             'pending_amount' => (float) ($pending?->amount ?? 0),
+            'pending_approval_count' => (int) ($pendingApproval?->total ?? 0),
+            'pending_approval_amount' => (float) ($pendingApproval?->amount ?? 0),
             'processing_count' => (int) ($processing?->total ?? 0),
             'processing_amount' => (float) ($processing?->amount ?? 0),
             'completed_count' => (int) ($completed?->total ?? 0),
             'completed_amount' => (float) ($completed?->amount ?? 0),
             'failed_count' => (int) ($failed?->total ?? 0),
             'failed_amount' => (float) ($failed?->amount ?? 0),
+            'denied_count' => (int) ($denied?->total ?? 0),
+            'denied_amount' => (float) ($denied?->amount ?? 0),
             'cancelled_count' => (int) ($cancelled?->total ?? 0),
             'cancelled_amount' => (float) ($cancelled?->amount ?? 0),
             'platform_fee_total' => (float) ($fees?->platform_fee ?? 0),
@@ -162,6 +169,24 @@ class WithdrawalController extends Controller
             $this->paginated($paginated, WithdrawalResource::collection($paginated->items())->resolve()),
             'All withdrawals retrieved',
         );
+    }
+
+    public function approve(Request $request, Withdrawal $withdrawal): JsonResponse
+    {
+        $withdrawal = $this->withdrawalService->approve($withdrawal, $request->user());
+
+        return $this->success((new WithdrawalResource($withdrawal))->resolve(), 'Withdrawal approved and payout started');
+    }
+
+    public function deny(DenyWithdrawalRequest $request, Withdrawal $withdrawal): JsonResponse
+    {
+        $withdrawal = $this->withdrawalService->deny(
+            $withdrawal,
+            $request->user(),
+            (string) $request->validated('reason'),
+        );
+
+        return $this->success((new WithdrawalResource($withdrawal))->resolve(), 'Withdrawal denied and wallet refunded');
     }
 
     public function adminGetWithdrawal(Withdrawal $withdrawal): JsonResponse

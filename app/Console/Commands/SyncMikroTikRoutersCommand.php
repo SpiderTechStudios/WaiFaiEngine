@@ -79,8 +79,6 @@ class SyncMikroTikRoutersCommand extends Command
             ->filter(fn (CaptiveSession $session) => filled($session->client_mac))
             ->keyBy('client_mac');
 
-        $seen = [];
-
         foreach ($active as $row) {
             $username = (string) ($row['user'] ?? '');
             $mac = $this->normalizeMac((string) ($row['mac-address'] ?? ''));
@@ -90,8 +88,6 @@ class SyncMikroTikRoutersCommand extends Command
             if (! $session) {
                 continue;
             }
-
-            $seen[$session->id] = true;
 
             $session->forceFill([
                 'router_active_id' => isset($row['.id']) ? (string) $row['.id'] : $session->router_active_id,
@@ -113,29 +109,10 @@ class SyncMikroTikRoutersCommand extends Command
             }
         }
 
-        $grace = max(30, (int) config('mikrotik.missing_session_grace_seconds', 120));
-
-        foreach ($sessions as $session) {
-            if (isset($seen[$session->id]) || ! $session->router_last_seen_at) {
-                continue;
-            }
-
-            if ($session->router_last_seen_at->gt(now()->subSeconds($grace))) {
-                continue;
-            }
-
-            if ($session->network_session_id) {
-                NetworkSession::query()
-                    ->whereKey($session->network_session_id)
-                    ->where('status', 'active')
-                    ->update(['status' => 'ended', 'ended_at' => now()]);
-            }
-
-            if ($session->status === CaptiveSession::STATUS_AUTHENTICATED) {
-                $session->forceFill(['status' => CaptiveSession::STATUS_DISCONNECTED])->save();
-            }
-        }
-
+        // Intentionally do NOT end/disconnect a session just because it is
+        // missing from /ip/hotspot/active. A paid or voucher grant owns access
+        // until its expiry; transient router/read outages must never log a
+        // customer out. AccessExpiryService ends access at grant expiry.
         $this->removeStaleUsers($router, $mikroTikService, $byUsername);
     }
 
