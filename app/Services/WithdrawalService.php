@@ -180,7 +180,7 @@ class WithdrawalService
             );
 
             return $withdrawal;
-        });
+        }, 3);
 
         $this->sendOtp($withdrawal, $actor, $code);
 
@@ -296,7 +296,7 @@ class WithdrawalService
             );
 
             return $locked->fresh();
-        });
+        }, 3);
 
         return $this->startPayout($withdrawal, $admin);
     }
@@ -333,7 +333,7 @@ class WithdrawalService
             );
 
             return $locked->load(['payoutAccount', 'paymentProvider', 'paymentMethod']);
-        });
+        }, 3);
     }
 
     private function startPayout(Withdrawal $withdrawal, User $actor): Withdrawal

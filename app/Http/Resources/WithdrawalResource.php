@@ -22,16 +22,25 @@ class WithdrawalResource extends JsonResource
             'payment_method_name' => $this->paymentMethod?->name,
             'payment_method_logo_url' => $this->paymentMethod?->logo_url,
             'payment_provider_slug' => $this->payment_provider_slug,
-            'payment_provider' => $this->whenLoaded('paymentProvider', fn () => [
-                'id' => $this->paymentProvider->id,
-                'name' => $this->paymentProvider->name,
-                'slug' => $this->paymentProvider->slug,
-            ], $this->payment_provider_slug ? [
-                'id' => $this->payment_provider_id,
-                'name' => null,
-                'slug' => $this->payment_provider_slug,
-            ] : null),
-            'payout_account' => $this->whenLoaded('payoutAccount', fn () => (new PayoutAccountResource($this->payoutAccount))->resolve()),
+            'payment_provider' => $this->whenLoaded('paymentProvider', function () {
+                if ($this->paymentProvider) {
+                    return [
+                        'id' => $this->paymentProvider->id,
+                        'name' => $this->paymentProvider->name,
+                        'slug' => $this->paymentProvider->slug,
+                    ];
+                }
+
+                return $this->payment_provider_slug ? [
+                    'id' => $this->payment_provider_id,
+                    'name' => null,
+                    'slug' => $this->payment_provider_slug,
+                ] : null;
+            }),
+            'payout_account' => $this->whenLoaded(
+                'payoutAccount',
+                fn () => $this->payoutAccount ? (new PayoutAccountResource($this->payoutAccount))->resolve() : null,
+            ),
             'destination_phone' => $this->destination_phone,
             'destination_name' => $this->destination_name,
             'amount' => $this->amount,

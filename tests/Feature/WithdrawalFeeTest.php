@@ -358,6 +358,48 @@ class WithdrawalFeeTest extends TestCase
         $this->assertSame(1, SmsMessage::query()->count());
     }
 
+    public function test_admin_can_deny_legacy_withdrawal_without_payout_account_or_provider(): void
+    {
+        $owner = $this->createUser();
+        $company = $this->createCompanyFor($owner);
+        $wallet = $this->fundWallet($company, 0);
+
+        $withdrawal = Withdrawal::query()->create([
+            'company_id' => $company->id,
+            'wallet_id' => $wallet->id,
+            'payout_account_id' => null,
+            'payment_provider_id' => null,
+            'payment_provider_slug' => null,
+            'requested_by' => $owner->id,
+            'provider' => 'mpesa',
+            'destination_phone' => '255754000000',
+            'destination_name' => 'Legacy Customer',
+            'reference' => 'WD-LEGACY0001',
+            'amount' => 1000,
+            'platform_fee' => 0,
+            'provider_fee' => 0,
+            'fee_total' => 0,
+            'net_amount' => 1000,
+            'currency' => 'TZS',
+            'status' => Withdrawal::STATUS_PENDING_APPROVAL,
+            'confirmed_at' => now(),
+            'requested_at' => now(),
+        ]);
+
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->withHeaders($this->authHeaders($admin))
+            ->postJson('/api/v1/admin/withdrawals/'.$withdrawal->id.'/deny', [
+                'reason' => 'Legacy payout account removed',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'denied')
+            ->assertJsonPath('data.payout_account', null)
+            ->assertJsonPath('data.payment_provider', null);
+
+        $this->assertSame(1000.0, (float) $wallet->fresh()->balance);
+    }
+
     private function fundWallet(Company $company, float $balance): Wallet
     {
         return Wallet::query()->updateOrCreate(

@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\Admin\AdminBillingController;
 use App\Http\Controllers\Api\V1\Admin\AdminDashboardController;
 use App\Http\Controllers\Api\V1\Admin\AdminExpenseTypeController;
 use App\Http\Controllers\Api\V1\Admin\AdminInstallationRequestController;
+use App\Http\Controllers\Api\V1\Admin\AdminPaymentMethodController;
 use App\Http\Controllers\Api\V1\Admin\AdminRouterController;
 use App\Http\Controllers\Api\V1\Operations\PaymentController;
 use App\Http\Controllers\Api\V1\Operations\WithdrawalController;
@@ -39,6 +40,12 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'active.user', 'platform.adm
     Route::get('/installation-requests/{installationRequest}', [AdminInstallationRequestController::class, 'show']);
     Route::patch('/installation-requests/{installationRequest}/fulfillment', [AdminInstallationRequestController::class, 'updateFulfillment']);
     Route::post('/installation-requests/{installationRequest}/updates', [AdminInstallationRequestController::class, 'addUpdate']);
+
+    Route::get('/payment-methods', [AdminPaymentMethodController::class, 'index']);
+    Route::patch('/payment-methods/{paymentMethod}', [AdminPaymentMethodController::class, 'update']);
+    Route::put('/payment-methods/{paymentMethod}', [AdminPaymentMethodController::class, 'update']);
+    Route::post('/payment-methods/{paymentMethod}/prefixes', [AdminPaymentMethodController::class, 'addPrefix']);
+    Route::delete('/payment-methods/{paymentMethod}/prefixes/{prefix}', [AdminPaymentMethodController::class, 'removePrefix']);
 
     Route::get('/expense-types', [AdminExpenseTypeController::class, 'index']);
     Route::post('/expense-types', [AdminExpenseTypeController::class, 'store']);
@@ -79,6 +86,12 @@ Route::prefix('superadmin')->middleware(['auth:sanctum', 'active.user', 'superad
     Route::get('/payments/summary', [PaymentController::class, 'getAllPaymentsSummary']);
     Route::get('/payments/export', [PaymentController::class, 'getAllPaymentsExport']);
     Route::get('/payments/{payment}', [PaymentController::class, 'getPayment']);
+
+    Route::get('/payment-methods', [AdminPaymentMethodController::class, 'index']);
+    Route::patch('/payment-methods/{paymentMethod}', [AdminPaymentMethodController::class, 'update']);
+    Route::put('/payment-methods/{paymentMethod}', [AdminPaymentMethodController::class, 'update']);
+    Route::post('/payment-methods/{paymentMethod}/prefixes', [AdminPaymentMethodController::class, 'addPrefix']);
+    Route::delete('/payment-methods/{paymentMethod}/prefixes/{prefix}', [AdminPaymentMethodController::class, 'removePrefix']);
 
     Route::get('/withdrawals', [WithdrawalController::class, 'adminGetWithdrawals']);
     Route::get('/withdrawals/{withdrawal}', [WithdrawalController::class, 'adminGetWithdrawal']);
