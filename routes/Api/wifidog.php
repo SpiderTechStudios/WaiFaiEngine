@@ -25,10 +25,17 @@ use Illuminate\Support\Facades\Route;
 | paths (login/login) and the server-to-server /auth leg never reaches us.
 */
 Route::prefix('wifidog')
-    ->middleware('throttle:120,1')
     ->group(function () {
-        Route::match(['get', 'post'], '/login', [WiFiDogController::class, 'login']);
+        // Browser-facing legs: keep a per-IP throttle.
+        Route::match(['get', 'post'], '/login', [WiFiDogController::class, 'login'])
+            ->middleware('throttle:120,1');
+        Route::match(['get', 'post'], '/portal', [WiFiDogController::class, 'portal'])
+            ->middleware('throttle:120,1');
+
+        // Server-to-server legs called by the gateway for every connected
+        // client (auth checks/counters and heartbeat). Throttling these makes
+        // the AP receive 429s and drop/flap authorized clients, so they are
+        // intentionally not rate limited.
         Route::match(['get', 'post'], '/auth', [WiFiDogController::class, 'auth']);
-        Route::match(['get', 'post'], '/portal', [WiFiDogController::class, 'portal']);
         Route::match(['get', 'post'], '/ping', [WiFiDogController::class, 'ping']);
     });

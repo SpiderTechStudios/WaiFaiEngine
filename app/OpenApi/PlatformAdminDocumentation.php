@@ -343,5 +343,27 @@ class PlatformAdminDocumentation
         ]
     )]
     public function billingPayments(): void {}
-}
 
+    #[OA\Post(
+        path: '/admin/withdrawals/{withdrawal}/approve-manual',
+        operationId: 'adminApproveWithdrawalManually',
+        tags: ['Platform Admin', 'Withdrawals'],
+        summary: 'Approve a withdrawal manually (cash/offline, no payout provider)',
+        description: 'Completes an OTP-confirmed withdrawal (`status = pending_approval`) when WaiFai pays the client directly instead of using a payout provider. The requested gross amount is debited from the company wallet exactly once: normal requests already debited it as a hold, so the endpoint only creates the debit for legacy rows that have none. The withdrawal becomes `completed`; no provider API is called and no external reference is set. A manual-approval note is stored in the withdrawal metadata and audit log.',
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'withdrawal', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        requestBody: new OA\RequestBody(required: false, content: new OA\JsonContent(properties: [
+            new OA\Property(property: 'note', type: 'string', nullable: true, maxLength: 1000, example: 'Paid cash at the office, receipt #1042'),
+        ])),
+        responses: [
+            new OA\Response(response: 200, description: 'Approved manually; status completed', content: new OA\JsonContent(ref: '#/components/schemas/WithdrawalResponse')),
+            new OA\Response(response: 401, description: 'Unauthenticated', content: new OA\JsonContent(ref: '#/components/schemas/UnauthenticatedResponse')),
+            new OA\Response(response: 403, description: 'Forbidden', content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenResponse')),
+            new OA\Response(response: 404, description: 'Not found', content: new OA\JsonContent(ref: '#/components/schemas/NotFoundResponse')),
+            new OA\Response(response: 422, description: 'Withdrawal is not OTP-confirmed / has insufficient balance (data.withdrawal[0])', content: new OA\JsonContent(ref: '#/components/schemas/ValidationErrorResponse')),
+        ]
+    )]
+    public function approveWithdrawalManually(): void {}
+}

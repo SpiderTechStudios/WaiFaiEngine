@@ -12,6 +12,7 @@ use App\Models\NetworkSession;
 use App\Services\CaptiveSessionService;
 use App\Services\RouterService;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class AccessPresenceTest extends TestCase
@@ -158,6 +159,112 @@ class AccessPresenceTest extends TestCase
         $this->assertNull($url);
         $this->assertSame(CaptiveSession::STATUS_PENDING, $returning->fresh()->status);
         $this->assertFalse($grant->fresh()->isUsable());
+    }
+
+    public function test_short_cached_expiry_is_healed_and_session_stays_authorized(): void
+    {
+        [$company, $router, $customer, $grant, $plan] = $this->fixtures();
+
+        $captive = CaptiveSession::query()->create([
+            'company_id' => $company->id,
+            'network_device_id' => $router->id,
+            'gateway_id' => $router->gateway_id,
+            'client_mac' => 'AA:BB:CC:DD:EE:FF',
+            'client_ip' => '192.168.0.131',
+            'gw_address' => $router->lan_ip,
+            'gw_port' => $router->wifidog_port,
+            'token' => str_repeat('f', 32),
+            'status' => CaptiveSession::STATUS_AUTHENTICATED,
+            'access_grant_id' => $grant->id,
+            'authenticated_at' => now()->subHour(),
+            'expires_at' => now()->subMinute(),
+            'last_seen_at' => now()->subMinute(),
+        ]);
+
+        $this->get('/api/wifidog/auth?stage=counters&token='.$captive->token
+            .'&gw_id='.$router->gateway_id
+            .'&mac=AA:BB:CC:DD:EE:FF&incoming=10&outgoing=20')
+            ->assertOk()
+            ->assertSee('Auth:1');
+
+        $refreshed = $captive->fresh();
+        $this->assertSame(CaptiveSession::STATUS_AUTHENTICATED, $refreshed->status);
+        $this->assertTrue($refreshed->expires_at->equalTo($grant->expires_at));
+    }
+
+    public function test_cron_does_not_revoke_paid_session_before_grant_expiry(): void
+    {
+        Queue::fake();
+
+        [$company, $router, $customer, $grant, $plan] = $this->fixtures();
+
+        $networkSession = NetworkSession::query()->create([
+            'company_id' => $company->id,
+            'customer_id' => $customer->id,
+            'access_grant_id' => $grant->id,
+            'internet_plan_id' => $plan->id,
+            'network_device_id' => $router->id,
+            'mac_address' => 'AA:BB:CC:DD:EE:FF',
+            'ip_address' => '192.168.0.131',
+            'started_at' => now()->subHour(),
+            'last_activity_at' => now()->subMinutes(10),
+            'status' => 'active',
+        ]);
+
+        $captive = CaptiveSession::query()->create([
+            'company_id' => $company->id,
+            'network_device_id' => $router->id,
+            'gateway_id' => $router->gateway_id,
+            'client_mac' => 'AA:BB:CC:DD:EE:FF',
+            'client_ip' => '192.168.0.131',
+            'gw_address' => $router->lan_ip,
+            'gw_port' => $router->wifidog_port,
+            'token' => str_repeat('e', 32),
+            'status' => CaptiveSession::STATUS_AUTHENTICATED,
+            'access_grant_id' => $grant->id,
+            'network_session_id' => $networkSession->id,
+            'authenticated_at' => now()->subHour(),
+            'expires_at' => now()->subMinute(),
+        ]);
+
+        Artisan::call('access:expire');
+
+        Queue::assertNothingPushed();
+        $this->assertSame(CaptiveSession::STATUS_AUTHENTICATED, $captive->fresh()->status);
+        $this->assertTrue($captive->fresh()->expires_at->equalTo($grant->expires_at));
+        $this->assertSame('active', $networkSession->fresh()->status);
+        $this->assertSame('active', $grant->fresh()->status);
+    }
+
+    public function test_unlimited_grant_is_never_removed_by_cron(): void
+    {
+        Queue::fake();
+
+        [$company, $router, $customer, $grant, $plan] = $this->fixtures();
+
+        $grant->forceFill(['expires_at' => null, 'status' => 'active'])->save();
+
+        $captive = CaptiveSession::query()->create([
+            'company_id' => $company->id,
+            'network_device_id' => $router->id,
+            'gateway_id' => $router->gateway_id,
+            'client_mac' => 'AA:BB:CC:DD:EE:FF',
+            'client_ip' => '192.168.0.131',
+            'gw_address' => $router->lan_ip,
+            'gw_port' => $router->wifidog_port,
+            'token' => str_repeat('9', 32),
+            'status' => CaptiveSession::STATUS_AUTHENTICATED,
+            'access_grant_id' => $grant->id,
+            'authenticated_at' => now()->subDay(),
+            'expires_at' => now()->subDay(),
+        ]);
+
+        Artisan::call('access:expire');
+
+        Queue::assertNothingPushed();
+        $this->assertSame(CaptiveSession::STATUS_AUTHENTICATED, $captive->fresh()->status);
+        $this->assertNull($captive->fresh()->expires_at);
+        $this->assertSame('active', $grant->fresh()->status);
     }
 
     /**

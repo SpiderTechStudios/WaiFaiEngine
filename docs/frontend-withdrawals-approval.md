@@ -18,7 +18,7 @@ OTP confirmation and the new **platform-admin approval** step.
 | Actor | Screens | Can do |
 | --- | --- | --- |
 | Tenant owner/operator with `withdrawals.view` / `withdrawals.create` | Client dashboard → Withdrawals | Manage payout accounts, preview fees, request, OTP-confirm, cancel, view history |
-| Platform admin (`platform.admin`) or superadmin | Admin dashboard → Withdrawals | List all client withdrawals, inspect, approve (starts payout), deny (refunds) |
+| Platform admin (`platform.admin`) or superadmin | Admin dashboard → Withdrawals | List all client withdrawals, inspect, approve (starts provider payout), approve manually (cash/offline, no provider call), deny (refunds) |
 
 Tenant routes live under `/api/v1/withdrawals`. Admin routes live under
 `/api/v1/admin/withdrawals` and are **not** company-scoped — do not show them in
@@ -31,6 +31,7 @@ the client dashboard.
 ```
 pending ──confirm OTP──> pending_approval ──admin approve──> processing ──provider──> completed
    │                          │                                                  └──> failed
+   │                          ├──admin approve-manual (cash/offline)──> completed
    │                          └──admin deny──> denied
    └──client cancel──> cancelled
 ```
@@ -40,7 +41,7 @@ pending ──confirm OTP──> pending_approval ──admin approve──> pro
 | `pending` | Created, wallet debited as a hold, OTP sent | Enter OTP, resend OTP, cancel | None |
 | `pending_approval` | OTP confirmed; waiting for admin | Wait | Approve or deny |
 | `processing` | Approved; payout sent to the provider | Wait | None (provider webhook completes it) |
-| `completed` | Provider paid the client | Done | None |
+| `completed` | Paid to the client (provider payout or manual cash/offline approval) | Done | None |
 | `failed` | Payout failed; wallet refunded | Can request a new withdrawal | None |
 | `denied` | Admin rejected; wallet refunded | See `denial_reason`, request again | None |
 | `cancelled` | Client cancelled before confirm; wallet refunded | — | None |
@@ -503,6 +504,46 @@ refunds the wallet).
 Errors (422):
 - `withdrawal: ["Only OTP-confirmed withdrawals can be approved."]`
 
+### Approve manually (cash/offline, no payout provider)
+
+Use this when WaiFai pays the client directly (cash or offline) instead of using
+a payout provider. No provider API is called and no provider reference is stored.
+
+```http
+POST /api/v1/admin/withdrawals/{id}/approve-manual
+Content-Type: application/json
+
+{ "note": "Paid cash at the office, receipt #1042" }
+```
+
+- `note` optional, string, max 1000 (stored in withdrawal metadata and audit log)
+- Only allowed while `status = pending_approval` and OTP-confirmed
+- The requested gross `amount` is debited from the client wallet **exactly once**:
+  - normal requests already debited it as a hold at request time, so this
+    endpoint does not debit it again;
+  - legacy withdrawals without a debit hold are debited by this endpoint.
+- The withdrawal becomes `completed` immediately; `approved_at`, `approved_by`
+  and `processed_at` are set. The wallet is not refunded and the withdrawal never
+  enters `processing`.
+
+Success returns `status: "completed"`:
+
+```json
+{
+  "id": 42,
+  "status": "completed",
+  "approved_at": "2026-11-11T09:03:00+00:00",
+  "approved_by": 7,
+  "processed_at": "2026-11-11T09:03:00+00:00",
+  "requires_approval": false
+}
+```
+
+Errors (422):
+- `withdrawal: ["Only OTP-confirmed withdrawals awaiting approval can be approved manually."]`
+- `withdrawal: ["Insufficient wallet balance."]` (only when a missing legacy debit
+  would overdraw the wallet)
+
 ### Deny (refunds wallet)
 
 ```http
@@ -550,9 +591,12 @@ Errors (422):
 - Default tab: `pending_approval`
 - Columns: reference, company, destination, amount, net amount, fees, confirmed
   time, waiting duration
-- Row actions: **Approve** (confirm modal: "This starts the payout to
-  {destination}") and **Deny** (modal with required reason)
-- After approve, move row to `processing`; after deny, move to `denied`
+- Row actions: **Approve** (confirm modal: "This starts the provider payout to
+  {destination}"), **Approve manually** (confirm modal: "I paid this client
+  directly (cash/offline); no payout provider will be called"), and **Deny**
+  (modal with required reason)
+- After approve, move row to `processing`; after manual approve, move to
+  `completed`; after deny, move to `denied`
 - Provide status tabs/counts using `GET /api/v1/withdrawals/stats` per company or
   the admin list meta; there is no global admin stats endpoint
 
@@ -576,6 +620,7 @@ Errors (422):
 - [ ] Client list/detail renders all statuses and denial/failure reasons
 - [ ] Admin queue filters `pending_approval` by default
 - [ ] Approve starts payout and shows `processing`
+- [ ] Approve manually completes without a provider call and shows `completed`
 - [ ] Deny requires a reason and shows wallet refunded
 - [ ] Admin routes are hidden from tenant users
 - [ ] Money formatted from decimal strings

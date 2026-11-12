@@ -212,6 +212,63 @@ class WiFiDogTest extends TestCase
         ]);
     }
 
+    public function test_login_reuses_authenticated_session_when_cached_expiry_lags_grant(): void
+    {
+        $owner = $this->createUser();
+        $company = $this->createCompanyFor($owner, 'owner', ['subdomain' => 'spider']);
+        $router = $this->createRuijieRouter($company, '323');
+
+        $plan = InternetPlan::query()->create([
+            'company_id' => $company->id,
+            'name' => '24 hours',
+            'slug' => '24-hours',
+            'duration' => 24,
+            'duration_unit' => 'HOURS',
+            'price' => 1000,
+            'status' => 'active',
+        ]);
+        $customer = Customer::query()->create([
+            'company_id' => $company->id,
+            'name' => 'Guest',
+            'phone' => '0711000000',
+            'status' => 'active',
+        ]);
+        $grant = AccessGrant::query()->create([
+            'company_id' => $company->id,
+            'customer_id' => $customer->id,
+            'internet_plan_id' => $plan->id,
+            'source' => 'payment',
+            'starts_at' => now()->subHour(),
+            'expires_at' => now()->addHours(23),
+            'status' => 'active',
+        ]);
+
+        $token = str_repeat('7', 32);
+        CaptiveSession::query()->create([
+            'company_id' => $company->id,
+            'network_device_id' => $router->id,
+            'network_station_id' => $router->network_station_id,
+            'gateway_id' => '323',
+            'client_mac' => 'AA:BB:CC:DD:EE:FF',
+            'client_ip' => '192.168.0.35',
+            'gw_address' => '192.168.0.1',
+            'gw_port' => 2060,
+            'token' => $token,
+            'status' => CaptiveSession::STATUS_AUTHENTICATED,
+            'access_grant_id' => $grant->id,
+            'authenticated_at' => now()->subHour(),
+            'expires_at' => now()->subMinute(),
+        ]);
+
+        $location = $this->get('/api/wifidog/login?gw_id=323&ip=192.168.0.36&mac=AA:BB:CC:DD:EE:FF')
+            ->assertRedirect()
+            ->headers->get('Location');
+
+        $this->assertSame($token, $this->sessionTokenFromLocation($location));
+        $this->assertDatabaseCount('captive_sessions', 1);
+        $this->assertTrue(CaptiveSession::query()->first()->expires_at->equalTo($grant->expires_at));
+    }
+
     public function test_subdomain_query_cannot_hijack_tenant(): void
     {
         config([

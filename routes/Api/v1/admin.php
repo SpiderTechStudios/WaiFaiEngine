@@ -20,6 +20,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'active.user', 'platform.adm
     Route::get('/withdrawals', [WithdrawalController::class, 'adminGetWithdrawals']);
     Route::get('/withdrawals/{withdrawal}', [WithdrawalController::class, 'adminGetWithdrawal']);
     Route::post('/withdrawals/{withdrawal}/approve', [WithdrawalController::class, 'approve']);
+    Route::post('/withdrawals/{withdrawal}/approve-manual', [WithdrawalController::class, 'approveManually']);
     Route::post('/withdrawals/{withdrawal}/deny', [WithdrawalController::class, 'deny']);
 
     // Platform billing: what clients pay WaiFai + subscription lifecycle.
@@ -96,6 +97,7 @@ Route::prefix('superadmin')->middleware(['auth:sanctum', 'active.user', 'superad
     Route::get('/withdrawals', [WithdrawalController::class, 'adminGetWithdrawals']);
     Route::get('/withdrawals/{withdrawal}', [WithdrawalController::class, 'adminGetWithdrawal']);
     Route::post('/withdrawals/{withdrawal}/approve', [WithdrawalController::class, 'approve']);
+    Route::post('/withdrawals/{withdrawal}/approve-manual', [WithdrawalController::class, 'approveManually']);
     Route::post('/withdrawals/{withdrawal}/deny', [WithdrawalController::class, 'deny']);
 
     Route::get('/payment-providers', [PaymentProviderController::class, 'index']);

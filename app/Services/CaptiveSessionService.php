@@ -54,6 +54,15 @@ class CaptiveSessionService
                 $gwAddress = $requestGwAddress ?: ($previousGwAddress ?: $fallbackGwAddress);
                 $gwPort = $requestGwPort ?: ($existing->gw_port ?: $fallbackGwPort);
 
+                // Never shorten a live session back to the pending TTL when it
+                // still owns a usable access grant.
+                $grant = $this->usableGrantForSession($existing);
+                $expiresAt = $grant
+                    ? $grant->expires_at
+                    : ($existing->isAuthenticated()
+                        ? $existing->expires_at
+                        : now()->addMinutes($this->ttlMinutes()));
+
                 $existing->forceFill([
                     'client_ip' => $ip ?? $existing->client_ip,
                     'client_mac' => $mac ?? $existing->client_mac,
@@ -62,15 +71,17 @@ class CaptiveSessionService
                     'gw_port' => $gwPort,
                     'requested_url' => $client['url'] ?? $existing->requested_url,
                     'last_seen_at' => now(),
-                    'expires_at' => $existing->isAuthenticated()
-                        ? $existing->expires_at
-                        : now()->addMinutes($this->ttlMinutes()),
+                    'expires_at' => $expiresAt,
                 ])->save();
 
                 // A returned client whose grant is still valid must recover
                 // automatically. Older presence logic marked quiet sessions as
-                // disconnected, which forced a paid customer to re-authenticate.
-                if ($existing->status === CaptiveSession::STATUS_DISCONNECTED) {
+                // disconnected/expired, which forced a paid customer to
+                // re-authenticate before the subscription ended.
+                if ($grant && in_array($existing->status, [
+                    CaptiveSession::STATUS_DISCONNECTED,
+                    CaptiveSession::STATUS_EXPIRED,
+                ], true)) {
                     $this->resumeForReturningDevice($existing);
                     $existing = $existing->fresh();
                 }
@@ -166,9 +177,17 @@ class CaptiveSessionService
             ->whereIn('status', [
                 CaptiveSession::STATUS_AUTHENTICATED,
                 CaptiveSession::STATUS_DISCONNECTED,
+                CaptiveSession::STATUS_EXPIRED,
             ])
             ->where(function ($query): void {
-                $query->whereNull('expires_at')->orWhere('expires_at', '>', now());
+                $query->whereNull('expires_at')
+                    ->orWhere('expires_at', '>', now())
+                    ->orWhereHas('accessGrant', function ($grant): void {
+                        $grant->where('status', 'active')
+                            ->where(function ($inner): void {
+                                $inner->whereNull('expires_at')->orWhere('expires_at', '>', now());
+                            });
+                    });
             })
             ->latest('id')
             ->first();
@@ -197,7 +216,14 @@ class CaptiveSessionService
             ->where('client_mac', $normalized)
             ->where('status', '!=', CaptiveSession::STATUS_REJECTED)
             ->where(function ($query): void {
-                $query->whereNull('expires_at')->orWhere('expires_at', '>', now());
+                $query->whereNull('expires_at')
+                    ->orWhere('expires_at', '>', now())
+                    ->orWhereHas('accessGrant', function ($grant): void {
+                        $grant->where('status', 'active')
+                            ->where(function ($inner): void {
+                                $inner->whereNull('expires_at')->orWhere('expires_at', '>', now());
+                            });
+                    });
             })
             ->latest('id')
             ->first();
@@ -257,21 +283,30 @@ class CaptiveSessionService
      */
     public function resumeForReturningDevice(CaptiveSession $session): ?string
     {
-        if ($session->isAuthenticated()) {
-            $grant = $session->access_grant_id
+        if ($session->status === CaptiveSession::STATUS_REJECTED) {
+            return null;
+        }
+
+        // Already authenticated: keep the same token/session. Heal a session
+        // expiry that lagged behind its still-active grant instead of forcing
+        // the customer through the portal again.
+        if ($session->status === CaptiveSession::STATUS_AUTHENTICATED) {
+            $ownGrant = $session->access_grant_id
                 ? AccessGrant::query()
                     ->where('company_id', $session->company_id)
                     ->whereKey($session->access_grant_id)
                     ->first()
                 : null;
 
-            return (! $session->access_grant_id || $grant?->isUsable())
-                ? $this->gatewayAuthRedirectUrl($session)
-                : null;
-        }
+            if ($session->access_grant_id && ! $ownGrant?->isUsable()) {
+                return null;
+            }
 
-        if (in_array($session->status, [CaptiveSession::STATUS_EXPIRED, CaptiveSession::STATUS_REJECTED], true)) {
-            return null;
+            if ($ownGrant) {
+                $session->forceFill(['expires_at' => $ownGrant->expires_at])->save();
+            }
+
+            return $this->gatewayAuthRedirectUrl($session);
         }
 
         $grant = $this->usableGrantForSession($session);
@@ -414,10 +449,14 @@ class CaptiveSessionService
             return false;
         }
 
-        // Recover sessions that were disconnected by the old activity-based
-        // presence check. The paid/voucher grant is the source of truth, so a
-        // still-valid grant always wins over a stale "disconnected" flag.
-        if ($session->status === CaptiveSession::STATUS_DISCONNECTED && ! $session->isExpired()) {
+        // Recover sessions that were disconnected, or prematurely marked
+        // expired, while their paid/voucher grant is still usable. The grant is
+        // the source of truth, so a still-valid grant always wins over a stale
+        // "disconnected" flag or a cached session expiry.
+        if (in_array($session->status, [
+            CaptiveSession::STATUS_DISCONNECTED,
+            CaptiveSession::STATUS_EXPIRED,
+        ], true) && $this->usableGrantForSession($session)) {
             $this->resumeForReturningDevice($session);
             $session = $session->fresh();
         }
@@ -747,8 +786,17 @@ class CaptiveSessionService
                 CaptiveSession::STATUS_PENDING,
                 CaptiveSession::STATUS_AUTHENTICATED,
                 CaptiveSession::STATUS_DISCONNECTED,
+                CaptiveSession::STATUS_EXPIRED,
             ])
-            ->where('expires_at', '>', now())
+            ->where(function ($query): void {
+                $query->where('expires_at', '>', now())
+                    ->orWhereHas('accessGrant', function ($grant): void {
+                        $grant->where('status', 'active')
+                            ->where(function ($inner): void {
+                                $inner->whereNull('expires_at')->orWhere('expires_at', '>', now());
+                            });
+                    });
+            })
             ->orderByDesc('id');
 
         if ($mac) {
@@ -779,16 +827,18 @@ class CaptiveSessionService
         return max(1, (int) config('captive.session_ttl_minutes', 10));
     }
 
-    private function extendAuthenticatedExpiry(NetworkSession $hotspotSession): CarbonInterface
+    private function extendAuthenticatedExpiry(NetworkSession $hotspotSession): ?CarbonInterface
     {
         $hotspotSession->loadMissing('accessGrant');
-        $grantExpiry = $hotspotSession->accessGrant?->expires_at;
+        $grant = $hotspotSession->accessGrant;
 
-        if ($grantExpiry && $grantExpiry->isFuture()) {
-            return $grantExpiry;
+        if (! $grant) {
+            return now()->addHours(24);
         }
 
-        return now()->addHours(24);
+        // Unlimited packages (expires_at = null) never expire on time. The
+        // grant's expiry is the only thing allowed to end access.
+        return $grant->expires_at;
     }
 
     private function normalizeMacOptional(string $mac): ?string

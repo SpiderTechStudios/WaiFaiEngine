@@ -4890,7 +4890,8 @@
                                         "enum": [
                                             "mikrotik",
                                             "ruijie",
-                                            "wavlink"
+                                            "wavlink",
+                                            "omada"
                                         ]
                                     },
                                     "name": {
@@ -5155,7 +5156,8 @@
                                         "enum": [
                                             "mikrotik",
                                             "ruijie",
-                                            "wavlink"
+                                            "wavlink",
+                                            "omada"
                                         ]
                                     },
                                     "name": {
@@ -6853,6 +6855,27 @@
                         "schema": {
                             "type": "integer"
                         }
+                    },
+                    {
+                        "name": "usage",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "used",
+                                "unused"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Matches code, note, or package name.",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 ],
                 "responses": {
@@ -6986,6 +7009,218 @@
                     },
                     "422": {
                         "description": "Validation error — including missing/deleted router_id or package_id, custom_code rules, or duplicate custom_code",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/vouchers/summary": {
+            "get": {
+                "tags": [
+                    "Vouchers"
+                ],
+                "summary": "Used / unused voucher report",
+                "operationId": "voucherSummary",
+                "responses": {
+                    "200": {
+                        "description": "Voucher counts",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer",
+                                                    "example": 381
+                                                },
+                                                "used": {
+                                                    "type": "integer",
+                                                    "example": 53
+                                                },
+                                                "unused": {
+                                                    "type": "integer",
+                                                    "example": 328
+                                                },
+                                                "available": {
+                                                    "type": "integer",
+                                                    "example": 320
+                                                },
+                                                "expired": {
+                                                    "type": "integer",
+                                                    "example": 4
+                                                },
+                                                "revoked": {
+                                                    "type": "integer",
+                                                    "example": 4
+                                                },
+                                                "sold_value": {
+                                                    "type": "number",
+                                                    "example": 26500
+                                                },
+                                                "currency": {
+                                                    "type": "string",
+                                                    "example": "TZS"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/vouchers/export/word": {
+            "post": {
+                "tags": [
+                    "Vouchers"
+                ],
+                "summary": "Download selected vouchers as a Word (.docx) document",
+                "operationId": "exportVouchersWord",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "ids": {
+                                        "description": "Export exactly these voucher ids. Omit to export by filters (or all).",
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer"
+                                        },
+                                        "example": [
+                                            1,
+                                            2,
+                                            3
+                                        ]
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "enum": [
+                                            "active",
+                                            "expired",
+                                            "revoked"
+                                        ]
+                                    },
+                                    "usage": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "enum": [
+                                            "used",
+                                            "unused"
+                                        ]
+                                    },
+                                    "router_id": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "package_id": {
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "search": {
+                                        "description": "Matches code, note, or package name.",
+                                        "type": "string",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Word document",
+                        "content": {
+                            "application/vnd.openxmlformats-officedocument.wordprocessingml.document": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No matching vouchers",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -9287,7 +9522,8 @@
                             "enum": [
                                 "mikrotik",
                                 "ruijie",
-                                "wavlink"
+                                "wavlink",
+                                "omada"
                             ]
                         }
                     },
@@ -9379,7 +9615,8 @@
                                         "enum": [
                                             "mikrotik",
                                             "ruijie",
-                                            "wavlink"
+                                            "wavlink",
+                                            "omada"
                                         ]
                                     },
                                     "name": {
@@ -9642,7 +9879,8 @@
                                         "enum": [
                                             "mikrotik",
                                             "ruijie",
-                                            "wavlink"
+                                            "wavlink",
+                                            "omada"
                                         ]
                                     },
                                     "name": {
@@ -10611,6 +10849,102 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/admin/withdrawals/{withdrawal}/approve-manual": {
+            "post": {
+                "tags": [
+                    "Platform Admin",
+                    "Withdrawals"
+                ],
+                "summary": "Approve a withdrawal manually (cash/offline, no payout provider)",
+                "description": "Completes an OTP-confirmed withdrawal (`status = pending_approval`) when WaiFai pays the client directly instead of using a payout provider. The requested gross amount is debited from the company wallet exactly once: normal requests already debited it as a hold, so the endpoint only creates the debit for legacy rows that have none. The withdrawal becomes `completed`; no provider API is called and no external reference is set. A manual-approval note is stored in the withdrawal metadata and audit log.",
+                "operationId": "adminApproveWithdrawalManually",
+                "parameters": [
+                    {
+                        "name": "withdrawal",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "note": {
+                                        "type": "string",
+                                        "example": "Paid cash at the office, receipt #1042",
+                                        "nullable": true,
+                                        "maxLength": 1000
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Approved manually; status completed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/WithdrawalResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ForbiddenResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/NotFoundResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Withdrawal is not OTP-confirmed / has insufficient balance (data.withdrawal[0])",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
                                 }
                             }
                         }
@@ -13610,6 +13944,41 @@
                     "uses_count": {
                         "type": "integer",
                         "example": 0
+                    },
+                    "is_used": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "remaining_uses": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "fully_used": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "last_used_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "used_by": {
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 9
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "Amina"
+                            },
+                            "phone": {
+                                "type": "string",
+                                "example": "0712345678"
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
                     },
                     "expires_at": {
                         "type": "string",

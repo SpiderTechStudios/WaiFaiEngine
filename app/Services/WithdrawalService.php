@@ -301,6 +301,65 @@ class WithdrawalService
         return $this->startPayout($withdrawal, $admin);
     }
 
+    /**
+     * Approve a confirmed withdrawal without calling any payout provider.
+     *
+     * Used when the admin pays the client directly (cash/offline). The wallet is
+     * debited exactly once: normally the debit hold was already created when the
+     * client requested the withdrawal, so this only creates it for legacy rows
+     * that never had one. The withdrawal is then marked completed.
+     */
+    public function approveManually(Withdrawal $withdrawal, User $admin, ?string $note = null): Withdrawal
+    {
+        return DB::transaction(function () use ($withdrawal, $admin, $note) {
+            $locked = Withdrawal::query()->whereKey($withdrawal->id)->lockForUpdate()->firstOrFail();
+
+            if ($locked->status !== Withdrawal::STATUS_PENDING_APPROVAL || $locked->confirmed_at === null) {
+                throw ValidationException::withMessages([
+                    'withdrawal' => ['Only OTP-confirmed withdrawals awaiting approval can be approved manually.'],
+                ]);
+            }
+
+            $this->debitWalletIfNotDebited($locked, 'Withdrawal '.$locked->reference.' paid manually');
+
+            $metadata = $locked->metadata ?? [];
+            $metadata['payout'] = [
+                'method' => 'manual',
+                'provider' => null,
+                'provider_reference' => null,
+                'message' => 'Marked paid manually by admin (cash/offline). No payout provider was called.',
+                'note' => $note,
+                'requested_at' => now()->toIso8601String(),
+            ];
+
+            $locked->forceFill([
+                'status' => Withdrawal::STATUS_COMPLETED,
+                'approved_at' => $locked->approved_at ?? now(),
+                'approved_by' => $admin->id,
+                'processed_at' => now(),
+                'confirmed_at' => $locked->confirmed_at ?? now(),
+                'otp_hash' => null,
+                'otp_expires_at' => null,
+                'metadata' => $metadata,
+            ])->save();
+
+            $this->auditLogger->log(
+                'withdrawal_approved_manually',
+                $admin,
+                $locked->company_id,
+                Withdrawal::class,
+                $locked->id,
+                newValues: [
+                    'amount' => (float) $locked->amount,
+                    'method' => 'manual',
+                    'note' => $note,
+                ],
+            );
+
+            return $locked->fresh(['payoutAccount', 'paymentProvider', 'paymentMethod']);
+        }, 3);
+    }
+
     public function deny(Withdrawal $withdrawal, User $admin, string $reason): Withdrawal
     {
         return DB::transaction(function () use ($withdrawal, $admin, $reason) {
@@ -557,6 +616,46 @@ class WithdrawalService
     private function failAndRefund(Withdrawal $withdrawal, string $reason): void
     {
         $this->markPayoutFailed($withdrawal, $reason);
+    }
+
+    /**
+     * Ensure the gross amount was taken out of the wallet exactly once. Normal
+     * requests create this debit immediately as a hold; legacy/manual rows may
+     * not have one yet.
+     */
+    private function debitWalletIfNotDebited(Withdrawal $withdrawal, string $description): void
+    {
+        $alreadyDebited = WalletTransaction::query()
+            ->where('reference_type', Withdrawal::class)
+            ->where('reference_id', $withdrawal->id)
+            ->where('type', 'debit')
+            ->exists();
+
+        if ($alreadyDebited) {
+            return;
+        }
+
+        $wallet = Wallet::query()->whereKey($withdrawal->wallet_id)->lockForUpdate()->firstOrFail();
+        $before = (float) $wallet->balance;
+
+        if ($before < (float) $withdrawal->amount) {
+            throw ValidationException::withMessages([
+                'withdrawal' => ['Insufficient wallet balance.'],
+            ]);
+        }
+
+        $wallet->forceFill(['balance' => $before - (float) $withdrawal->amount])->save();
+
+        WalletTransaction::query()->create([
+            'wallet_id' => $wallet->id,
+            'type' => 'debit',
+            'amount' => $withdrawal->amount,
+            'balance_before' => $before,
+            'balance_after' => $wallet->balance,
+            'reference_type' => Withdrawal::class,
+            'reference_id' => $withdrawal->id,
+            'description' => $description,
+        ]);
     }
 
     /**

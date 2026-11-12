@@ -144,19 +144,26 @@ class AccessExpiryService
 
     private function expireCaptiveSessionsForExpiredGrants(): int
     {
+        // The access grant is the source of truth. Repair any live session
+        // whose cached expiry is shorter than its still-active grant (for
+        // example the pending-session TTL) before deciding who to disconnect.
+        $this->syncLiveSessionExpiryToGrants();
+
         $query = CaptiveSession::query()
             ->where('status', CaptiveSession::STATUS_AUTHENTICATED)
             ->where(function ($query): void {
-                $query->where(function ($inner): void {
-                    $inner->whereNotNull('expires_at')
-                        ->where('expires_at', '<=', now());
-                })->orWhereHas('accessGrant', function ($grant): void {
-                    $grant->where('status', 'expired')
+                $query->whereHas('accessGrant', function ($grant): void {
+                    $grant->where('status', '!=', 'active')
                         ->orWhere(function ($inner): void {
-                            $inner->where('status', 'active')
-                                ->whereNotNull('expires_at')
+                            $inner->whereNotNull('expires_at')
                                 ->where('expires_at', '<=', now());
                         });
+                })->orWhere(function ($legacy): void {
+                    // Sessions without a grant (pending/legacy) fall back to
+                    // their own expiry.
+                    $legacy->whereNull('access_grant_id')
+                        ->whereNotNull('expires_at')
+                        ->where('expires_at', '<=', now());
                 });
             });
 
@@ -171,5 +178,44 @@ class AccessExpiryService
         }
 
         return $updated;
+    }
+
+    /**
+     * Keep authenticated captive sessions' cached expiry in sync with the
+     * still-active access grant so access is never removed early.
+     */
+    private function syncLiveSessionExpiryToGrants(): void
+    {
+        CaptiveSession::query()
+            ->with('accessGrant')
+            ->where('status', CaptiveSession::STATUS_AUTHENTICATED)
+            ->whereNotNull('access_grant_id')
+            ->whereHas('accessGrant', function ($grant): void {
+                $grant->where('status', 'active')
+                    ->where(function ($inner): void {
+                        $inner->whereNull('expires_at')->orWhere('expires_at', '>', now());
+                    });
+            })
+            ->chunkById(200, function ($sessions): void {
+                foreach ($sessions as $session) {
+                    $grant = $session->accessGrant;
+
+                    if (! $grant || ! $grant->isUsable()) {
+                        continue;
+                    }
+
+                    if ($session->expires_at === null && $grant->expires_at === null) {
+                        continue;
+                    }
+
+                    if ($session->expires_at !== null
+                        && $grant->expires_at !== null
+                        && $session->expires_at->equalTo($grant->expires_at)) {
+                        continue;
+                    }
+
+                    $session->forceFill(['expires_at' => $grant->expires_at])->save();
+                }
+            });
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Operations;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\ApproveWithdrawalManuallyRequest;
 use App\Http\Requests\Admin\DenyWithdrawalRequest;
 use App\Http\Requests\Operations\ConfirmWithdrawalRequest;
 use App\Http\Requests\Operations\PreviewWithdrawalRequest;
@@ -176,6 +177,20 @@ class WithdrawalController extends Controller
         $withdrawal = $this->withdrawalService->approve($withdrawal, $request->user());
 
         return $this->success((new WithdrawalResource($withdrawal))->resolve(), 'Withdrawal approved and payout started');
+    }
+
+    public function approveManually(ApproveWithdrawalManuallyRequest $request, Withdrawal $withdrawal): JsonResponse
+    {
+        $withdrawal = $this->withdrawalService->approveManually(
+            $withdrawal,
+            $request->user(),
+            $request->validated('note'),
+        );
+
+        return $this->success(
+            (new WithdrawalResource($withdrawal))->resolve(),
+            'Withdrawal approved manually and marked completed; no payout provider was called',
+        );
     }
 
     public function deny(DenyWithdrawalRequest $request, Withdrawal $withdrawal): JsonResponse

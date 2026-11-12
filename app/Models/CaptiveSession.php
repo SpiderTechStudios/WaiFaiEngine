@@ -106,8 +106,60 @@ class CaptiveSession extends Model
         return $this->status === self::STATUS_PENDING && ! $this->isExpired();
     }
 
+    /**
+     * The access grant is the source of truth for how long access lasts. The
+     * session's own expires_at is only a cached copy and may be shorter (for
+     * example a pending-session TTL or a legacy row), so it must never end a
+     * customer's access before the grant does.
+     */
+    public function currentGrant(): ?AccessGrant
+    {
+        if (! $this->access_grant_id) {
+            return null;
+        }
+
+        return $this->relationLoaded('accessGrant')
+            ? $this->accessGrant
+            : $this->accessGrant()->first();
+    }
+
+    public function syncExpiryToCurrentGrant(): void
+    {
+        $grant = $this->currentGrant();
+
+        if (! $grant || ! $grant->isUsable()) {
+            return;
+        }
+
+        if ($this->expires_at === null && $grant->expires_at === null) {
+            return;
+        }
+
+        if ($this->expires_at !== null && $grant->expires_at !== null && $this->expires_at->equalTo($grant->expires_at)) {
+            return;
+        }
+
+        $this->forceFill(['expires_at' => $grant->expires_at])->save();
+    }
+
     public function markExpiredIfNeeded(): bool
     {
+        $grant = $this->currentGrant();
+
+        if ($grant && $grant->isUsable()) {
+            $this->syncExpiryToCurrentGrant();
+
+            return false;
+        }
+
+        if ($grant) {
+            if ($this->status !== self::STATUS_EXPIRED) {
+                $this->forceFill(['status' => self::STATUS_EXPIRED])->save();
+            }
+
+            return true;
+        }
+
         if ($this->status === self::STATUS_EXPIRED) {
             return true;
         }
